@@ -24,12 +24,13 @@ interface HeaderProps {
   pendientes?: number
   agrupados?: number
   totalRcms?: number
+  unsavedCount?: number
   // Finalizar codificación
   onFinalizarCodificacion?: () => void
   isSaving?: boolean
 }
 
-const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, selectedTipoServicioNombre, borradores = 0, pendientes = 0, agrupados = 0, totalRcms = 0, onFinalizarCodificacion, isSaving = false }: HeaderProps) => {
+const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, selectedTipoServicioNombre, borradores = 0, pendientes = 0, agrupados = 0, totalRcms = 0, unsavedCount = 0, onFinalizarCodificacion, isSaving = false }: HeaderProps) => {
   // Hooks
   const params = useParams()
   const router = useRouter()
@@ -183,6 +184,23 @@ const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, sel
 
         {/* Pastillas de contadores */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          {/* Sin guardar (alerta) */}
+          {unsavedCount > 0 && (
+            <Chip
+              size='small'
+              label={`No guardados: ${unsavedCount}`}
+              sx={{
+                bgcolor: '#FFEBEE',
+                color: '#C62828',
+                fontWeight: 700,
+                fontSize: '12px',
+                height: 26,
+                borderRadius: '13px',
+                border: '1px solid #EF5350',
+                '& .MuiChip-label': { px: 1.5 }
+              }}
+            />
+          )}
           {/* Borradores */}
           <Chip
             size='small'

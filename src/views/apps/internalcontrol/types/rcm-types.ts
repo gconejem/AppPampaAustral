@@ -50,6 +50,7 @@ export interface SubmuestraVencimiento {
 export interface RCMData {
     id: number
     dbId?: number
+    temporaryCode?: string // Temporary code for display (RCM-001, RCM-002, etc.) until finalization
     rcmType: string
     sede?: string
     area?: string
@@ -87,9 +88,10 @@ export interface RCMData {
 export interface CodigoAgrupador {
     id: string
     dbId?: number
+    temporaryCode?: string // Temporary code for display (PRD-001, PRD-002, etc.) until finalization
     codigoId: string
     codigoNombre: string
-    rcmsVinculados: Array<{ id: number; numeroTarjeta: string; rcmType: string; numeroRcm?: string }>
+    rcmsVinculados: Array<{ id: number; numeroTarjeta: string; rcmType: string; numeroRcm?: string; temporaryCode?: string }>
     ensayos: Array<{ productoId: number; sku: string; nombre: string }>
     descripcionServicio: string
     cantidad: number

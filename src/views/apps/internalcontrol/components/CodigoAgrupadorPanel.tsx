@@ -86,152 +86,156 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
                     </Typography>
                 </Box>
             ) : (
-            <Box sx={{ overflowX: 'auto', maxHeight: '250px', overflowY: 'auto', px: 1 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr>
-                            {['CÓDIGO ID', 'RCMS VINCULADOS', 'SKUS / ENSAYOS', 'DESCRIPCIÓN DEL SERVICIO', 'CANTIDAD', 'FACTURACIÓN', 'ACCIONES'].map((header, idx) => (
-                                <th
-                                    key={header}
-                                    style={{
-                                        padding: '8px 16px',
-                                        textAlign: idx >= 4 ? 'center' : 'left',
-                                        fontWeight: 700, fontSize: '11px', textTransform: 'uppercase',
-                                        color: '#6B7280', letterSpacing: '0.05em',
-                                        borderBottom: '2px solid #E5E7EB',
-                                        position: 'sticky', top: 0, background: 'white', zIndex: 1
-                                    }}
-                                >
-                                    {header}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {codigosAgrupadores.map((agrupador) => (
-                            <tr key={agrupador.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
-                                {/* Código ID */}
-                                <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                                    <Typography variant='body2' sx={{ fontWeight: 700, color: '#1976D2', fontFamily: 'monospace' }}>
-                                        {agrupador.id}
-                                    </Typography>
-                                </td>
+                <Box sx={{ overflowX: 'auto', maxHeight: '250px', overflowY: 'auto', px: 1 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr>
+                                {['CÓDIGO ID', 'RCMS VINCULADOS', 'SKUS / ENSAYOS', 'DESCRIPCIÓN DEL SERVICIO', 'CANTIDAD', 'FACTURACIÓN', 'ACCIONES'].map((header, idx) => (
+                                    <th
+                                        key={header}
+                                        style={{
+                                            padding: '8px 16px',
+                                            textAlign: idx >= 4 ? 'center' : 'left',
+                                            fontWeight: 700, fontSize: '11px', textTransform: 'uppercase',
+                                            color: '#6B7280', letterSpacing: '0.05em',
+                                            borderBottom: '2px solid #E5E7EB',
+                                            position: 'sticky', top: 0, background: 'white', zIndex: 1
+                                        }}
+                                    >
+                                        {header}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {codigosAgrupadores.map((agrupador) => (
+                                <tr key={agrupador.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
+                                    {/* Código ID */}
+                                    <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                            <Typography variant='body2' sx={{ fontWeight: 700, color: '#1976D2', fontFamily: 'monospace' }}>
+                                                {agrupador.temporaryCode || agrupador.codigoNombre || agrupador.id}
+                                            </Typography>
+                                            {!agrupador.dbId && (
+                                                <Chip label='No guardado' size='small' sx={{ fontWeight: 600, bgcolor: '#FFEBEE', color: '#C62828', border: '1px solid #EF5350', fontSize: '0.65rem', height: '20px' }} />
+                                            )}
+                                        </Box>
+                                    </td>
 
-                                {/* RCMs Vinculados */}
-                                <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                        {agrupador.rcmsVinculados.map((rcm, idx) => {
-                                            const fullRcm = savedRcms.find(r => r.id === rcm.id)
-                                            const rcmCode = rcm.numeroRcm || fullRcm?.numeroRcm
-                                            const rcmLabel = rcmCode ? `RCM-${String(rcmCode).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
-                                            return (
-                                                <Chip
-                                                    key={idx}
-                                                    label={rcmLabel}
-                                                    size='small'
-                                                    sx={{ bgcolor: '#EEF2FF', color: '#4338CA', fontWeight: 600, fontSize: '0.75rem' }}
-                                                />
-                                            )
-                                        })}
-                                    </Box>
-                                </td>
-
-                                {/* SKUs / Ensayos */}
-                                <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                        {agrupador.ensayos.length > 0 && (
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                {agrupador.ensayos.map((ensayo, idx) => (
+                                    {/* RCMs Vinculados */}
+                                    <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                            {agrupador.rcmsVinculados.map((rcm, idx) => {
+                                                const fullRcm = savedRcms.find(r => r.id === rcm.id)
+                                                const rcmLabel = rcm.temporaryCode || fullRcm?.temporaryCode || (rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : (fullRcm?.numeroRcm ? `RCM-${String(fullRcm.numeroRcm).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`))
+                                                return (
                                                     <Chip
                                                         key={idx}
-                                                        label={`${ensayo.nombre} (${ensayo.sku})`}
+                                                        label={rcmLabel}
                                                         size='small'
-                                                        onDelete={() => onRemoveEnsayoFromAgrupador(agrupador.id, ensayo.productoId)}
-                                                        sx={{
-                                                            bgcolor: '#F0F7FF', color: '#1976D2', fontWeight: 500, fontSize: '0.7rem',
-                                                            '& .MuiChip-deleteIcon': { color: '#90CAF9', '&:hover': { color: '#1976D2' } }
-                                                        }}
+                                                        sx={{ bgcolor: '#EEF2FF', color: '#4338CA', fontWeight: 600, fontSize: '0.75rem' }}
                                                     />
-                                                ))}
-                                            </Box>
-                                        )}
-                                        <Button
-                                            startIcon={<SearchIcon />}
-                                            size='small'
-                                            variant='outlined'
-                                            onClick={(e) => onOpenAgrupadorSearch(e, agrupador.id)}
-                                            sx={{
-                                                textTransform: 'none', borderRadius: '6px', fontSize: '0.75rem',
-                                                borderColor: '#E0E0E0', color: '#666',
-                                                '&:hover': { borderColor: '#1976D2', color: '#1976D2' }
-                                            }}
-                                        >
-                                            Buscar ensayo
-                                        </Button>
-                                    </Box>
-                                </td>
+                                                )
+                                            })}
+                                        </Box>
+                                    </td>
 
-                                {/* Descripción del Servicio */}
-                                <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                                    <TextField
-                                        size='small'
-                                        value={agrupador.descripcionServicio}
-                                        onChange={(e) => onChangeDescripcion(agrupador.id, e.target.value)}
-                                        sx={{ width: 180 }}
-                                    />
-                                </td>
+                                    {/* SKUs / Ensayos */}
+                                    <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                            {agrupador.ensayos.length > 0 && (
+                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                    {agrupador.ensayos.map((ensayo, idx) => (
+                                                        <Chip
+                                                            key={idx}
+                                                            label={`${ensayo.nombre} (${ensayo.sku})`}
+                                                            size='small'
+                                                            onDelete={() => onRemoveEnsayoFromAgrupador(agrupador.id, ensayo.productoId)}
+                                                            sx={{
+                                                                bgcolor: '#F0F7FF', color: '#1976D2', fontWeight: 500, fontSize: '0.7rem',
+                                                                '& .MuiChip-deleteIcon': { color: '#90CAF9', '&:hover': { color: '#1976D2' } }
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Box>
+                                            )}
+                                            <Button
+                                                startIcon={<SearchIcon />}
+                                                size='small'
+                                                variant='outlined'
+                                                onClick={(e) => onOpenAgrupadorSearch(e, agrupador.id)}
+                                                sx={{
+                                                    textTransform: 'none', borderRadius: '6px', fontSize: '0.75rem',
+                                                    borderColor: '#E0E0E0', color: '#666',
+                                                    '&:hover': { borderColor: '#1976D2', color: '#1976D2' }
+                                                }}
+                                            >
+                                                Buscar ensayo
+                                            </Button>
+                                        </Box>
+                                    </td>
 
-                                {/* Cantidad */}
-                                <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'top' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                    {/* Descripción del Servicio */}
+                                    <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                                         <TextField
-                                            size='small' type='number'
-                                            value={agrupador.cantidad}
-                                            onChange={(e) => onChangeCantidad(agrupador.id, parseInt(e.target.value) || 0)}
-                                            sx={{ width: 70 }}
-                                            inputProps={{ min: 1 }}
+                                            size='small'
+                                            value={agrupador.descripcionServicio}
+                                            onChange={(e) => onChangeDescripcion(agrupador.id, e.target.value)}
+                                            sx={{ width: 180 }}
                                         />
-                                        <Typography variant='body2' color='text.secondary'>
-                                            {agrupador.unidad}
-                                        </Typography>
-                                    </Box>
-                                </td>
+                                    </td>
 
-                                {/* Facturación */}
-                                <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'top' }}>
-                                    <Chip
-                                        label={agrupador.facturacion}
-                                        size='small'
-                                        onClick={() => onChangeFacturacion(
-                                            agrupador.id,
-                                            agrupador.facturacion === 'Unitario' ? 'Fijo' : 'Unitario'
-                                        )}
-                                        sx={{
-                                            cursor: 'pointer', fontWeight: 600,
-                                            bgcolor: agrupador.facturacion === 'Unitario' ? '#EEF2FF' : '#F0FDF4',
-                                            color: agrupador.facturacion === 'Unitario' ? '#4338CA' : '#16A34A',
-                                            '&:hover': {
-                                                bgcolor: agrupador.facturacion === 'Unitario' ? '#E0E7FF' : '#DCFCE7'
-                                            }
-                                        }}
-                                    />
-                                </td>
+                                    {/* Cantidad */}
+                                    <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'top' }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                            <TextField
+                                                size='small' type='number'
+                                                value={agrupador.cantidad}
+                                                onChange={(e) => onChangeCantidad(agrupador.id, parseInt(e.target.value) || 0)}
+                                                sx={{ width: 70 }}
+                                                inputProps={{ min: 1 }}
+                                            />
+                                            <Typography variant='body2' color='text.secondary'>
+                                                {agrupador.unidad}
+                                            </Typography>
+                                        </Box>
+                                    </td>
 
-                                {/* Acciones */}
-                                <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'top' }}>
-                                    <IconButton
-                                        size='small'
-                                        onClick={() => onDeleteAgrupador(agrupador.id)}
-                                        sx={{ color: '#9CA3AF', '&:hover': { color: '#EF4444' } }}
-                                    >
-                                        <DeleteIcon fontSize='small' />
-                                    </IconButton>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </Box>
+                                    {/* Facturación */}
+                                    <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'top' }}>
+                                        <Chip
+                                            label={agrupador.facturacion}
+                                            size='small'
+                                            onClick={() => onChangeFacturacion(
+                                                agrupador.id,
+                                                agrupador.facturacion === 'Unitario' ? 'Fijo' : 'Unitario'
+                                            )}
+                                            sx={{
+                                                cursor: 'pointer', fontWeight: 600,
+                                                bgcolor: agrupador.facturacion === 'Unitario' ? '#EEF2FF' : '#F0FDF4',
+                                                color: agrupador.facturacion === 'Unitario' ? '#4338CA' : '#16A34A',
+                                                '&:hover': {
+                                                    bgcolor: agrupador.facturacion === 'Unitario' ? '#E0E7FF' : '#DCFCE7'
+                                                }
+                                            }}
+                                        />
+                                    </td>
+
+                                    {/* Acciones */}
+                                    <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'top' }}>
+                                        <IconButton
+                                            size='small'
+                                            onClick={() => onDeleteAgrupador(agrupador.id)}
+                                            sx={{ color: '#9CA3AF', '&:hover': { color: '#EF4444' } }}
+                                        >
+                                            <DeleteIcon fontSize='small' />
+                                        </IconButton>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </Box>
             )}
         </Box>
     )

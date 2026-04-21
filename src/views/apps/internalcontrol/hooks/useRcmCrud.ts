@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import type { RCMData, EnsayoAsociado, AreaType, FamiliaType, SubmuestraVencimiento, ParametroAreaType } from '../types/rcm-types'
+import { generateTemporaryRcmCode } from '../utils/temporaryCodes'
 
 interface UseRcmCrudParams {
     savedRcms: RCMData[]
@@ -219,85 +220,28 @@ export function useRcmCrud({
         else if (formValues.rcmType === 'Servicio') estadoRcm = 'Ejecutado'
 
         const today = getTodayDateForInput()
-        const payload = {
-            rcmType: formValues.rcmType,
-            sede: formValues.sede,
-            areaId: formValues.area || null,
-            familiaId: formValues.tipoServicio || null,
-            fechaCodificacion: today,
-            fechaServicio: formValues.fechaServicio,
-            fechaMuestreo: formValues.fechaServicio,
-            fechaIngreso: today,
-            numeroTarjeta: formValues.numeroTarjeta,
-            tipoMaterial: formValues.tipoMaterial,
-            item: formValues.item,
-            grado: formValues.grado,
-            procedencia: formValues.procedencia,
-            ubicacionSector: formValues.ubicacionSector,
-            elemento: formValues.elemento,
-            cota1: formValues.cota1,
-            cota2: formValues.cota2,
-            observacionItem: formValues.observacionItem,
-            observaciones: formValues.observaciones,
-            informeEnsayo: formValues.informeEnsayo,
-            tomaMuestra: formValues.tomaMuestra,
-            cantidadMuestras: parseInt(formValues.cantidadMuestras) || 1,
-            vencimiento: formValues.tieneVencimiento,
-            ensayos: ensayosAsociados.map(e => ({
-                productoId: e.productoId,
-                sku: e.sku,
-                nombre: e.nombre,
-                norma: e.norma,
-                cantidad: e.cantidad,
-                observacion: e.observacion,
-                estadoOperativo: e.estadoOperativo,
-                esPaquete: e.esPaquete,
-                subProductos: e.subProductos?.map(sp => ({
-                    productoId: sp.productoId,
-                    sku: sp.sku,
-                    nombre: sp.nombre,
-                    norma: sp.norma,
-                    cantidad: sp.cantidad,
-                    observacion: sp.observacion,
-                })),
-            })),
-            submuestrasVencimiento: formValues.submuestrasVencimiento,
-            ordenTrabajoId: otData?.id ?? null,
-            clienteId: otData?.clienteId ?? otData?.cliente?.id ?? null,
-            obraId: otData?.obraId ?? otData?.obra?.id ?? null,
-        }
 
         setIsSavingRcm(true)
         try {
-            let result: any
-            if (editandoRcm && rcmOriginal?.dbId) {
-                const response = await fetch(`/api/rcm/${rcmOriginal.dbId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                })
-                if (!response.ok) {
-                    const errBody = await response.json().catch(() => ({}))
-                    throw new Error(errBody.error || 'Error al actualizar el RCM')
-                }
-                result = await response.json()
+            // Generate temporary RCM code (in-memory only, no database save)
+            let temporaryCode: string
+            let rcmId: number
+
+            if (editandoRcm && rcmOriginal) {
+                // Editing existing RCM: preserve ID and temporary code
+                rcmId = rcmOriginal.id
+                temporaryCode = rcmOriginal.temporaryCode || rcmOriginal.numeroRcm || generateTemporaryRcmCode(savedRcms.length + 1)
             } else {
-                const response = await fetch('/api/rcm', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                })
-                if (!response.ok) {
-                    const errBody = await response.json().catch(() => ({}))
-                    throw new Error(errBody.error || 'Error al guardar el RCM')
-                }
-                result = await response.json()
+                // Creating new RCM: generate new ID and temporary code
+                rcmId = Date.now()
+                const nextIndex = savedRcms.length + 1
+                temporaryCode = generateTemporaryRcmCode(nextIndex)
             }
 
             const newRcm: RCMData = {
-                id: Date.now(),
-                dbId: result.id,
-                numeroRcm: result.numeroRcm,
+                id: rcmId,
+                temporaryCode: temporaryCode,
+                // dbId will be assigned after finalization
                 rcmType: formValues.rcmType,
                 sede: formValues.sede,
                 area: areaNombre,
@@ -394,14 +338,7 @@ export function useRcmCrud({
     }
 
     const performDeleteRcm = async (rcmId: number) => {
-        const rcmToDelete = savedRcms.find(r => r.id === rcmId)
-        if (rcmToDelete?.dbId) {
-            try {
-                await fetch(`/api/rcm/${rcmToDelete.dbId}`, { method: 'DELETE' })
-            } catch {
-                // ignorar error de red, igual remover de la UI
-            }
-        }
+        // In-memory only: no database deletion until finalization
         setSavedRcms(prev => prev.filter(r => r.id !== rcmId))
     }
 
@@ -538,14 +475,20 @@ export function useRcmCrud({
 
             const result = await response.json()
 
+            // Update RCMs with real database IDs and numeroRcm after finalization
             setSavedRcms(prev =>
-                prev.map((rcm, idx) => ({
-                    ...rcm,
-                    dbId: result.rcms[idx]?.id ?? rcm.dbId,
-                    numeroRcm: result.rcms[idx]?.id
-                        ? result.rcms[idx].id.toString()
-                        : rcm.numeroRcm,
-                }))
+                prev.map((rcm, idx) => {
+                    const dbRcm = result.rcms[idx]
+                    if (!dbRcm) return rcm
+
+                    return {
+                        ...rcm,
+                        dbId: dbRcm.id,
+                        numeroRcm: dbRcm.numeroRcm,
+                        // Remove temporary code after finalization
+                        temporaryCode: undefined,
+                    }
+                })
             )
 
             const total = result.rcms?.length ?? savedRcms.length

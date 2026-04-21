@@ -81,6 +81,7 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
   const agrupados = agrupadosCount
   const pendientes = savedRcms.length - agrupados // Guardados sin agrupar
   const totalRcms = borradores + savedRcms.length
+  const unsavedCount = savedRcms.filter(rcm => !rcm.dbId).length
 
   useEffect(() => {
     if (!searchParams) return
@@ -113,6 +114,27 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
     }
   }, [searchParams])
 
+  // Navigation warning when there are unsaved RCMs
+  useEffect(() => {
+    const hasUnsavedRcms = savedRcms.some(rcm => !rcm.dbId)
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedRcms) {
+        e.preventDefault()
+        e.returnValue = '' // Chrome requires returnValue to be set
+        return '' // Some browsers use the return value
+      }
+    }
+
+    if (hasUnsavedRcms) {
+      window.addEventListener('beforeunload', handleBeforeUnload)
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [savedRcms])
+
   return (
     <Grid container spacing={6}>
       {/* Agregamos el Header con los datos de la OT */}
@@ -125,6 +147,7 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
           pendientes={pendientes}
           agrupados={agrupados}
           totalRcms={totalRcms}
+          unsavedCount={unsavedCount}
           onFinalizarCodificacion={handleFinalizarCodificacion}
           isSaving={isSaving}
         />

@@ -76,6 +76,7 @@ interface AgrupadorEnsayo {
 
 interface AgrupadorInput {
     id?: string                    // frontend temp id like "PRD-001"
+    dbId?: number                  // DB id if already persisted — update instead of create
     codigoId: string
     codigoNombre: string
     descripcionServicio?: string
@@ -139,21 +140,43 @@ export async function POST(request: Request) {
 
         const productosMap = await resolveProductos([...allSkus])
 
+        // --- Pre-cómputo FUERA de la transacción para minimizar tiempo de la tx ---
+        // Calcular maxNum de agrupadores PRD-### antes de la tx (lectura no atómica)
+        const todosAgrupadoresPre = await prisma.codigoAgrupador.findMany({
+            select: { codigoNombre: true },
+        })
+        let maxNumPre = 0
+        for (const record of todosAgrupadoresPre) {
+            const match = record.codigoNombre.match(/^PRD-(\d+)$/)
+            if (match) {
+                const num = parseInt(match[1], 10)
+                if (num > maxNumPre) maxNumPre = num
+            }
+        }
+
+        // Pre-asignar codigoNombre / codigoId para agrupadores nuevos (sin dbId)
+        let maxNumCounter = maxNumPre
+        const agrupadoresPreparados = codigosAgrupadores.map(ag => {
+            if (ag.dbId) return { ag, codigoNombre: undefined as string | undefined, codigoId: undefined as string | undefined }
+            maxNumCounter++
+            const codigoNombre = `PRD-${String(maxNumCounter).padStart(3, '0')}`
+            const codigoId = `${codigoNombre}-${Date.now()}`
+            return { ag, codigoNombre, codigoId }
+        })
+
         const resultados = await prisma.$transaction(async (tx) => {
+            // numeroRcm se calcula dentro de la tx para garantizar correlatividad
             const getNumero = await nextNumeroRcm(tx as unknown as typeof prisma)
 
             // Map frontend temp RCM id → real DB RCM id
             const rcmIdMap: Record<string | number, number> = {}
 
-            // 1. Create all RCMs
-            const rcmsCriados: { id: number }[] = []
-
-            for (const rcmInput of rcms) {
+            // 1. Crear todos los RCMs en paralelo
+            const rcmCreateTasks = rcms.map(async (rcmInput) => {
                 // Already persisted: only register in the id map, do not create a duplicate
                 if (rcmInput.dbId) {
                     if (rcmInput.id != null) rcmIdMap[rcmInput.id] = rcmInput.dbId
-                    rcmsCriados.push({ id: rcmInput.dbId })
-                    continue
+                    return { id: rcmInput.dbId }
                 }
 
                 const numero = getNumero()
@@ -272,29 +295,20 @@ export async function POST(request: Request) {
                     select: { id: true },
                 })
 
-                rcmsCriados.push(rcmCriado)
                 if (rcmInput.id != null) rcmIdMap[rcmInput.id] = rcmCriado.id
-            }
+                return rcmCriado
+            })
 
-            // 2. Link RCMs to pre-existing CodigoAgrupadores (already created via /api/codigo-agrupador)
-            const agrupadores: { id: number; codigoId: string }[] = []
+            const rcmsCriados = await Promise.all(rcmCreateTasks)
 
-            for (const ag of codigosAgrupadores) {
+            // 2. Crear/actualizar CodigoAgrupadores en paralelo y enlazar RCMs
+            const agrupadorTasks = agrupadoresPreparados.map(async ({ ag, codigoNombre, codigoId }) => {
                 const rcmIdsVinculados = (ag.rcmsVinculados ?? [])
                     .map(r => rcmIdMap[r.id])
                     .filter((id): id is number => id !== undefined)
 
-                if (rcmIdsVinculados.length === 0) continue
+                if (rcmIdsVinculados.length === 0) return null
 
-                // Find the existing agrupador by codigoId
-                const existing = await tx.codigoAgrupador.findUnique({
-                    where: { codigoId: ag.codigoId },
-                    select: { id: true, codigoId: true },
-                })
-
-                if (!existing) continue
-
-                // Update: link the RCMs and sync metadata
                 const ensayosData = (ag.ensayos ?? [])
                     .filter(e => productosMap[e.sku] !== undefined)
                     .map(e => ({
@@ -303,26 +317,56 @@ export async function POST(request: Request) {
                         producto: { connect: { productoId: productosMap[e.sku] } },
                     }))
 
-                const agrupador = await tx.codigoAgrupador.update({
-                    where: { codigoId: ag.codigoId },
+                // Check if agrupador already exists (has dbId)
+                if (ag.dbId) {
+                    // Update existing agrupador
+                    return tx.codigoAgrupador.update({
+                        where: { id: ag.dbId },
+                        data: {
+                            descripcionServicio: ag.descripcionServicio ?? undefined,
+                            cantidad: ag.cantidad ?? undefined,
+                            facturacion: ag.facturacion ?? undefined,
+                            ordenTrabajoId: ordenTrabajoId ?? undefined,
+                            ensayos: {
+                                deleteMany: {},
+                                create: ensayosData,
+                            },
+                            rcms: { connect: rcmIdsVinculados.map(id => ({ id })) },
+                        },
+                        select: { id: true, codigoId: true, codigoNombre: true },
+                    })
+                }
+
+                // Create new agrupador con codigoNombre/codigoId pre-asignados
+                return tx.codigoAgrupador.create({
                     data: {
-                        descripcionServicio: ag.descripcionServicio ?? undefined,
-                        cantidad: ag.cantidad ?? undefined,
-                        facturacion: ag.facturacion ?? undefined,
-                        ordenTrabajoId: ordenTrabajoId ?? undefined,
+                        codigoId: codigoId!,
+                        codigoNombre: codigoNombre!,
+                        descripcionServicio: ag.descripcionServicio ?? null,
+                        cantidad: ag.cantidad ?? 1,
+                        unidad: ag.unidad ?? 'unid',
+                        facturacion: ag.facturacion ?? 'Unitario',
+                        ordenTrabajoId: ordenTrabajoId ?? null,
                         ensayos: {
-                            deleteMany: {},
                             create: ensayosData,
                         },
-                        rcms: { connect: rcmIdsVinculados.map(id => ({ id })) },
+                        rcms: {
+                            connect: rcmIdsVinculados.map(id => ({ id })),
+                        },
                     },
-                    select: { id: true, codigoId: true },
+                    select: { id: true, codigoId: true, codigoNombre: true },
                 })
+            })
 
-                agrupadores.push(agrupador)
-            }
+            const agrupadoresResultados = await Promise.all(agrupadorTasks)
+            const agrupadores = agrupadoresResultados.filter(
+                (a): a is { id: number; codigoId: string; codigoNombre: string } => a !== null
+            )
 
             return { rcms: rcmsCriados, agrupadores }
+        }, {
+            timeout: 15000, // margen de seguridad tras optimización
+            maxWait: 5000,
         })
 
         return NextResponse.json(resultados, { status: 201 })

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { CodigoAgrupador, RCMData, EnsayoAsociado, AreaType, FamiliaType, ProductoType } from '../types/rcm-types'
+import { generateTemporaryProductCode } from '../utils/temporaryCodes'
 
 interface UseCodigoAgrupadorParams {
     savedRcms: RCMData[]
@@ -149,32 +150,26 @@ export function useCodigoAgrupador({
 
         setIsCreatingCodigo(true)
         try {
-            const res = await fetch('/api/codigo-agrupador', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    descripcionServicio: dialogDescripcionServicio || null,
-                    cantidad: dialogCantidad,
-                    unidad: 'unid',
-                    facturacion: facturacionValue,
-                    ensayos: allEnsayos.map(e => ({ sku: e.sku, nombre: e.nombre })),
-                    ordenTrabajoId: otData?.id ?? null,
-                }),
+            // Generate temporary product code (in-memory only, no database save)
+            const nextIndex = codigosAgrupadores.length + 1
+            const temporaryCode = generateTemporaryProductCode(nextIndex)
+            const tempId = `temp-${Date.now()}`
+
+            // Enrich rcmsToAssign with temporaryCode from savedRcms
+            const enrichedRcmsToAssign = rcmsToAssign.map(rcmRef => {
+                const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
+                return {
+                    ...rcmRef,
+                    temporaryCode: fullRcm?.temporaryCode
+                }
             })
 
-            if (!res.ok) {
-                const errBody = await res.json().catch(() => ({}))
-                throw new Error(errBody.error || 'Error al crear código de producto')
-            }
-
-            const created = await res.json()
-
             const newAgrupador: CodigoAgrupador = {
-                id: created.codigoNombre,
-                dbId: created.id,
-                codigoId: created.codigoId,
-                codigoNombre: created.codigoNombre,
-                rcmsVinculados: rcmsToAssign,
+                id: tempId,
+                temporaryCode: temporaryCode,
+                codigoId: temporaryCode,
+                codigoNombre: temporaryCode,
+                rcmsVinculados: enrichedRcmsToAssign,
                 ensayos: allEnsayos,
                 descripcionServicio: dialogDescripcionServicio,
                 cantidad: dialogCantidad,
@@ -241,16 +236,7 @@ export function useCodigoAgrupador({
     }
 
     const handleDeleteAgrupador = async (agrupadorId: string) => {
-        const agrupador = codigosAgrupadores.find(a => a.id === agrupadorId)
-
-        if (agrupador?.dbId) {
-            try {
-                await fetch(`/api/codigo-agrupador/${agrupador.dbId}`, { method: 'DELETE' })
-            } catch (err) {
-                console.error('Error al eliminar código agrupador de la DB:', err)
-            }
-        }
-
+        // In-memory only: no database deletion until finalization
         setCodigosAgrupadores(prev => prev.filter(a => a.id !== agrupadorId))
     }
 
@@ -339,7 +325,13 @@ export function useCodigoAgrupador({
             : rcmOrId
         if (!rcm) return
 
-        const rcmRef = { id: rcm.id, numeroTarjeta: rcm.numeroTarjeta || rcm.numeroRcm || `T-${rcm.id}`, rcmType: rcm.rcmType, numeroRcm: rcm.numeroRcm }
+        const rcmRef = {
+            id: rcm.id,
+            numeroTarjeta: rcm.numeroTarjeta || rcm.numeroRcm || `T-${rcm.id}`,
+            rcmType: rcm.rcmType,
+            numeroRcm: rcm.numeroRcm,
+            temporaryCode: rcm.temporaryCode
+        }
 
         const allEnsayos: Array<{ productoId: number; sku: string; nombre: string }> = []
         const seenIds = new Set<number>()
@@ -352,31 +344,16 @@ export function useCodigoAgrupador({
 
         setIsCreatingCodigo(true)
         try {
-            const res = await fetch('/api/codigo-agrupador', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    descripcionServicio: null,
-                    cantidad: 1,
-                    unidad: 'unid',
-                    facturacion: 'Unitario',
-                    ensayos: allEnsayos.map(e => ({ sku: e.sku, nombre: e.nombre })),
-                    ordenTrabajoId: otData?.id ?? null,
-                }),
-            })
-
-            if (!res.ok) {
-                const errBody = await res.json().catch(() => ({}))
-                throw new Error(errBody.error || 'Error al crear código de producto')
-            }
-
-            const created = await res.json()
+            // Generate temporary product code (in-memory only, no database save)
+            const nextIndex = codigosAgrupadores.length + 1
+            const temporaryCode = generateTemporaryProductCode(nextIndex)
+            const tempId = `temp-${Date.now()}`
 
             const newAgrupador: CodigoAgrupador = {
-                id: created.codigoNombre,
-                dbId: created.id,
-                codigoId: created.codigoId,
-                codigoNombre: created.codigoNombre,
+                id: tempId,
+                temporaryCode: temporaryCode,
+                codigoId: temporaryCode,
+                codigoNombre: temporaryCode,
                 rcmsVinculados: [rcmRef],
                 ensayos: allEnsayos,
                 descripcionServicio: '',

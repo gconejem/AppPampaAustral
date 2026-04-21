@@ -409,8 +409,11 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                         </Box>
                                         <Chip label={rcm.rcmType.toUpperCase()} sx={{ fontWeight: 'bold', backgroundColor: rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b', color: '#ffffff' }} />
                                         <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                            {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...'}
+                                            {rcm.temporaryCode || (rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...')}
                                         </Typography>
+                                        {!rcm.dbId && (
+                                            <Chip label='No guardado' size='small' sx={{ fontWeight: 600, bgcolor: '#FFEBEE', color: '#C62828', border: '1px solid #EF5350' }} />
+                                        )}
                                         <Chip label='Pendiente de agrupar' size='small' sx={{ fontWeight: 600, bgcolor: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D' }} />
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
                                             {renderRcmHeaderFields(rcm)}
@@ -436,7 +439,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, px: 2, py: 1.5, bgcolor: '#EEEEEE', borderTop: '1px solid #E0E0E0' }}>
                                         {/* Left: saved label */}
                                         <Typography variant='body2' sx={{ fontWeight: 700, color: '#0D47A1', whiteSpace: 'nowrap', pl: '5px' }}>
-                                            {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')} guardado` : 'RCM guardado'}
+                                            {rcm.temporaryCode || (rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : 'RCM')} {!rcm.dbId ? 'creado' : 'guardado'}
                                         </Typography>
                                         {/* Right: actions */}
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -491,8 +494,11 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
                                         <Chip label={rcm.rcmType.toUpperCase()} sx={{ fontWeight: 'bold', backgroundColor: rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b', color: '#ffffff' }} />
                                         <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                                            {rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...'}
+                                            {rcm.temporaryCode || (rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...')}
                                         </Typography>
+                                        {!rcm.dbId && (
+                                            <Chip label='No guardado' size='small' sx={{ fontWeight: 600, bgcolor: '#FFEBEE', color: '#C62828', border: '1px solid #EF5350' }} />
+                                        )}
                                         <Chip label='Agrupado' size='small' sx={{ fontWeight: 600, bgcolor: '#C8E6C9', color: '#2E7D32', border: '1px solid #81C784' }} />
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
                                             {rcm.area && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.area}</Typography></>}
