@@ -94,6 +94,30 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         }
     }
 
+    /**
+     * Resetea los campos dinámicos dependientes del área al cambiar de Área.
+     * Se mantienen: numeroTarjeta, tomaMuestra, procedencia, ubicacionSector,
+     * observaciones, fechas generales, cantidadMuestras, sede, rcmType e informeEnsayo.
+     */
+    const resetDynamicFieldsOnAreaChange = () => {
+        setTipoServicio('')
+        setTipoMaterial('')
+        setCustomTipoMaterial('')
+        setItem('')
+        setCustomItem('')
+        setGrado('')
+        setCustomGrado('')
+        setElemento('')
+        setFechaConfeccion('')
+        setCota1('')
+        setCota2('')
+        setCalicata('')
+        setEstrato('')
+        setObservacionItem('')
+        setSubmuestrasVencimiento([])
+        setErrorVencimiento('')
+    }
+
     const resetForm = (type?: string) => {
         setShowRcmCard(type !== undefined)
         setRcmType(type || '')
@@ -365,5 +389,6 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         getFormValues,
         hasUnsavedChanges,
         autoEnableVencimiento,
+        resetDynamicFieldsOnAreaChange,
     }
 }

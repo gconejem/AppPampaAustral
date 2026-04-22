@@ -70,6 +70,7 @@ interface FormState {
     submuestrasVencimiento: SubmuestraVencimiento[]; setSubmuestrasVencimiento: (v: SubmuestraVencimiento[]) => void
     errorVencimiento: string; setErrorVencimiento: (v: string) => void
     getTodayDateForInput: () => string
+    resetDynamicFieldsOnAreaChange: () => void
 }
 
 interface EnsayoHandlers {
@@ -143,6 +144,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
         submuestrasVencimiento, setSubmuestrasVencimiento,
         errorVencimiento, setErrorVencimiento,
         getTodayDateForInput,
+        resetDynamicFieldsOnAreaChange,
     } = form
 
     const {
@@ -260,7 +262,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                 <FormControl fullWidth>
                     <InputLabel id={areaLabelId} shrink>Área</InputLabel>
                     <Select labelId={areaLabelId} label='Área' value={area} displayEmpty notched
-                        onChange={(e) => { setArea(e.target.value as number | ''); setTipoServicio(''); setTipoMaterial(''); setCustomTipoMaterial(''); setItem(''); setCustomItem(''); setGrado(''); setCustomGrado('') }}>
+                        onChange={(e) => { setArea(e.target.value as number | ''); resetDynamicFieldsOnAreaChange() }}>
                         <MenuItem value='' disabled>Seleccionar área</MenuItem>
                         {areas.map((a) => <MenuItem key={a.id} value={a.id}>{a.nombre}</MenuItem>)}
                     </Select>
