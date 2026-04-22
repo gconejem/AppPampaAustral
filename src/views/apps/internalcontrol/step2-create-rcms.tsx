@@ -198,7 +198,7 @@ const Step2CreateRcms = ({
 
     useEffect(() => {
         form.autoEnableVencimiento(productSearch.areas)
-    }, [form.area, productSearch.areas])
+    }, [form.area, productSearch.areas, form.rcmType])
 
     const handleQuickDuplicate = (rcmId: number) => {
         crud.handleDuplicateInline(rcmId)

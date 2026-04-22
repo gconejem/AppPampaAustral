@@ -75,6 +75,11 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
 
     // Auto-activar vencimiento para áreas Hormigón / Elementos y Componentes
     const autoEnableVencimiento = (areas: AreaType[]) => {
+        if (rcmType !== 'Muestra') {
+            setTieneVencimiento(false)
+            setSubmuestrasVencimiento([])
+            return
+        }
         const foundArea = areas.find(a => a.id === area)
         const currentAreaName = foundArea?.nombre?.toLowerCase()
         const shouldHaveVencimiento =
