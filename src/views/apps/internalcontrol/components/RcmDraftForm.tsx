@@ -164,27 +164,22 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
         }
     }, [area])
 
-    // Recalculate fechaVencimiento for all submuestras when fechaConfeccion or fechaCodificacion changes
+    // Recalculate fechaVencimiento for all submuestras when fechaConfeccion changes
     React.useEffect(() => {
         if (!tieneVencimiento || submuestrasVencimiento.length === 0) return
-
-        const areaObj = areas.find(a => a.id === area)
-        const familiaObj = todasLasFamilias.find(f => f.id === tipoServicio)
-        const isHormigonFresco = areaObj?.nombre?.toLowerCase() === 'hormigón' && familiaObj?.nombre?.toLowerCase() === 'hormigón fresco'
-        const fechaBase = isHormigonFresco ? fechaConfeccion : fechaCodificacion
-
+        const fechaBase = fechaConfeccion
         if (!fechaBase) return
 
         const updated = submuestrasVencimiento.map(s => {
-            if (s.dias <= 0) return s
+            const dias = s.dias || 0
             const fecha = new Date(fechaBase + 'T00:00:00')
-            fecha.setDate(fecha.getDate() + s.dias)
+            fecha.setDate(fecha.getDate() + dias)
             const fechaVencimiento = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`
             return { ...s, fechaVencimiento }
         })
         setSubmuestrasVencimiento(updated)
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [fechaConfeccion, fechaCodificacion, area, tipoServicio])
+    }, [fechaConfeccion])
 
     // Preset para Área Hormigón + Tipo Servicio "Hormigón Fresco":
     // 3 muestras → 1 probeta a 7 días, 2 probetas a 28 días
@@ -810,7 +805,13 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                             setErrorVencimiento('')
                                             const newId = submuestrasVencimiento.length > 0 ? Math.max(...submuestrasVencimiento.map(s => s.id)) + 1 : 1
                                             const newNumero = submuestrasVencimiento.length + 1
-                                            setSubmuestrasVencimiento([...submuestrasVencimiento, { id: newId, submuestra: `RCM - ${newNumero}`, numero: newNumero, dias: 0, fechaVencimiento: '', cantidad: 1 }])
+                                            const nuevaFechaVenc = fechaConfeccion
+                                                ? (() => {
+                                                    const f = new Date(fechaConfeccion + 'T00:00:00')
+                                                    return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`
+                                                })()
+                                                : ''
+                                            setSubmuestrasVencimiento([...submuestrasVencimiento, { id: newId, submuestra: `RCM - ${newNumero}`, numero: newNumero, dias: 0, fechaVencimiento: nuevaFechaVenc, cantidad: 1 }])
                                         }}>
                                         Agregar Submuestra
                                     </Button>
@@ -846,11 +847,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                                             <TextField size='small' type='number' value={submuestra.dias}
                                                                 onChange={(e) => {
                                                                     const dias = parseInt(e.target.value) || 0
-                                                                    const areaObj = areas.find(a => a.id === area)
-                                                                    const familiaObj = todasLasFamilias.find(f => f.id === tipoServicio)
-                                                                    const isHormigonFresco = areaObj?.nombre?.toLowerCase() === 'hormigón' && familiaObj?.nombre?.toLowerCase() === 'hormigón fresco'
-                                                                    const fechaBase = isHormigonFresco ? fechaConfeccion : fechaCodificacion
-
+                                                                    const fechaBase = fechaConfeccion
                                                                     if (fechaBase) {
                                                                         const fecha = new Date(fechaBase + 'T00:00:00')
                                                                         fecha.setDate(fecha.getDate() + dias)
@@ -865,14 +862,10 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                                             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
                                                                 <DatePicker
                                                                     value={submuestra.fechaVencimiento ? new Date(submuestra.fechaVencimiento + 'T00:00:00') : null}
-                                                                    minDate={fechaCodificacion ? new Date(fechaCodificacion + 'T00:00:00') : undefined}
+                                                                    minDate={fechaConfeccion ? new Date(fechaConfeccion + 'T00:00:00') : undefined}
                                                                     onChange={(newValue) => {
                                                                         const nuevaFecha = newValue ? `${newValue.getFullYear()}-${String(newValue.getMonth() + 1).padStart(2, '0')}-${String(newValue.getDate()).padStart(2, '0')}` : ''
-                                                                        const areaObj = areas.find(a => a.id === area)
-                                                                        const familiaObj = todasLasFamilias.find(f => f.id === tipoServicio)
-                                                                        const isHormigonFresco = areaObj?.nombre?.toLowerCase() === 'hormigón' && familiaObj?.nombre?.toLowerCase() === 'hormigón fresco'
-                                                                        const fechaBase = isHormigonFresco ? fechaConfeccion : fechaCodificacion
-
+                                                                        const fechaBase = fechaConfeccion
                                                                         if (fechaBase && nuevaFecha) {
                                                                             const fechaBaseDate = new Date(fechaBase + 'T00:00:00')
                                                                             const fechaVenc = new Date(nuevaFecha + 'T00:00:00')
