@@ -36,8 +36,8 @@ interface CodigoCreationDialogProps {
     dialogAreaNombre: string
     dialogSkuSearch: string
     setDialogSkuSearch: (val: string) => void
-    dialogSkus: Array<{ sku: string; nombre: string; productoId: number }>
-    setDialogSkus: React.Dispatch<React.SetStateAction<Array<{ sku: string; nombre: string; productoId: number }>>>
+    dialogSkus: Array<{ sku: string; nombre: string; productoId: number; cantidad: number }>
+    setDialogSkus: React.Dispatch<React.SetStateAction<Array<{ sku: string; nombre: string; productoId: number; cantidad: number }>>>
     dialogDescripcionServicio: string
     setDialogDescripcionServicio: (val: string) => void
     dialogCantidad: number
@@ -87,18 +87,29 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                             <Typography variant='caption' sx={{ fontWeight: 700, color: 'primary.main', display: 'block', mb: 1 }}>
                                 RCMs a agrupar en este código
                             </Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                 {selectedRcmIds.map((id, idx) => {
                                     const rcm = savedRcms.find(r => r.id === id)
                                     const rcmNum = rcm?.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
-                                    const label = rcm?.tipoServicio ? `${rcmNum} - ${rcm.tipoServicio}` : rcmNum
                                     return (
-                                        <Chip
+                                        <Box
                                             key={id}
-                                            label={label}
-                                            size='small'
-                                            sx={{ bgcolor: 'white', border: '1px solid', borderColor: '#BFDBFE', color: 'text.primary', fontWeight: 500, fontSize: '0.78rem' }}
-                                        />
+                                            sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'white', border: '1px solid', borderColor: '#BFDBFE', borderRadius: '6px', px: 1, py: 0.5 }}
+                                        >
+                                            <Chip
+                                                label='MUE'
+                                                size='small'
+                                                sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 700, fontSize: '0.7rem', height: 24, '& .MuiChip-label': { px: 2 } }}
+                                            />
+                                            <Typography variant='body2' sx={{ fontWeight: 700, color: 'primary.main', fontFamily: 'monospace', fontSize: '0.82rem' }}>
+                                                {rcmNum}
+                                            </Typography>
+                                            <Typography variant='caption' sx={{ color: 'text.secondary', fontSize: '0.78rem' }} noWrap>
+                                                T:{rcm?.numeroTarjeta || '-'}
+                                                {rcm?.area ? ` ${rcm.area}` : ''}
+                                                {rcm?.tipoServicio ? ` ${rcm.tipoServicio}` : ''}
+                                            </Typography>
+                                        </Box>
                                     )
                                 })}
                             </Box>
@@ -206,7 +217,7 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                     {/* MODO: Crear nuevo código */}
                     {dialogMode === 'nuevo' && (
                         <>
-                            {/* Área + SKU Producto */}
+                            {/* Área + Descripción del Servicio */}
                             <Box sx={{ display: 'flex', gap: 2 }}>
                                 <Box sx={{ flex: 1 }}>
                                     <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
@@ -216,125 +227,132 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                 </Box>
                                 <Box sx={{ flex: 1 }}>
                                     <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
-                                        SKU Producto (opcional)
+                                        Descripción del Servicio
                                     </Typography>
                                     <TextField
                                         fullWidth size='small'
-                                        placeholder='Buscar SKU...'
-                                        value={dialogSkuSearch}
-                                        onChange={(e) => setDialogSkuSearch(e.target.value)}
-                                        onClick={onOpenSkuSearch}
-                                        inputProps={{ readOnly: true, style: { cursor: 'pointer' } }}
-                                        InputProps={{
-                                            startAdornment: <InputAdornment position='start'><SearchIcon fontSize='small' sx={{ color: 'text.disabled' }} /></InputAdornment>,
-                                            endAdornment: dialogSkuSearch ? (
-                                                <InputAdornment position='end'>
-                                                    <IconButton size='small' onClick={(e) => { e.stopPropagation(); setDialogSkuSearch('') }} sx={{ p: 0.25 }}>
-                                                        <CloseIcon fontSize='small' />
-                                                    </IconButton>
-                                                </InputAdornment>
-                                            ) : undefined
-                                        }}
+                                        placeholder='Ej: Dosificación G20 — 3 áridos'
+                                        value={dialogDescripcionServicio}
+                                        onChange={(e) => setDialogDescripcionServicio(e.target.value)}
                                     />
                                 </Box>
                             </Box>
 
-                            {/* Lista de SKUs agregados */}
+                            {/* Lista de SKUs agregados - Tabla */}
                             {dialogSkus.length > 0 && (
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                                    {/* Encabezado */}
+                                    <Box sx={{ display: 'flex', gap: 1, px: 1, pb: 0.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+                                        <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', width: 70 }}>SKU</Typography>
+                                        <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', flex: 1 }}>Nombre producto</Typography>
+                                        <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', width: 80, textAlign: 'center' }}>Cantidad</Typography>
+                                        <Box sx={{ width: 32 }} />
+                                    </Box>
+                                    {/* Filas */}
                                     {dialogSkus.map((item, idx) => (
                                         <Box
                                             key={idx}
                                             sx={{
-                                                display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75,
-                                                borderRadius: '6px', border: '1px solid', borderColor: 'divider', bgcolor: '#F8FAFC'
+                                                display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.5,
+                                                bgcolor: '#F8FAFC'
                                             }}
                                         >
-                                            <InventoryIcon sx={{ fontSize: 14, color: 'text.disabled', flexShrink: 0 }} />
-                                            <Typography variant='body2' sx={{ fontWeight: 700, fontFamily: 'monospace', color: 'primary.main', flexShrink: 0 }}>
-                                                {item.sku}
+                                            <Chip
+                                                label={item.sku}
+                                                size='small'
+                                                sx={{
+                                                    width: 70, justifyContent: 'center',
+                                                    bgcolor: '#EEF2FF', color: 'primary.main', fontWeight: 700,
+                                                    fontFamily: 'monospace', fontSize: '0.75rem', height: 24,
+                                                    '& .MuiChip-label': { px: 1 }
+                                                }}
+                                            />
+                                            <Typography variant='body2' color='text.secondary' noWrap sx={{ flex: 1, fontSize: '0.85rem' }}>
+                                                {item.nombre}
                                             </Typography>
-                                            {item.nombre !== item.sku && (
-                                                <Typography variant='body2' color='text.secondary' noWrap sx={{ flex: 1 }}>
-                                                    {item.nombre}
-                                                </Typography>
-                                            )}
+                                            <TextField
+                                                type='number'
+                                                size='small'
+                                                value={item.cantidad}
+                                                onChange={(e) => {
+                                                    const newCantidad = Math.max(1, parseInt(e.target.value) || 1)
+                                                    setDialogSkus(prev => prev.map((s, i) => i === idx ? { ...s, cantidad: newCantidad } : s))
+                                                }}
+                                                inputProps={{ min: 1, style: { textAlign: 'center', padding: '4px 8px' } }}
+                                                sx={{ width: 80, '& .MuiOutlinedInput-root': { height: 28 } }}
+                                            />
                                             <IconButton
                                                 size='small'
                                                 onClick={() => setDialogSkus(prev => prev.filter((_, i) => i !== idx))}
-                                                sx={{ ml: 'auto', p: 0.25, flexShrink: 0 }}
+                                                disableRipple
+                                                sx={{ width: 32, color: '#EF4444', p: 0.25, '&:hover': { bgcolor: 'transparent' } }}
                                             >
-                                                <CloseIcon sx={{ fontSize: 14 }} />
+                                                <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, lineHeight: 1 }}>×</Typography>
                                             </IconButton>
                                         </Box>
                                     ))}
                                 </Box>
                             )}
 
-                            {/* Descripción del Servicio */}
+                            {/* Buscador SKU Producto */}
                             <Box>
                                 <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
-                                    Descripción del Servicio
+                                    SKU Producto (opcional)
                                 </Typography>
                                 <TextField
                                     fullWidth size='small'
-                                    placeholder='Ej: Dosificación G20 — 3 áridos'
-                                    value={dialogDescripcionServicio}
-                                    onChange={(e) => setDialogDescripcionServicio(e.target.value)}
+                                    placeholder='Buscar SKU...'
+                                    value={dialogSkuSearch}
+                                    onChange={(e) => setDialogSkuSearch(e.target.value)}
+                                    onClick={onOpenSkuSearch}
+                                    inputProps={{ readOnly: true, style: { cursor: 'pointer' } }}
+                                    InputProps={{
+                                        startAdornment: <InputAdornment position='start'><SearchIcon fontSize='small' sx={{ color: 'text.disabled' }} /></InputAdornment>,
+                                        endAdornment: dialogSkuSearch ? (
+                                            <InputAdornment position='end'>
+                                                <IconButton size='small' onClick={(e) => { e.stopPropagation(); setDialogSkuSearch('') }} sx={{ p: 0.25 }}>
+                                                    <CloseIcon fontSize='small' />
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ) : undefined
+                                    }}
                                 />
                             </Box>
 
-                            {/* Cantidad + Modo de Facturación */}
-                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                                <Box sx={{ flex: 1 }}>
-                                    <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
-                                        Cantidad (unidades a facturar)
-                                    </Typography>
-                                    <TextField
-                                        fullWidth size='small' type='number'
-                                        value={dialogCantidad}
-                                        onChange={(e) => setDialogCantidad(Math.max(1, parseInt(e.target.value) || 1))}
-                                        inputProps={{ min: 1 }}
-                                    />
-                                </Box>
-                                <Box sx={{ flex: 1 }}>
-                                    <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
-                                        Modo de Facturación
-                                    </Typography>
-                                    <Box sx={{
-                                        display: 'flex', alignItems: 'center', gap: 1, height: 40, px: 1.5, borderRadius: '8px',
-                                        border: '1px solid',
-                                        borderColor: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? '#FDE68A' : 'divider',
-                                        bgcolor: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? '#FEF3C7' : '#F9FAFB',
-                                        transition: 'all 0.2s ease'
-                                    }}>
-                                        <Box sx={{
-                                            width: 8, height: 8, borderRadius: '50%',
-                                            bgcolor: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? '#D97706' : 'primary.main',
-                                            flexShrink: 0, transition: 'background-color 0.2s ease'
-                                        }} />
-                                        <Typography variant='body2' sx={{
-                                            fontWeight: 600,
-                                            color: (dialogSkus.length > 0 || dialogSkuSearch.trim()) ? '#D97706' : 'primary.main',
-                                            fontSize: '0.8rem', transition: 'color 0.2s ease'
-                                        }}>
-                                            {(dialogSkus.length > 0 || dialogSkuSearch.trim())
-                                                ? 'Fijo — SKU \u00d7 Cantidad'
-                                                : 'Unitario — P\u00d7Q por ensayos'
-                                            }
+                            {/* Mensaje informativo según modo */}
+                            {dialogSkus.length > 0 ? (
+                                <Box sx={{ bgcolor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', p: 1.5 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                        <Chip
+                                            label='Modo Fijo'
+                                            size='small'
+                                            sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 700, fontSize: '0.72rem', height: 24, '& .MuiChip-label': { px: 2.25 } }}
+                                        />
+                                        <Typography variant='body2' sx={{ fontWeight: 700, color: 'primary.main', fontSize: '0.85rem' }}>
+                                            Cobro por SKU × Cantidad
                                         </Typography>
                                     </Box>
+                                    <Typography variant='caption' sx={{ color: 'text.secondary', lineHeight: 1.5, display: 'block' }}>
+                                        La minuta usará el precio unitario de cada SKU aquí definido, multiplicado por su cantidad. No se desglosan los ensayos del RCM.
+                                    </Typography>
                                 </Box>
-                            </Box>
-
-                            {/* Nota informativa */}
-                            <Box sx={{ bgcolor: '#FFFDE7', border: '1px solid #FFF176', borderRadius: '8px', p: 1.5, display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                                <Typography sx={{ fontSize: '1rem', lineHeight: 1.3 }}>💡</Typography>
-                                <Typography variant='caption' sx={{ color: 'text.secondary', lineHeight: 1.5 }}>
-                                    Si dejas el SKU vacío, la minuta calculará el cobro sumando los ensayos individuales de cada RCM (modo P×Q).
-                                    Si asignas un SKU, el cobro será precio del SKU × cantidad.
-                                </Typography>
-                            </Box>
+                            ) : (
+                                <Box sx={{ bgcolor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', p: 1.5 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                        <Chip
+                                            label='Modo P×Q'
+                                            size='small'
+                                            sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 700, fontSize: '0.72rem', height: 24, '& .MuiChip-label': { px: 2.25 } }}
+                                        />
+                                        <Typography variant='body2' sx={{ fontWeight: 700, color: 'primary.main', fontSize: '0.85rem' }}>
+                                            Cobro por detalle de ensayos en cada RCM
+                                        </Typography>
+                                    </Box>
+                                    <Typography variant='caption' sx={{ color: 'text.secondary', lineHeight: 1.5, display: 'block' }}>
+                                        La minuta sumará cada ensayo/servicio declarado en los RCMs vinculados, por su precio unitario y cantidad. Se activa automáticamente si no se define ningún SKU.
+                                    </Typography>
+                                </Box>
+                            )}
                         </>
                     )}
                 </Box>

@@ -40,7 +40,7 @@ export function useCodigoAgrupador({
     const [newCodigoDescripcion, setNewCodigoDescripcion] = useState('')
     const [newCodigoTipo, setNewCodigoTipo] = useState('')
     const [dialogSkuSearch, setDialogSkuSearch] = useState('')
-    const [dialogSkus, setDialogSkus] = useState<Array<{ sku: string; nombre: string; productoId: number }>>([])
+    const [dialogSkus, setDialogSkus] = useState<Array<{ sku: string; nombre: string; productoId: number; cantidad: number }>>([])
     const [dialogDescripcionServicio, setDialogDescripcionServicio] = useState('')
     const [dialogCantidad, setDialogCantidad] = useState<number>(1)
     const [dialogMode, setDialogMode] = useState<'nuevo' | 'existente'>('nuevo')
@@ -302,7 +302,7 @@ export function useCodigoAgrupador({
 
     const handleSelectProductForSku = (producto: ProductoType) => {
         const sku = producto.sku || producto.nombre
-        setDialogSkus(prev => prev.some(s => s.sku === sku) ? prev : [...prev, { sku, nombre: producto.nombre, productoId: producto.id }])
+        setDialogSkus(prev => prev.some(s => s.sku === sku) ? prev : [...prev, { sku, nombre: producto.nombre, productoId: producto.id, cantidad: 1 }])
         setDialogSkuSearch('')
         handleCloseSkuSearch()
     }
