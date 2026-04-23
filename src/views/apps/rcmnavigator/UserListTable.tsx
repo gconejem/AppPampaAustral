@@ -2,6 +2,7 @@
 
 // ...existing code...
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRef } from 'react'
 
 // NextAuth
 import { useSession } from 'next-auth/react'
@@ -19,7 +20,8 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
-  type FilterFn
+  type FilterFn,
+  type SortingState
 } from '@tanstack/react-table'
 
 // MUI Imports
@@ -60,8 +62,11 @@ import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined'
 import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined'
 import Popover from '@mui/material/Popover'
 import Radio from '@mui/material/Radio'
+
+import * as XLSX from 'xlsx'
 
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
@@ -99,6 +104,37 @@ function normalizeText(v: any) {
   } catch {
     return ''
   }
+}
+
+const esCollator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' })
+
+const toSortableText = (v: any) => normalizeText(v).toLowerCase()
+
+const compareText = (a: any, b: any) => {
+  const aa = toSortableText(a)
+  const bb = toSortableText(b)
+  if (!aa && !bb) return 0
+  if (!aa) return 1
+  if (!bb) return -1
+  return esCollator.compare(aa, bb)
+}
+
+const toSortableNumber = (v: any): number | null => {
+  if (v === null || typeof v === 'undefined') return null
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null
+  const s = String(v).trim()
+  if (!s || s === '-') return null
+  const n = Number(s)
+  return Number.isFinite(n) ? n : null
+}
+
+const compareNumber = (a: any, b: any) => {
+  const na = toSortableNumber(a)
+  const nb = toSortableNumber(b)
+  if (na == null && nb == null) return 0
+  if (na == null) return 1
+  if (nb == null) return -1
+  return na === nb ? 0 : na > nb ? 1 : -1
 }
 
 const DebouncedInput = ({
@@ -228,7 +264,7 @@ const UserListTable2 = ({
 }: {
   filters?: Filters
   onFiltersChange?: (filters?: Filters) => void
-  onSelectCodigo?: (codigoAgrupadorId: number) => void
+  onSelectCodigo?: (codigoAgrupadorId: number | null) => void
 }) => {
   const { data: session } = useSession()
 
@@ -246,6 +282,8 @@ const UserListTable2 = ({
   const [filteredData, setFilteredData] = useState<RCM[]>([])
   const [loading, setLoading] = useState(true)
   const [globalFilter, setGlobalFilter] = useState('')
+  const [selectedCodigoId, setSelectedCodigoId] = useState<number | null>(null)
+  const tableKeyboardRef = useRef<HTMLDivElement | null>(null)
   const [savingHistory, setSavingHistory] = useState(false)
   const [formErrors, setFormErrors] = useState<{
     eventType?: string
@@ -464,6 +502,7 @@ const UserListTable2 = ({
   const [informeDialogMeta, setInformeDialogMeta] = useState<any>(null)
   const [informeDialogData, setInformeDialogData] = useState<any>(null)
   const [informeDialogHistory, setInformeDialogHistory] = useState<any[]>([])
+  const [hideEnsayosByRcm, setHideEnsayosByRcm] = useState(false)
 
   const AUTO_TEMPLATES = [
     { key: 'DENSIDAD', label: 'Informe Densidad' },
@@ -546,6 +585,7 @@ const UserListTable2 = ({
     setAutoInformeExisting({ DENSIDAD: null, HORMIGON: null })
     setAutoInformeDrafts({ DENSIDAD: { ...emptyDraft }, HORMIGON: { ...emptyDraft } })
     setInformeDialogErrors({})
+    setHideEnsayosByRcm(false)
     setInformeDialogOpen(true)
 
     if (!codigoAgrupadorId) return
@@ -554,7 +594,7 @@ const UserListTable2 = ({
       setInformeDialogLoading(true)
 
       const detailPromise = codigoAgrupadorId
-        ? fetch(`/api/codigo-agrupador/${codigoAgrupadorId}?view=skus`).then(async res => {
+        ? fetch(`/api/codigo-agrupador/${codigoAgrupadorId}`, { cache: 'no-store' }).then(async res => {
             if (!res.ok) {
               const txt = await res.text().catch(() => '')
               throw new Error(txt || 'No se pudo cargar el detalle del código')
@@ -615,6 +655,7 @@ const UserListTable2 = ({
     setAutoInformeExisting({ DENSIDAD: null, HORMIGON: null })
     setAutoInformeDrafts({ DENSIDAD: { ...emptyDraft }, HORMIGON: { ...emptyDraft } })
     setInformeDialogErrors({})
+    setHideEnsayosByRcm(false)
   }
 
   const parseInformeNumber = (raw: any) => {
@@ -1702,6 +1743,17 @@ const UserListTable2 = ({
     return new Date(d.getFullYear(), d.getMonth(), d.getDate())
   }
 
+  const compareDateOnly = (aRaw: any, bRaw: any) => {
+    const a = toDateOnly(aRaw)
+    const b = toDateOnly(bRaw)
+    const at = a ? a.getTime() : null
+    const bt = b ? b.getTime() : null
+    if (at == null && bt == null) return 0
+    if (at == null) return 1
+    if (bt == null) return -1
+    return at === bt ? 0 : at > bt ? 1 : -1
+  }
+
   // helper: formatear fecha a DD/MM/AAAA (ahora incluye HH:MM:SS)
   const formatDateDDMMYYYY = (v: any) => {
     if (!v) return '-'
@@ -1933,18 +1985,37 @@ const UserListTable2 = ({
     setFilteredData(result)
   }
 
+  const opStateOrder = useMemo(() => {
+    const map = new Map<string, number>()
+    OPERATIONAL_STATES.forEach((s, idx) => {
+      if (s?.value) map.set(String(s.value).trim().toUpperCase(), idx)
+    })
+    return map
+  }, [])
+
+  const adminStateOrder = useMemo(() => {
+    const map = new Map<string, number>()
+    ;(ADMINISTRATIVE_STATES ?? []).forEach((s: any, idx: number) => {
+      const key = String(s?.value ?? '').trim().toUpperCase()
+      if (key) map.set(key, idx)
+    })
+    return map
+  }, [])
+
   const columns = useMemo((): ColumnDef<RCM>[] => {
     return [
       {
         id: 'codigo',
         header: 'CÓDIGO',
         accessorFn: r => r.codigoNombre ?? r.numeroRcm,
+        sortingFn: (rowA, rowB, columnId) => compareText(rowA.getValue(columnId), rowB.getValue(columnId)),
         cell: ({ row }) => <Typography variant='body2' sx={{ fontWeight: 700 }}>{row.original.codigoNombre ?? row.original.numeroRcm}</Typography>
       },
       {
         id: 'ot',
         header: 'OT',
         accessorKey: 'ot',
+        sortingFn: (rowA, rowB, columnId) => compareText(rowA.getValue(columnId), rowB.getValue(columnId)),
         cell: ({ row }) => <Typography variant='body2'>{row.original.ot ?? '-'}</Typography>
       },
       {
@@ -1952,11 +2023,7 @@ const UserListTable2 = ({
         header: 'FECHA COD.',
         accessorKey: 'fechaCodificacion',
         sortingFn: (rowA, rowB, columnId) => {
-          const aRaw = rowA.getValue(columnId) as any
-          const bRaw = rowB.getValue(columnId) as any
-          const aTime = aRaw ? new Date(aRaw).getTime() : 0
-          const bTime = bRaw ? new Date(bRaw).getTime() : 0
-          return aTime === bTime ? 0 : aTime > bTime ? 1 : -1
+          return compareDateOnly(rowA.getValue(columnId) as any, rowB.getValue(columnId) as any)
         },
         sortDescFirst: true,
         cell: ({ row }) => <span>{formatDateDDMMYYYYDateOnly(row.original.fechaCodificacion)}</span>
@@ -1974,6 +2041,7 @@ const UserListTable2 = ({
           const parts = [cliente, obra].map(v => String(v ?? '').trim()).filter(Boolean)
           return parts.length ? parts.join(' - ') : '-'
         },
+        sortingFn: (rowA, rowB, columnId) => compareText(rowA.getValue(columnId), rowB.getValue(columnId)),
         cell: ({ row }) => {
           const cliente =
             row.original.cliente?.nombreCliente ??
@@ -2016,12 +2084,6 @@ const UserListTable2 = ({
         }
       },
       {
-        id: 'ciudad',
-        header: 'CIUDAD',
-        accessorFn: r => r.ciudad ?? r.cliente?.comuna ?? (r as any).comuna ?? '-',
-        cell: ({ row }) => <Typography variant='body2'>{(row.getValue('ciudad') as string) ?? '-'}</Typography>
-      },
-      {
         id: 'areaServicio',
         header: 'ÁREA - SERVICIO',
         accessorFn: r => {
@@ -2030,6 +2092,7 @@ const UserListTable2 = ({
           const parts = [area, servicio].filter(Boolean)
           return parts.length ? parts.join(' - ') : '-'
         },
+        sortingFn: (rowA, rowB, columnId) => compareText(rowA.getValue(columnId), rowB.getValue(columnId)),
         cell: ({ row }) => {
           const areaText = String(row.original.area ?? '').trim()
           const servicioText = String(row.original.familia ?? '').trim()
@@ -2055,22 +2118,43 @@ const UserListTable2 = ({
       {
         id: 'totalRcms',
         header: '# RCMS',
-        accessorKey: 'totalRcms',
+        accessorFn: r => Number(r.totalRcms ?? 0),
+        sortingFn: (rowA, rowB, columnId) => compareNumber(rowA.getValue(columnId), rowB.getValue(columnId)),
+        sortDescFirst: true,
         cell: ({ row }) => <span>{row.original.totalRcms ?? 0}</span>
       },
       {
         id: 'informe',
         header: 'N° INFORME',
-        accessorKey: 'informe',
+        accessorFn: r => (r.informe == null ? null : Number(r.informe)),
+        sortingFn: (rowA, rowB, columnId) => compareNumber(rowA.getValue(columnId), rowB.getValue(columnId)),
+        sortDescFirst: true,
         cell: ({ row }) => <span>{row.original.informe ?? '-'}</span>
       },
       {
         id: 'estOp',
         header: 'EST. OPERATIVO',
         accessorKey: 'estadoOperativo',
+        sortingFn: (rowA, rowB, columnId) => {
+          const aRaw = rowA.getValue(columnId) as any
+          const bRaw = rowB.getValue(columnId) as any
+          const aKey = normalizeStateKey(aRaw) ?? String(aRaw ?? '').trim().toUpperCase()
+          const bKey = normalizeStateKey(bRaw) ?? String(bRaw ?? '').trim().toUpperCase()
+          const ai = aKey ? opStateOrder.get(aKey) : null
+          const bi = bKey ? opStateOrder.get(bKey) : null
+          if (ai == null && bi == null) return compareText(aKey, bKey)
+          if (ai == null) return 1
+          if (bi == null) return -1
+          return ai === bi ? 0 : ai > bi ? 1 : -1
+        },
         cell: ({ row }) => {
           const opRaw = row.original.estadoOperativo ?? null
-          const opLabel = opRaw ? (OPERATIONAL_STATES.find(s => s.value === opRaw)?.label ?? opRaw) : '-'
+          const opLabel = (() => {
+            if (!opRaw) return '-'
+            const opKey = normalizeStateKey(opRaw) ?? String(opRaw ?? '').trim().toUpperCase()
+            if (opKey === 'ENVIADO_DIGITACION') return 'Env. Digitación'
+            return OPERATIONAL_STATES.find(s => s.value === opKey)?.label ?? opRaw
+          })()
           const info = getOperationalInfo(opRaw ?? undefined)
 
           const hasEvento = Boolean((row.original as any).conEvento)
@@ -2151,8 +2235,83 @@ const UserListTable2 = ({
         }
       },
       {
+        id: 'estAd',
+        header: 'EST. ADMINISTRATIVO',
+        accessorKey: 'estadoAdministrativo',
+        sortingFn: (rowA, rowB, columnId) => {
+          const aRaw = rowA.getValue(columnId) as any
+          const bRaw = rowB.getValue(columnId) as any
+          const aKey = normalizeStateKey(aRaw) ?? String(aRaw ?? '').trim().toUpperCase()
+          const bKey = normalizeStateKey(bRaw) ?? String(bRaw ?? '').trim().toUpperCase()
+          const ai = aKey ? adminStateOrder.get(aKey) : null
+          const bi = bKey ? adminStateOrder.get(bKey) : null
+          if (ai == null && bi == null) return compareText(aKey, bKey)
+          if (ai == null) return 1
+          if (bi == null) return -1
+          return ai === bi ? 0 : ai > bi ? 1 : -1
+        },
+        cell: ({ row }) => {
+          const adRaw = row.original.estadoAdministrativo ?? null
+          if (!adRaw) {
+            return (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <Chip
+                  label='-'
+                  size='small'
+                  variant='filled'
+                  sx={{
+                    bgcolor: 'rgba(0,0,0,0.06)',
+                    color: 'rgba(0,0,0,0.65)',
+                    textTransform: 'uppercase',
+                    fontWeight: 700,
+                    fontSize: '0.72rem',
+                    borderRadius: 2,
+                    px: 1,
+                    py: 0.4,
+                    minWidth: 84,
+                    justifyContent: 'center'
+                  }}
+                />
+              </Box>
+            )
+          }
+
+          const adKey = normalizeStateKey(adRaw) ?? String(adRaw ?? '').trim().toUpperCase()
+          const adLabel =
+            (ADMINISTRATIVE_STATES ?? []).find((s: any) => String(s?.value ?? '').trim().toUpperCase() === adKey)?.label ??
+            String(adRaw)
+
+          const info = getAdministrativeInfo(adRaw ?? undefined)
+
+          return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <Chip
+                label={adLabel}
+                title={info.hex ?? ''}
+                size='small'
+                variant='filled'
+                sx={{
+                  bgcolor: info.bgcolor,
+                  color: info.colorText,
+                  border: `1px solid ${info.border}`,
+                  textTransform: 'uppercase',
+                  fontWeight: 700,
+                  fontSize: '0.72rem',
+                  borderRadius: 2,
+                  px: 1,
+                  py: 0.4,
+                  minWidth: 84,
+                  justifyContent: 'center'
+                }}
+              />
+            </Box>
+          )
+        }
+      },
+      {
         id: 'acciones',
         header: 'ACCIONES',
+        enableSorting: false,
         cell: ({ row }) => (
           <Box onClick={e => e.stopPropagation()} sx={{ display: 'inline-flex', justifyContent: 'center' }}>
             <IconButton
@@ -2225,7 +2384,9 @@ const UserListTable2 = ({
         )
       }
     ]
-  }, [onSelectCodigo])
+  }, [adminStateOrder, opStateOrder, onSelectCodigo])
+
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'fechaCod', desc: true }])
 
   const searchedData = useMemo(() => {
     const q = String(globalFilter ?? '').toLowerCase().trim()
@@ -2250,6 +2411,39 @@ const UserListTable2 = ({
     )
   }, [filteredData, globalFilter])
 
+  // click fuera de la tabla => limpiar selección
+  useEffect(() => {
+    const onMouseDown = (ev: MouseEvent) => {
+      if (selectedCodigoId == null) return
+
+      const target = ev.target as HTMLElement | null
+      if (!target) return
+
+      // si el click ocurre dentro del panel de detalle inferior, no limpiar
+      if (target.closest('[data-rcmnav-detail]')) return
+
+      // si el click ocurre dentro de un menú/popover/modal (portal), no limpiar
+      if (target.closest('.MuiPopover-root') || target.closest('.MuiMenu-root') || target.closest('.MuiModal-root')) return
+
+      const root = tableKeyboardRef.current
+      if (!root) return
+      if (root.contains(target)) return
+
+      setSelectedCodigoId(null)
+      onSelectCodigo?.(null)
+    }
+
+    window.addEventListener('mousedown', onMouseDown, true)
+    return () => window.removeEventListener('mousedown', onMouseDown, true)
+  }, [selectedCodigoId, onSelectCodigo])
+
+  // si el elemento seleccionado ya no está en la data visible (por filtros/búsqueda), limpiar selección
+  useEffect(() => {
+    if (selectedCodigoId == null) return
+    const exists = searchedData.some(it => Number((it as any).id) === selectedCodigoId)
+    if (!exists) setSelectedCodigoId(null)
+  }, [searchedData, selectedCodigoId])
+
   const table = useReactTable({
     data: searchedData,
     columns,
@@ -2257,14 +2451,82 @@ const UserListTable2 = ({
       fuzzy: fuzzyFilter,
       global: fuzzyFilter
     } as any,
-    initialState: {
-      sorting: [{ id: 'fechaCod', desc: true }]
-    },
+    state: { sorting },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel()
   })
+
+  const exportFilteredToExcel = useCallback(() => {
+    const rows = table.getPrePaginationRowModel().rows
+
+    const dataToExport = rows.map(r => {
+      const item = r.original as RCM
+
+      const codigo = (item.codigoNombre ?? item.numeroRcm ?? '').toString().trim()
+      const ot = (item.ot ?? '').toString().trim()
+      const fechaCod = formatDateDDMMYYYYDateOnly(item.fechaCodificacion)
+
+      const cliente =
+        item.cliente?.nombreCliente ??
+        (item as any).clienteNombre ??
+        (item as any).nombreCliente ??
+        (typeof (item as any).cliente === 'string' ? (item as any).cliente : null) ??
+        ''
+
+      const obra = item.obra?.numeroObra ?? item.obra?.nombreObra ?? ''
+
+      const clienteObraParts = [String(cliente ?? '').trim(), obra ? `Obra ${String(obra).trim()}` : ''].filter(Boolean)
+      const clienteObra = clienteObraParts.length ? clienteObraParts.join(' - ') : ''
+
+      const ciudad = (item.ciudad ?? item.cliente?.comuna ?? (item as any).comuna ?? '').toString().trim()
+
+      const area = String(item.area ?? '').trim()
+      const servicio = String(item.familia ?? '').trim()
+      const areaServicio = [area, servicio].filter(Boolean).join(' - ')
+
+      const totalRcms = item.totalRcms ?? 0
+      const informe = item.informe ?? ''
+
+      const opRaw = item.estadoOperativo ?? ''
+      const opLabel = opRaw ? (OPERATIONAL_STATES.find(s => s.value === opRaw)?.label ?? opRaw) : ''
+
+      return {
+        'CÓDIGO': codigo,
+        OT: ot,
+        'FECHA COD.': fechaCod,
+        'CLIENTE - OBRA': clienteObra,
+        CIUDAD: ciudad,
+        'ÁREA - SERVICIO': areaServicio,
+        '# RCMS': totalRcms,
+        'N° INFORME': informe,
+        'EST. OPERATIVO': opLabel,
+        'CON EVENTO': (item as any).conEvento ? 'Sí' : 'No'
+      }
+    })
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Navegador')
+
+    worksheet['!cols'] = [
+      { wch: 18 },
+      { wch: 10 },
+      { wch: 14 },
+      { wch: 55 },
+      { wch: 18 },
+      { wch: 28 },
+      { wch: 8 },
+      { wch: 12 },
+      { wch: 18 },
+      { wch: 10 }
+    ]
+
+    const today = new Date().toISOString().split('T')[0]
+    XLSX.writeFile(workbook, `Navegador_RCM_${today}.xlsx`)
+  }, [table])
 
 
   // Indicadores del dashboard: NO deben verse afectados por filtros de estado.
@@ -2282,7 +2544,7 @@ const UserListTable2 = ({
           .toString()
           .normalize?.('NFD')
           ?.replace(/[\u0300-\u036f]/g, '')
-          .toLowerCase() ?? String(raw).toLowerCase()
+          ?.toLowerCase() ?? String(raw ?? '').toLowerCase()
       const byLabel = OPERATIONAL_STATES.find(
         s =>
           (s.label ?? '')
@@ -2350,8 +2612,7 @@ const UserListTable2 = ({
     const indicatorRows = filterRowsForNavigator(data, filters, { ignoreOperational: true, ignoreAdministrative: true })
 
     for (const d of indicatorRows) {
-      const opRaw =
-        d.estadoOperativo ?? (Array.isArray(d.servicios) && d.servicios.length ? ((d.servicios[0] as any).estado ?? '') : '') ?? ''
+      const opRaw = d.estadoOperativo ?? (Array.isArray(d.servicios) && d.servicios.length ? ((d.servicios[0] as any).estado ?? '') : '')
       const opVal = normOp(opRaw)
 
       if (Object.prototype.hasOwnProperty.call(byState, opVal)) {
@@ -2439,7 +2700,13 @@ const UserListTable2 = ({
       <Divider />
 
       {/* ROW: Dashboard indicadores (fila superior) */}
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', p: 2 }}>
+      <Box sx={{ px: 2, pt: 1.25, pb: 0.75 }}>
+        <Typography variant='overline' sx={{ fontWeight: 800, letterSpacing: 0.9, color: 'text.secondary' }}>
+          INDICADORES DE AVANCE — CÓDIGOS PRODUCTO
+        </Typography>
+      </Box>
+
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', px: 2, pb: 2 }}>
         {[
           {
             key: 'CODIFICADO',
@@ -2542,8 +2809,18 @@ const UserListTable2 = ({
 
       <Divider />
 
-      {/* Toolbar row: Buscar */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', p: 2, gap: 2 }}>
+      {/* Toolbar row: Buscar + Exportar */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, gap: 2, flexWrap: 'wrap' }}>
+        <Button
+          variant='outlined'
+          size='small'
+          startIcon={<FileDownloadOutlinedIcon />}
+          disabled={table.getPrePaginationRowModel().rows.length === 0}
+          onClick={exportFilteredToExcel}
+        >
+          Exportar Excel
+        </Button>
+
         <Box sx={{ width: 300 }}>
           <DebouncedInput
             value={globalFilter}
@@ -2559,14 +2836,69 @@ const UserListTable2 = ({
 
       <Divider />
 
-      <div className='overflow-x-auto'>
+      <Box
+        ref={tableKeyboardRef}
+        className='overflow-x-auto'
+        tabIndex={0}
+        onKeyDown={e => {
+          if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+
+          const rows = table.getRowModel().rows
+          if (!rows.length) return
+
+          const currentIndex = selectedCodigoId == null ? -1 : rows.findIndex(r => Number((r.original as any).id) === selectedCodigoId)
+          const nextIndex =
+            e.key === 'ArrowDown'
+              ? Math.min((currentIndex < 0 ? 0 : currentIndex + 1), rows.length - 1)
+              : Math.max((currentIndex < 0 ? 0 : currentIndex - 1), 0)
+
+          const next = rows[nextIndex]
+          const nextId = next ? Number((next.original as any).id) : null
+          if (!next || !Number.isFinite(nextId) || (nextId as number) <= 0) return
+
+          e.preventDefault()
+          e.stopPropagation()
+
+          setSelectedCodigoId(nextId as number)
+          onSelectCodigo?.(nextId as number)
+        }}
+        sx={theme => ({
+          '--rcmnav-selected-row-bg': alpha(theme.palette.primary.main, 0.08) as any,
+          outline: 'none',
+          borderRadius: 1,
+          '&:focus-visible': {
+            boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.25)}`
+          }
+        })}
+      >
         <table className={tableStyles.table}>
           <thead>
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map(header => (
-                  <th key={header.id} style={{ textAlign: 'center' }}>
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  <th
+                    key={header.id}
+                    onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
+                    style={{
+                      textAlign: 'center',
+                      cursor: header.column.getCanSort() ? 'pointer' : 'default',
+                      userSelect: 'none'
+                    }}
+                  >
+                    {header.isPlaceholder ? null : (
+                      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                        <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                        {(() => {
+                          const s = header.column.getIsSorted()
+                          if (!s) return null
+                          return (
+                            <Typography component='span' variant='caption' sx={{ fontWeight: 900, lineHeight: 1 }}>
+                              {s === 'asc' ? '▲' : '▼'}
+                            </Typography>
+                          )
+                        })()}
+                      </Box>
+                    )}
                   </th>
                 ))}
               </tr>
@@ -2577,9 +2909,21 @@ const UserListTable2 = ({
               <tr
                 key={row.id}
                 onClick={() => {
-                  onSelectCodigo?.(row.original.id)
+                  const id = Number((row.original as any).id)
+                  if (Number.isFinite(id) && id > 0) {
+                    setSelectedCodigoId(id)
+                    onSelectCodigo?.(id)
+                  }
+                  // dar foco al contenedor para permitir navegación con teclado inmediatamente
+                  tableKeyboardRef.current?.focus()
                 }}
-                style={{ cursor: onSelectCodigo ? 'pointer' : 'default' }}
+                style={{
+                  cursor: onSelectCodigo ? 'pointer' : 'default',
+                  backgroundColor:
+                    selectedCodigoId != null && Number((row.original as any).id) === selectedCodigoId
+                      ? ('var(--rcmnav-selected-row-bg)' as any)
+                      : undefined
+                }}
               >
                 {row.getVisibleCells().map(cell => (
                   <td key={cell.id} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
@@ -2590,7 +2934,7 @@ const UserListTable2 = ({
             ))}
           </tbody>
         </table>
-      </div>
+      </Box>
 
       <TablePagination
         rowsPerPageOptions={[10, 25, 50]}
@@ -3248,6 +3592,172 @@ const UserListTable2 = ({
           </Paper>
 
           {(() => {
+            const detailRcms = Array.isArray(informeDialogData?.rcms) ? (informeDialogData?.rcms ?? []) : []
+            const metaRcms: string[] = Array.isArray(informeDialogMeta?.rcmNumeros)
+              ? (informeDialogMeta?.rcmNumeros ?? []).map((x: any) => String(x ?? '').trim()).filter(Boolean)
+              : []
+
+            const digitales = detailRcms.length || metaRcms.length
+            if (!digitales) return null
+
+            const rcms = detailRcms.length ? detailRcms : metaRcms.map(n => ({ numeroRcm: n }))
+
+            return (
+              <Paper
+                variant='outlined'
+                sx={theme => ({
+                  p: 2,
+                  mb: 2,
+                  borderColor: alpha(theme.palette.primary.main, 0.22),
+                  bgcolor: alpha(theme.palette.primary.main, 0.03)
+                })}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                    <Typography variant='subtitle2' sx={{ fontWeight: 900 }}>
+                      Este CP generará:
+                    </Typography>
+                    <Chip
+                      size='small'
+                      variant='outlined'
+                      label={`${digitales} digitales`}
+                      sx={theme => ({
+                        fontWeight: 900,
+                        color: theme.palette.primary.main,
+                        borderColor: alpha(theme.palette.primary.main, 0.5),
+                        bgcolor: alpha(theme.palette.primary.main, 0.08)
+                      })}
+                    />
+                  </Box>
+
+                  <Button
+                    size='small'
+                    variant='outlined'
+                    onClick={() => setHideEnsayosByRcm(v => !v)}
+                    sx={{ textTransform: 'none', borderRadius: 2, whiteSpace: 'nowrap' }}
+                  >
+                    {hideEnsayosByRcm ? 'Ver ensayos por RCM' : 'Ocultar ensayos por RCM'}
+                  </Button>
+                </Box>
+
+                {informeDialogLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                    <CircularProgress size={22} />
+                  </Box>
+                ) : hideEnsayosByRcm ? null : (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 1 }}>
+                    {rcms.map((r: any, idx: number) => {
+                      const numero = String(r?.numeroRcm ?? '').trim()
+                      const rcmType = String(r?.rcmType ?? '').trim()
+                      const tarjeta = String(r?.numeroTarjeta ?? '').trim()
+
+                      const details = [r?.tipoMaterial, r?.tomaMuestra ?? r?.procedencia ?? r?.item, r?.ubicacionSector]
+                        .map(v => String(v ?? '').trim())
+                        .filter(Boolean)
+                        .join(' ')
+
+                      const opKey = normalizeStateKey(r?.estadoOperativo) ?? null
+                      const opLabel = (() => {
+                        if (!opKey) return ''
+                        const hit = OPERATIONAL_STATES.find(s => s.value === opKey)
+                        return hit?.label ?? formatStateForChip(opKey)
+                      })()
+                      const opInfo = getOperationalInfo(opKey ?? undefined)
+
+                      const servicios = Array.isArray(r?.servicios) ? (r.servicios as any[]) : []
+                      const ensayos = servicios
+                        .map(s => ({
+                          nombre: String(s?.nombre ?? '').trim(),
+                          estado: normalizeStateKey(s?.estadoOperativo ?? s?.estado) ?? null
+                        }))
+                        .filter(e => e.nombre)
+
+                      return (
+                        <Box
+                          key={String(r?.id != null ? r.id : numero ? numero : idx)}
+                          sx={theme => ({
+                            p: 1.25,
+                            borderRadius: 1.5,
+                            border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
+                            bgcolor: alpha(theme.palette.common.white, 0.55)
+                          })}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                <Typography variant='subtitle2' sx={{ fontWeight: 900 }}>
+                                  {numero || '-'}
+                                </Typography>
+
+                                {rcmType ? <Chip size='small' label={rcmType.toUpperCase()} sx={{ fontWeight: 800 }} /> : null}
+
+                                {tarjeta ? (
+                                  <Chip size='small' variant='outlined' label={`T: ${tarjeta}`} sx={{ fontWeight: 900 }} />
+                                ) : null}
+                              </Box>
+
+                              {details ? (
+                                <Typography
+                                  variant='caption'
+                                  color='text.secondary'
+                                  sx={{ fontWeight: 700, display: 'block', mt: 0.25 }}
+                                >
+                                  {details}
+                                </Typography>
+                              ) : null}
+
+                              {hideEnsayosByRcm || !ensayos.length ? null : (
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1 }}>
+                                  {ensayos.map((e, i) => {
+                                    const k = e.estado ?? undefined
+                                    const info = getOperationalInfo(k)
+                                    return (
+                                      <Chip
+                                        key={`${e.nombre}-${i}`}
+                                        size='small'
+                                        label={e.nombre}
+                                        sx={theme => {
+                                          const isEnsayado = String(k ?? '').toUpperCase() === 'ENSAYADO'
+                                          const bg = isEnsayado ? alpha(theme.palette.success.main, 0.12) : info.bgcolor
+                                          const bd = isEnsayado ? alpha(theme.palette.success.main, 0.28) : info.border
+
+                                          return {
+                                            fontWeight: 800,
+                                            bgcolor: bg,
+                                            border: `1px solid ${bd}`,
+                                            color: 'text.primary'
+                                          }
+                                        }}
+                                      />
+                                    )
+                                  })}
+                                </Box>
+                              )}
+                            </Box>
+
+                            {opLabel ? (
+                              <Chip
+                                size='small'
+                                label={opLabel}
+                                sx={{
+                                  fontWeight: 900,
+                                  bgcolor: opInfo.bgcolor,
+                                  border: `1px solid ${opInfo.border}`,
+                                  color: opInfo.colorText
+                                }}
+                              />
+                            ) : null}
+                          </Box>
+                        </Box>
+                      )
+                    })}
+                  </Box>
+                )}
+              </Paper>
+            )
+          })()}
+
+          {(() => {
             const applicableKeys = getApplicableAutoTemplateKeys(informeDialogMeta)
             if (!applicableKeys.length) return null
 
@@ -3335,7 +3845,18 @@ const UserListTable2 = ({
                                     e.stopPropagation()
                                     const slug = t.key === 'DENSIDAD' ? 'densidad' : t.key === 'HORMIGON' ? 'hormigon' : null
                                     if (!slug) return
-                                    const url = `/api/informes/${slug}/mock`
+
+                                    let url = `/api/informes/${slug}/mock`
+
+                                    if (slug === 'densidad') {
+                                      const params = new URLSearchParams()
+                                      if (informeDialogCodigoId) params.set('codigoAgrupadorId', String(informeDialogCodigoId))
+                                      if (informeDialogRcmId) params.set('rcmId', String(informeDialogRcmId))
+                                      if (existing != null) params.set('informe', String(existing))
+                                      const qs = params.toString()
+                                      if (qs) url = `/api/informes/densidad/generate?${qs}`
+                                    }
+
                                     const w = window.open(url, '_blank')
                                     if (w) {
                                       try {

@@ -151,7 +151,7 @@ const getOperativeChipSx = (state?: string | null) => {
       border: '1px solid',
       borderColor: 'divider',
       textTransform: 'uppercase',
-      fontWeight: 700,
+      fontWeight: 800,
       fontSize: '0.72rem'
     } as const
   }
@@ -164,7 +164,7 @@ const getOperativeChipSx = (state?: string | null) => {
     border: '1px solid',
     borderColor: alpha(base, 0.32),
     textTransform: 'uppercase',
-    fontWeight: 700,
+    fontWeight: 800,
     fontSize: '0.72rem'
   } as const
 }
@@ -247,6 +247,8 @@ export default function CodigoProductoDetallePanel({
   onClose?: () => void
   onResolveEvento?: (rcmId: number) => void
 }) {
+  // objetivo: en md+ quepan 5 RCM “completos” sin scroll vertical
+  const detailBodyHeight = { xs: 320, sm: 380, md: 420 } as const
   const [tab, setTab] = useState<'rcms' | 'eventos'>('rcms')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<AgrupadorDetalle | null>(null)
@@ -297,6 +299,32 @@ export default function CodigoProductoDetallePanel({
   }, [codigoAgrupadorId, refreshTick])
 
   const rcms = data?.rcms ?? []
+
+  const headerMeta = useMemo(() => {
+    const count = (items: Array<string | null | undefined>) => {
+      const map = new Map<string, number>()
+      for (const raw of items) {
+        const v = String(raw ?? '').trim()
+        if (!v) continue
+        map.set(v, (map.get(v) ?? 0) + 1)
+      }
+      let best: string | null = null
+      let bestN = -1
+      for (const [k, n] of map.entries()) {
+        if (n > bestN) {
+          best = k
+          bestN = n
+        }
+      }
+      return best
+    }
+
+    const area = count(rcms.map(r => r.area?.nombre))
+    const tipoServicio = count(rcms.map(r => r.familia?.nombre))
+    const descripcion = String(data?.descripcionServicio ?? '').trim() || null
+
+    return { area, tipoServicio, descripcion }
+  }, [data?.descripcionServicio, rcms])
 
   const headerStates = useMemo(() => {
     const opCounts: Record<string, number> = {}
@@ -357,64 +385,68 @@ export default function CodigoProductoDetallePanel({
   if (!codigoAgrupadorId) return null
 
   return (
-    <Card sx={{ mt: 4 }}>
+    <Card data-rcmnav-detail sx={{ mt: 4 }}>
       <CardHeader
         title={
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-            {/* Fila superior: Código + Estados */}
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, flexWrap: 'wrap', minWidth: 0 }}>
-                <Typography variant='subtitle1' sx={{ fontWeight: 800 }}>
-                  {data?.codigoNombre ?? `Código #${codigoAgrupadorId}`}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'nowrap' }}>
+            {/* Izquierda: ID + Área + Tipo + Descripción (1 línea) */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1, overflow: 'hidden' }}>
+              <Chip
+                size='small'
+                label={data?.codigoNombre ?? `Código #${codigoAgrupadorId}`}
+                sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', fontWeight: 900 }}
+              />
+
+              {headerMeta.area ? (
+                <Chip size='small' label={headerMeta.area} variant='outlined' sx={{ fontWeight: 800 }} />
+              ) : null}
+
+              {headerMeta.tipoServicio ? (
+                <Chip size='small' label={headerMeta.tipoServicio} variant='outlined' sx={{ fontWeight: 800 }} />
+              ) : null}
+
+              {headerMeta.descripcion ? (
+                <Typography
+                  variant='body2'
+                  color='text.secondary'
+                  sx={{
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                  title={headerMeta.descripcion}
+                >
+                  {headerMeta.descripcion}
                 </Typography>
-                {data?.descripcionServicio ? (
-                  <Typography variant='caption' color='text.secondary'>
-                    {data.descripcionServicio}
-                  </Typography>
-                ) : null}
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
-                {/* Estado Operativo + fecha */}
-                {headerStates.opMain ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.1 }}>
-                    <Chip
-                      size='small'
-                      label={OPERATIONAL_STATES.find(s => s.value === headerStates.opMain)?.label ?? headerStates.opMain}
-                      sx={getOperativeChipSx(headerStates.opMain)}
-                    />
-                    <Typography variant='caption' color='text.secondary' sx={{ mt: 0.25, fontWeight: 700 }}>
-                      Desde {formatDateDDMMYYYYDash(headerStates.opSince)}
-                    </Typography>
-                  </Box>
-                ) : null}
-
-                {/* Estado Administrativo */}
-                {headerStates.adMain ? (
-                  <Chip
-                    size='small'
-                    label={ADMINISTRATIVE_STATES.find(s => s.value === headerStates.adMain)?.label ?? headerStates.adMain}
-                    sx={getAdministrativeChipSx(headerStates.adMain)}
-                  />
-                ) : null}
-
-                {onClose ? (
-                  <IconButton size='small' aria-label='Cerrar' onClick={onClose}>
-                    <CloseIcon fontSize='small' />
-                  </IconButton>
-                ) : null}
-              </Box>
+              ) : null}
             </Box>
 
-            {/* Segunda fila: OT / SS / loading */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-              {data?.ordenTrabajo?.correlativ ? (
-                <Chip size='small' label={`OT ${data.ordenTrabajo.correlativ}`} variant='outlined' sx={{ fontWeight: 700 }} />
+            {/* Derecha: Estados (mismo tamaño/tipografía) */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+              {loading ? <Chip size='small' label='Cargando…' variant='outlined' sx={{ fontWeight: 800 }} /> : null}
+
+              {headerStates.opMain ? (
+                <Chip
+                  size='small'
+                  label={OPERATIONAL_STATES.find(s => s.value === headerStates.opMain)?.label ?? headerStates.opMain}
+                  sx={getOperativeChipSx(headerStates.opMain)}
+                />
               ) : null}
-              {data?.ordenTrabajo?.clave ? (
-                <Chip size='small' label={data.ordenTrabajo.clave} variant='outlined' sx={{ fontWeight: 700 }} />
+
+              {headerStates.adMain ? (
+                <Chip
+                  size='small'
+                  label={ADMINISTRATIVE_STATES.find(s => s.value === headerStates.adMain)?.label ?? headerStates.adMain}
+                  sx={getAdministrativeChipSx(headerStates.adMain)}
+                />
               ) : null}
-              {loading ? <Chip size='small' label='Cargando…' variant='outlined' /> : null}
+
+              {onClose ? (
+                <IconButton size='small' aria-label='Cerrar' onClick={onClose}>
+                  <CloseIcon fontSize='small' />
+                </IconButton>
+              ) : null}
             </Box>
           </Box>
         }
@@ -436,8 +468,18 @@ export default function CodigoProductoDetallePanel({
       <Divider />
 
       {tab === 'rcms' ? (
-        <Box sx={{ p: 2 }}>
-          <div className='overflow-x-auto'>
+        <Box sx={{ p: 2, height: detailBodyHeight, overflow: 'hidden' }}>
+          <Box
+            sx={{
+              height: '100%',
+              overflowX: 'auto',
+              overflowY: 'auto',
+              // El CSS base de la app fija las filas a 50px; aquí necesitamos permitir 2 líneas (RCM + Sede)
+              '& table tbody td, & table tbody th': {
+                blockSize: 64
+              }
+            }}
+          >
             <table className={tableStyles.table}>
               <thead>
                 <tr>
@@ -527,10 +569,10 @@ export default function CodigoProductoDetallePanel({
                 })}
               </tbody>
             </table>
-          </div>
+          </Box>
         </Box>
       ) : (
-        <Box sx={{ p: 2 }}>
+        <Box sx={{ p: 2, height: detailBodyHeight, overflowY: 'auto' }}>
           {eventos.length === 0 ? (
             <Typography variant='body2' color='text.secondary'>
               Sin eventos para este código.

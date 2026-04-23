@@ -314,9 +314,18 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
       {/* Título y Botón */}
       <Grid container alignItems='center' sx={{ mb: 4 }}>
         <Grid item xs={3}>
-          <Typography variant='h5' sx={{ fontWeight: 'bold' }}>
-            Navegador
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap', minWidth: 0 }}>
+            <Typography variant='h5' sx={{ fontWeight: 'bold' }}>
+              Navegador
+            </Typography>
+            <Typography
+              variant='subtitle2'
+              color='text.secondary'
+              sx={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
+            >
+              Seguimiento — Códigos Producto
+            </Typography>
+          </Box>
         </Grid>
         <Grid item xs={6} />
         <Grid item xs={3} sx={{ textAlign: 'right' }}>
@@ -377,7 +386,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
 
       {/* Segunda Fila de Inputs */}
       <Grid container spacing={2} alignItems='center'>
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={6} md={2}>
           <FormControl fullWidth size='small'>
             <InputLabel id='area-select'>Área</InputLabel>
             <Select
@@ -396,7 +405,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
           </FormControl>
         </Grid>
 
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={6} md={2}>
           <FormControl fullWidth size='small'>
             <InputLabel id='familia-select'>Tipo de Servicio</InputLabel>
             <Select
@@ -416,7 +425,26 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
           </FormControl>
         </Grid>
 
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={6} md={2}>
+          <FormControl fullWidth size='small'>
+            <InputLabel id='sede-select'>Sede</InputLabel>
+            <Select
+              labelId='sede-select'
+              label='Sede'
+              value={selectedSede}
+              onChange={e => handleSedeChange(String(e.target.value ?? ''))}
+            >
+              <MenuItem value=''>Todas las sedes</MenuItem>
+              {sedeOptions.map(s => (
+                <MenuItem key={s} value={s}>
+                  {s}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
           <FormControl fullWidth size='small'>
             <InputLabel id='estado-op-select' shrink>
               Estado Operativo
@@ -429,10 +457,19 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
               value={selectedEstadoOp}
               onChange={e => handleEstadoOpChange(e.target.value)}
               renderValue={(selected) => {
-                const arr = Array.isArray(selected) ? selected : []
+                const rawArr = Array.isArray(selected) ? selected : []
+                const arr = rawArr.filter(v => v !== OP_ALL)
+
                 if (!arr.length) return 'Seleccione'
                 if (arr.length === operationalValues.length) return 'Todos'
-                return `${arr.length} seleccionado(s)`
+
+                if (arr.length === 1) {
+                  const v = String(arr[0] ?? '')
+                  const match = (operationalStatesForFilter ?? []).find((s: any) => String(s?.value ?? '') === v)
+                  return String(match?.label ?? v)
+                }
+
+                return `${arr.length} seleccionados`
               }}
             >
               <MenuItem value={OP_ALL}>
@@ -452,7 +489,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
           </FormControl>
         </Grid>
 
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={6} md={3}>
           <FormControl fullWidth size='small'>
             <InputLabel id='estado-ad-select' shrink>
               Estado Administrativo
@@ -465,10 +502,19 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
               value={selectedEstadoAd}
               onChange={e => handleEstadoAdChange(e.target.value)}
               renderValue={(selected) => {
-                const arr = Array.isArray(selected) ? selected : []
+                const rawArr = Array.isArray(selected) ? selected : []
+                const arr = rawArr.filter(v => v !== AD_ALL)
+
                 if (!arr.length) return 'Seleccione'
                 if (arr.length === administrativeValues.length) return 'Todos'
-                return `${arr.length} seleccionado(s)`
+
+                if (arr.length === 1) {
+                  const v = String(arr[0] ?? '')
+                  const match = (ADMINISTRATIVE_STATES ?? []).find((s: any) => String(s?.value ?? '') === v)
+                  return String(match?.label ?? v)
+                }
+
+                return `${arr.length} seleccionados`
               }}
             >
               <MenuItem value={AD_ALL}>
@@ -482,28 +528,6 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
                 <MenuItem key={s.value} value={s.value}>
                   <Checkbox checked={selectedEstadoAd.includes(s.value)} />
                   <ListItemText primary={s.label} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
-      </Grid>
-
-      {/* Tercera Fila: Sede */}
-      <Grid container spacing={2} alignItems='center' sx={{ mt: 0.5 }}>
-        <Grid item xs={12} sm={3}>
-          <FormControl fullWidth size='small'>
-            <InputLabel id='sede-select'>Sede</InputLabel>
-            <Select
-              labelId='sede-select'
-              label='Sede'
-              value={selectedSede}
-              onChange={e => handleSedeChange(String(e.target.value ?? ''))}
-            >
-              <MenuItem value=''>Todas las sedes</MenuItem>
-              {sedeOptions.map(s => (
-                <MenuItem key={s} value={s}>
-                  {s}
                 </MenuItem>
               ))}
             </Select>

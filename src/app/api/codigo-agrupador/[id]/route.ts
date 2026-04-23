@@ -112,6 +112,9 @@ export async function GET(request: Request, { params }: Params) {
                                 select: {
                                     cantidad: true,
                                     estadoOperativo: true,
+                                    estado: true,
+                                    codigo: true,
+                                    nombre: true,
                                 },
                             },
                             RCMHistory: {
