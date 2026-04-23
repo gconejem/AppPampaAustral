@@ -111,38 +111,39 @@ export function useCodigoAgrupador({
 
         const allEnsayos: Array<{ productoId: number; sku: string; nombre: string }> = []
         const seenProductoIds = new Set<number>()
-
-        rcmsToAssign.forEach(rcmRef => {
-            const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
-            if (fullRcm) {
-                fullRcm.ensayos.forEach(e => {
+        const hasDialogSkus = dialogSkus.length > 0 || dialogSkuSearch.trim().length > 0
+        if (hasDialogSkus) {
+            const seenSkus = new Set<string>()
+            dialogSkus.forEach(skuItem => {
+                if (seenSkus.has(skuItem.sku)) return
+                seenSkus.add(skuItem.sku)
+                if (skuItem.productoId && !seenProductoIds.has(skuItem.productoId)) {
+                    seenProductoIds.add(skuItem.productoId)
+                }
+                allEnsayos.push({ productoId: skuItem.productoId, sku: skuItem.sku, nombre: skuItem.nombre })
+            })
+            if (dialogSkus.length === 0 && dialogSkuSearch.trim()) {
+                allEnsayos.push({ productoId: -1, sku: dialogSkuSearch.trim(), nombre: dialogSkuSearch.trim() })
+            }
+        } else {
+            rcmsToAssign.forEach(rcmRef => {
+                const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
+                if (fullRcm) {
+                    fullRcm.ensayos.forEach(e => {
+                        if (!seenProductoIds.has(e.productoId)) {
+                            seenProductoIds.add(e.productoId)
+                            allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                        }
+                    })
+                }
+            })
+            if (allEnsayos.length === 0 && ensayosAsociados.length > 0) {
+                ensayosAsociados.forEach(e => {
                     if (!seenProductoIds.has(e.productoId)) {
                         seenProductoIds.add(e.productoId)
                         allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
                     }
                 })
-            }
-        })
-
-        if (allEnsayos.length === 0 && ensayosAsociados.length > 0) {
-            ensayosAsociados.forEach(e => {
-                if (!seenProductoIds.has(e.productoId)) {
-                    seenProductoIds.add(e.productoId)
-                    allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
-                }
-            })
-        }
-
-        dialogSkus.forEach(skuItem => {
-            const skuAlreadyIncluded = allEnsayos.some(e => e.sku === skuItem.sku)
-            if (!skuAlreadyIncluded) {
-                allEnsayos.unshift({ productoId: skuItem.productoId, sku: skuItem.sku, nombre: skuItem.nombre })
-            }
-        })
-        if (dialogSkus.length === 0 && dialogSkuSearch.trim()) {
-            const skuAlreadyIncluded = allEnsayos.some(e => e.sku === dialogSkuSearch.trim())
-            if (!skuAlreadyIncluded) {
-                allEnsayos.unshift({ productoId: -1, sku: dialogSkuSearch.trim(), nombre: dialogSkuSearch.trim() })
             }
         }
 
@@ -302,7 +303,8 @@ export function useCodigoAgrupador({
 
     const handleSelectProductForSku = (producto: ProductoType) => {
         const sku = producto.sku || producto.nombre
-        setDialogSkus(prev => prev.some(s => s.sku === sku) ? prev : [...prev, { sku, nombre: producto.nombre, productoId: producto.id, cantidad: 1 }])
+        const idProducto = (producto as any).productoId || producto.id
+        setDialogSkus(prev => prev.some(s => s.sku === sku) ? prev : [...prev, { sku, nombre: producto.nombre, productoId: idProducto, cantidad: 1 }])
         setDialogSkuSearch('')
         handleCloseSkuSearch()
     }

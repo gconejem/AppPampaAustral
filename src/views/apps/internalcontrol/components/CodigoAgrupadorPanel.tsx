@@ -206,17 +206,10 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
                                         <Chip
                                             label={agrupador.facturacion}
                                             size='small'
-                                            onClick={() => onChangeFacturacion(
-                                                agrupador.id,
-                                                agrupador.facturacion === 'Unitario' ? 'Fijo' : 'Unitario'
-                                            )}
                                             sx={{
-                                                cursor: 'pointer', fontWeight: 600,
+                                                fontWeight: 600,
                                                 bgcolor: agrupador.facturacion === 'Unitario' ? '#EEF2FF' : '#F0FDF4',
                                                 color: agrupador.facturacion === 'Unitario' ? '#4338CA' : '#16A34A',
-                                                '&:hover': {
-                                                    bgcolor: agrupador.facturacion === 'Unitario' ? '#E0E7FF' : '#DCFCE7'
-                                                }
                                             }}
                                         />
                                     </td>
