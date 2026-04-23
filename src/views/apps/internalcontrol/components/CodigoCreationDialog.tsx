@@ -285,9 +285,9 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                                 size='small'
                                                 onClick={() => setDialogSkus(prev => prev.filter((_, i) => i !== idx))}
                                                 disableRipple
-                                                sx={{ width: 32, color: '#EF4444', p: 0.25, '&:hover': { bgcolor: 'transparent' } }}
+                                                sx={{ width: 32, height: 32, color: '#EF4444', p: 0.25, '&:hover': { bgcolor: 'transparent' } }}
                                             >
-                                                <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, lineHeight: 1 }}>×</Typography>
+                                                <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, lineHeight: 1, color: '#EF4444' }}>×</Typography>
                                             </IconButton>
                                         </Box>
                                     ))}
