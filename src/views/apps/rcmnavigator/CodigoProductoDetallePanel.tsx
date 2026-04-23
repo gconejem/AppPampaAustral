@@ -7,6 +7,7 @@ import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
+import Dialog from '@mui/material/Dialog'
 import IconButton from '@mui/material/IconButton'
 import LinearProgress from '@mui/material/LinearProgress'
 import Tab from '@mui/material/Tab'
@@ -16,7 +17,6 @@ import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
 import { alpha } from '@mui/material/styles'
 
-import VisibilityIcon from '@mui/icons-material/Visibility'
 import CloseIcon from '@mui/icons-material/Close'
 
 import { OPERATIONAL_STATES } from '@/constants/operationalStates'
@@ -27,6 +27,11 @@ import tableStyles from '@core/styles/table.module.css'
 type Servicio = {
   cantidad?: number | null
   estadoOperativo?: string | null
+  estado?: string | null
+  codigo?: string | null
+  nombre?: string | null
+  norma?: string | null
+  producto?: { sku?: string | null; nombre?: string | null; norma?: string | null } | null
 }
 
 type HistoryEntry = {
@@ -42,6 +47,7 @@ type HistoryEntry = {
 type RcmRow = {
   id: number
   numeroRcm?: string | null
+  fechaMuestreo?: string | null
   numeroTarjeta?: string | null
   rcmType?: string | null
   estadoOperativo?: string | null
@@ -58,6 +64,9 @@ type RcmRow = {
   familia?: { nombre?: string | null } | null
   servicios?: Servicio[]
   RCMHistory?: HistoryEntry[]
+  ordenTrabajoId?: string | null
+  ordenTrabajo?: { id?: string | null; clave?: string | null; correlativ?: string | null } | null
+  codigoAgrupador?: { id?: number | null; codigoNombre?: string | null; descripcionServicio?: string | null } | null
 }
 
 type AgrupadorDetalle = {
@@ -130,6 +139,21 @@ const computeEnsayos = (servicios?: Servicio[]) => {
   }
 
   return { total, ensayados }
+}
+
+const computeEnsayoStateKey = (servicios?: Servicio[]) => {
+  const { total, ensayados } = computeEnsayos(servicios)
+  if (total <= 0) return null
+  if (ensayados >= total) return 'ENSAYADO'
+  if (ensayados > 0) return 'EN_PROCESO'
+  return 'CODIFICADO'
+}
+
+const getOperationalLabel = (raw?: string | null) => {
+  const key = normalizeStateKey(raw)
+  if (!key) return '-'
+  if (key === 'ENVIADO_DIGITACION') return 'Env. Digitación'
+  return OPERATIONAL_STATES.find(s => s.value === key)?.label ?? key
 }
 
 const normalizeHex6 = (hex: string) => {
@@ -254,6 +278,11 @@ export default function CodigoProductoDetallePanel({
   const [data, setData] = useState<AgrupadorDetalle | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
 
+  const [rcmDialogOpen, setRcmDialogOpen] = useState(false)
+  const [rcmDialogLoading, setRcmDialogLoading] = useState(false)
+  const [rcmDialogError, setRcmDialogError] = useState<string | null>(null)
+  const [rcmDialogData, setRcmDialogData] = useState<RcmRow | null>(null)
+
   useEffect(() => {
     const onRefresh = () => {
       if (!codigoAgrupadorId) return
@@ -374,11 +403,44 @@ export default function CodigoProductoDetallePanel({
     return { totalRcms, ev }
   }, [rcms.length, eventos.length])
 
-  const handleViewRcm = (rcmId: number) => {
+  const openRcmDialog = async (rcmId: number) => {
+    setRcmDialogOpen(true)
+    setRcmDialogLoading(true)
+    setRcmDialogError(null)
+    setRcmDialogData(null)
+
+    try {
+      const res = await fetch(`/api/rcm/${rcmId}`, { cache: 'no-store' })
+      if (!res.ok) throw new Error('No se pudo cargar el RCM')
+      const json = await res.json().catch(() => null)
+      setRcmDialogData(json as any)
+    } catch (e) {
+      setRcmDialogError(e instanceof Error ? e.message : 'No se pudo cargar el RCM')
+    } finally {
+      setRcmDialogLoading(false)
+    }
+  }
+
+  const closeRcmDialog = () => {
+    if (rcmDialogLoading) return
+    setRcmDialogOpen(false)
+    setRcmDialogError(null)
+    setRcmDialogData(null)
+  }
+
+  const openReadOnlyCodificacion = (rcmId: number) => {
     if (typeof window === 'undefined') return
     const parts = window.location.pathname.split('/').filter(Boolean)
     const lang = parts[0] || 'en'
     const url = `${window.location.origin}/${lang}/apps/view-rcm/${rcmId}`
+    window.open(url, '_blank')
+  }
+
+  const handleEditRcm = (rcmId: number) => {
+    if (typeof window === 'undefined') return
+    const parts = window.location.pathname.split('/').filter(Boolean)
+    const lang = parts[0] || 'en'
+    const url = `${window.location.origin}/${lang}/apps/rcm-edit/${rcmId}`
     window.open(url, '_blank')
   }
 
@@ -489,6 +551,7 @@ export default function CodigoProductoDetallePanel({
                   <th style={{ textAlign: 'center' }}>ÁREA</th>
                   <th style={{ textAlign: 'center' }}>SERVICIO</th>
                   <th style={{ textAlign: 'left' }}>MATERIAL · ÍTEM · TOMA</th>
+                  <th style={{ textAlign: 'center' }}>F. MUESTREO</th>
                   <th style={{ textAlign: 'center' }}>ENSAYOS</th>
                   <th style={{ textAlign: 'center' }}>ESTADO</th>
                   <th style={{ textAlign: 'center' }} />
@@ -535,6 +598,11 @@ export default function CodigoProductoDetallePanel({
                       <td style={{ textAlign: 'center' }}>{r.area?.nombre ?? '-'}</td>
                       <td style={{ textAlign: 'center' }}>{r.familia?.nombre ?? '-'}</td>
                       <td>{formatMaterialItemToma(r)}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <Typography variant='body2'>
+                          {r.fechaMuestreo ? formatDateDDMMYYYYDash(r.fechaMuestreo) : '-'}
+                        </Typography>
+                      </td>
                       <td style={{ textAlign: 'center', minWidth: 120 }}>
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
                           <LinearProgress variant='determinate' value={pct} sx={{ height: 6, borderRadius: 999, width: 60 }} />
@@ -560,9 +628,14 @@ export default function CodigoProductoDetallePanel({
                         })()}
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <IconButton size='small' title='Ver' onClick={() => handleViewRcm(r.id)}>
-                          <VisibilityIcon fontSize='small' />
-                        </IconButton>
+                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                          <Button size='small' variant='outlined' onClick={() => openRcmDialog(r.id)} sx={{ minWidth: 0, px: 1.25 }}>
+                            Ver
+                          </Button>
+                          <Button size='small' variant='outlined' onClick={() => handleEditRcm(r.id)} sx={{ minWidth: 0, px: 1.25 }}>
+                            Editar
+                          </Button>
+                        </Box>
                       </td>
                     </tr>
                   )
@@ -654,6 +727,303 @@ export default function CodigoProductoDetallePanel({
           )}
         </Box>
       )}
+
+      {/* Popup: Ver RCM */}
+      <Dialog
+        open={rcmDialogOpen}
+        onClose={closeRcmDialog}
+        fullWidth
+        maxWidth='md'
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        {(() => {
+          const r = rcmDialogData as any
+          const rcmId = Number(r?.id ?? 0)
+
+          const rcmNumRaw = String(r?.numeroRcm ?? '').trim()
+          const numShort = rcmNumRaw.replace(/^RCM[-\s]?/i, '').trim()
+          const title = `RCM — ${numShort || rcmNumRaw || (rcmId ? String(rcmId) : '-')}`
+
+          const subtitle = (() => {
+            const parts = [r?.tipoMaterial, r?.item, r?.tomaMuestra]
+              .map((v: any) => String(v ?? '').trim())
+              .filter(Boolean)
+            return parts.join(' · ')
+          })()
+
+          const belongsCodigo = String(r?.codigoAgrupador?.codigoNombre ?? data?.codigoNombre ?? '').trim()
+          const fallbackRow = (data?.rcms ?? []).find((x: any) => Number(x?.id) === rcmId) ?? null
+          const cliente = String(
+            r?.cliente?.razonSocial ??
+              r?.cliente?.nombreCliente ??
+              fallbackRow?.cliente?.razonSocial ??
+              fallbackRow?.cliente?.nombreCliente ??
+              r?.obra?.razonSocial ??
+              r?.obra?.nombreCliente ??
+              fallbackRow?.obra?.razonSocial ??
+              fallbackRow?.obra?.nombreCliente ??
+              ''
+          ).trim()
+          const obra = String(
+            r?.obra?.numeroObra ??
+              r?.obra?.nombreObra ??
+              fallbackRow?.obra?.numeroObra ??
+              fallbackRow?.obra?.nombreObra ??
+              ''
+          ).trim()
+          const ciudad = String(r?.obra?.comuna ?? fallbackRow?.obra?.comuna ?? fallbackRow?.obra?.ciudad ?? '').trim()
+          const belongsText = [cliente || null, obra ? `Obra ${obra}` : null, ciudad || null].filter(Boolean).join(' - ')
+
+          const servicios = (r?.servicios ?? []) as Servicio[]
+          const stateKey = (computeEnsayoStateKey(servicios) ?? normalizeStateKey(r?.estadoOperativo) ?? null) as any
+
+          const tipo = String(r?.rcmType ?? 'MUESTRA').trim().toUpperCase()
+          const area = String(r?.area?.nombre ?? r?.area ?? '').trim()
+          const servicio = String(r?.familia?.nombre ?? r?.tipoServicio ?? '').trim()
+          const sede = String(r?.sede ?? '').trim()
+          const tarjeta = String(r?.numeroTarjeta ?? '').trim()
+          const muestreo = r?.fechaMuestreo ? formatDateDDMMYYYYDash(r?.fechaMuestreo) : '-'
+
+          const ensayoCount = servicios.length
+
+          return (
+            <Box>
+              <Box sx={{ p: 2.5, pb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant='h6' sx={{ fontWeight: 900, lineHeight: 1.1 }}>
+                      {title}
+                    </Typography>
+                    {subtitle ? (
+                      <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 0.25 }}>
+                        {subtitle}
+                      </Typography>
+                    ) : null}
+                  </Box>
+
+                  <IconButton size='small' aria-label='Cerrar' onClick={closeRcmDialog}>
+                    <CloseIcon fontSize='small' />
+                  </IconButton>
+                </Box>
+
+                <Divider sx={{ mt: 2 }} />
+
+                <Paper
+                  variant='outlined'
+                  sx={theme => ({
+                    mt: 2.25,
+                    p: 1.5,
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.primary.main, 0.06),
+                    borderColor: alpha(theme.palette.primary.main, 0.25)
+                  })}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                      <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900 }}>
+                        PERTENECE A
+                      </Typography>
+
+                      {belongsCodigo ? (
+                        <Chip size='small' label={belongsCodigo} variant='outlined' sx={{ fontWeight: 900 }} />
+                      ) : null}
+
+                      {belongsText ? (
+                        <Typography
+                          variant='body2'
+                          sx={{
+                            fontWeight: 600,
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                          title={belongsText}
+                        >
+                          {belongsText}
+                        </Typography>
+                      ) : null}
+                    </Box>
+
+                    {stateKey ? (
+                      <Chip size='small' label={getOperationalLabel(stateKey)} sx={getOperativeChipSx(stateKey)} />
+                    ) : null}
+                  </Box>
+                </Paper>
+
+                <Paper
+                  variant='outlined'
+                  sx={theme => ({
+                    mt: 2.25,
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.text.primary, 0.04),
+                    borderColor: alpha(theme.palette.text.primary, 0.08)
+                  })}
+                >
+                  <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 260 }}>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          TIPO
+                        </Typography>
+                        <Chip size='small' label={tipo || '-'} sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', fontWeight: 900 }} />
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          ÁREA
+                        </Typography>
+                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                          {area || '-'}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          SEDE
+                        </Typography>
+                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                          {sede || '-'}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          MUESTREO
+                        </Typography>
+                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                          {muestreo}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 260 }}>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          ESTADO
+                        </Typography>
+                        {stateKey ? (
+                          <Chip size='small' label={getOperationalLabel(stateKey)} sx={getOperativeChipSx(stateKey)} />
+                        ) : (
+                          <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                            -
+                          </Typography>
+                        )}
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          SERVICIO
+                        </Typography>
+                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                          {servicio || '-'}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          TARJETA
+                        </Typography>
+                        <Typography variant='body2' sx={{ fontWeight: 900, color: 'primary.main' }}>
+                          {tarjeta || '-'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Paper>
+
+                <Box sx={{ mt: 2.75 }}>
+                  <Typography variant='subtitle2' sx={{ fontWeight: 900, mb: 1.25 }}>
+                    Ensayos ({ensayoCount})
+                  </Typography>
+
+                  <Paper variant='outlined' sx={{ borderRadius: 2, overflow: 'hidden' }}>
+                    <div className='overflow-x-auto'>
+                      <table className={tableStyles.table}>
+                        <thead>
+                          <tr>
+                            <th style={{ textAlign: 'center' }}>SKU</th>
+                            <th style={{ textAlign: 'left' }}>ENSAYO / SERVICIO</th>
+                            <th style={{ textAlign: 'center' }}>CANT.</th>
+                            <th style={{ textAlign: 'center' }}>ESTADO</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(servicios ?? []).map((s: any, idx: number) => {
+                            const sku = String(s?.producto?.sku ?? s?.codigo ?? s?.sku ?? '').trim() || '-'
+                            const nombre = String(s?.producto?.nombre ?? s?.nombre ?? '').trim() || '-'
+                            const norma = String(s?.producto?.norma ?? s?.norma ?? '').trim()
+                            const qty = Number(s?.cantidad ?? 0)
+                            const stKey = normalizeStateKey(s?.estadoOperativo ?? s?.estado) ?? null
+
+                            return (
+                              <tr key={String(s?.id ?? idx)}>
+                                <td style={{ textAlign: 'center' }}>
+                                  <Chip size='small' label={sku} variant='outlined' sx={{ fontWeight: 800 }} />
+                                </td>
+                                <td>
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                    <Typography variant='body2' sx={{ fontWeight: 800 }}>
+                                      {nombre}
+                                    </Typography>
+                                    {norma ? (
+                                      <Typography variant='caption' color='text.secondary' sx={{ lineHeight: 1.2 }}>
+                                        {norma}
+                                      </Typography>
+                                    ) : null}
+                                  </Box>
+                                </td>
+                                <td style={{ textAlign: 'center' }}>
+                                  <Typography variant='body2' sx={{ fontWeight: 800 }}>
+                                    {Number.isFinite(qty) && qty > 0 ? qty : '-'}
+                                  </Typography>
+                                </td>
+                                <td style={{ textAlign: 'center' }}>
+                                  {stKey ? (
+                                    <Chip size='small' label={getOperationalLabel(stKey)} sx={getOperativeChipSx(stKey)} />
+                                  ) : (
+                                    <Chip size='small' label='-' variant='outlined' sx={{ fontWeight: 800, fontSize: '0.72rem' }} />
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Paper>
+                </Box>
+              </Box>
+
+              <Divider />
+
+              <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                <Button
+                  size='small'
+                  variant='outlined'
+                  onClick={() => {
+                    if (!Number.isFinite(rcmId) || rcmId <= 0) return
+                    openReadOnlyCodificacion(rcmId)
+                  }}
+                  sx={{ textTransform: 'none', borderRadius: 999 }}
+                >
+                  Ver en Codificación (solo lectura)
+                </Button>
+
+                <Button size='small' onClick={closeRcmDialog} sx={{ textTransform: 'none' }}>
+                  Cerrar
+                </Button>
+              </Box>
+
+              {rcmDialogLoading ? <LinearProgress /> : null}
+
+              {rcmDialogError ? (
+                <Box sx={{ p: 2, pt: 1 }}>
+                  <Typography variant='body2' color='error'>
+                    {rcmDialogError}
+                  </Typography>
+                </Box>
+              ) : null}
+            </Box>
+          )
+        })()}
+      </Dialog>
     </Card>
   )
 }
