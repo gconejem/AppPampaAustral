@@ -50,6 +50,7 @@ interface UseRcmCrudParams {
     clearEnsayosPendientes: () => void
     resetSearchFilters?: () => void
     onAutoAgrupar?: (newRcm: RCMData, setError: (msg: string) => void) => Promise<void>
+    onUpdateAgrupador?: (rcm: RCMData) => void
 }
 
 export function useRcmCrud({
@@ -58,7 +59,7 @@ export function useRcmCrud({
     areas, todasLasFamilias, parametrosArea, otData,
     getFormValues, getTodayDateForInput, resetForm, populateFormFromRcm,
     hasUnsavedChanges, setShowRcmCard, setErrorVencimiento,
-    clearEnsayosPendientes, resetSearchFilters, onAutoAgrupar,
+    clearEnsayosPendientes, resetSearchFilters, onAutoAgrupar, onUpdateAgrupador,
 }: UseRcmCrudParams) {
     // Estado de edición
     const [isEditingRcm, setIsEditingRcm] = useState(false)
@@ -277,9 +278,13 @@ export function useRcmCrud({
             setSavedRcms(prev => [...prev, newRcm])
             setActionBarRcmId(newRcm.id)
 
-            // Auto-agrupar 1:1 para Control y Servicio
-            if ((formValues.rcmType === 'Control' || formValues.rcmType === 'Servicio') && onAutoAgrupar) {
+            // Auto-agrupar 1:1 para Control y Servicio (solo al crear, no al editar)
+            if (!editandoRcm && (formValues.rcmType === 'Control' || formValues.rcmType === 'Servicio') && onAutoAgrupar) {
                 await onAutoAgrupar(newRcm, setErrorVencimiento)
+            }
+            // Al editar, actualizar el agrupador 1:1 existente vinculado al RCM
+            if (editandoRcm && onUpdateAgrupador) {
+                onUpdateAgrupador(newRcm)
             }
 
             // Limpiar estado de edición y duplicación

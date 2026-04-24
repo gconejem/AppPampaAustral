@@ -71,6 +71,7 @@ const Step2CreateRcms = ({
     const codigoUnoAUnoRef = React.useRef<(rcm: RCMData, setError: (msg: string) => void) => Promise<void>>(
         async () => { /* se sobreescribe después */ }
     )
+    const updateAgrupadorRef = React.useRef<(rcm: RCMData) => void>(() => { /* se sobreescribe después */ })
 
     const crud = useRcmCrud({
         savedRcms, setSavedRcms,
@@ -89,6 +90,7 @@ const Step2CreateRcms = ({
         clearEnsayosPendientes: ensayoHooks.clearPendientes,
         resetSearchFilters: productSearch.resetSearchFilters,
         onAutoAgrupar: (newRcm, setError) => codigoUnoAUnoRef.current(newRcm, setError),
+        onUpdateAgrupador: (rcm) => updateAgrupadorRef.current(rcm),
     })
 
     // ═══════════════════════════════════════
@@ -149,6 +151,8 @@ const Step2CreateRcms = ({
     useEffect(() => {
         codigoUnoAUnoRef.current = (rcm: RCMData, setError: (msg: string) => void) =>
             codigoReal.handleCodigoUnoAUno(rcm, setError)
+        updateAgrupadorRef.current = (rcm: RCMData) =>
+            codigoReal.handleUpdateAgrupadorForRcm(rcm)
     })
 
     useEffect(() => {

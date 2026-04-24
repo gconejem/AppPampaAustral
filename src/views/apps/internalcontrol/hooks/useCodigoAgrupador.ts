@@ -376,6 +376,27 @@ export function useCodigoAgrupador({
         }
     }
 
+    /** Actualizar el agrupador 1:1 asociado a un RCM editado (ensayos y cantidad) */
+    const handleUpdateAgrupadorForRcm = (rcm: RCMData) => {
+        setCodigosAgrupadores(prev => prev.map(ag => {
+            const hasRcm = ag.rcmsVinculados.some(rv => rv.id === rcm.id)
+            if (!hasRcm) return ag
+            if (ag.rcmsVinculados.length !== 1) return ag
+            const seen = new Set<number>()
+            const ensayos: Array<{ productoId: number; sku: string; nombre: string }> = []
+            rcm.ensayos.forEach(e => {
+                if (!seen.has(e.productoId)) {
+                    seen.add(e.productoId)
+                    ensayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                }
+            })
+            const nextCantidad = (rcm.rcmType === 'Control' || rcm.rcmType === 'Servicio')
+                ? (rcm.ensayos[0]?.cantidad ?? ag.cantidad)
+                : ag.cantidad
+            return { ...ag, ensayos, cantidad: nextCantidad }
+        }))
+    }
+
     const handleCrearNuevoCodigo = () => {
         if (!newCodigoNombre.trim()) return
         const newCodigo = {
@@ -467,6 +488,7 @@ export function useCodigoAgrupador({
         handleRemoveEnsayoFromAgrupador,
         handleCrearNuevoCodigo,
         handleCodigoUnoAUno,
+        handleUpdateAgrupadorForRcm,
         computeValidaciones,
     }
 }
