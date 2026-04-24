@@ -274,14 +274,19 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                 return (
                     <Dialog
                         open={showPreFinalizacion}
-                        onClose={() => setShowPreFinalizacion(false)}
+                        onClose={(_e, reason) => {
+                            if (isSaving) return
+                            if (reason === 'backdropClick' || reason === 'escapeKeyDown') return
+                            setShowPreFinalizacion(false)
+                        }}
+                        disableEscapeKeyDown={isSaving}
                         maxWidth='md'
                         fullWidth
                         PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden' } }}
                     >
                         <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem', pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             Revisar y Finalizar Codificación
-                            <IconButton size='small' onClick={() => setShowPreFinalizacion(false)} sx={{ color: 'text.secondary' }}>
+                            <IconButton size='small' onClick={() => setShowPreFinalizacion(false)} disabled={isSaving} sx={{ color: 'text.secondary' }}>
                                 <CloseIcon fontSize='small' />
                             </IconButton>
                         </DialogTitle>
@@ -455,6 +460,7 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                 <Button
                                     onClick={() => setShowPreFinalizacion(false)}
                                     variant='outlined'
+                                    disabled={isSaving}
                                     sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: 600 }}
                                 >
                                     Volver a Revisar
