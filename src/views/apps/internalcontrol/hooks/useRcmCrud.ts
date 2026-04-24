@@ -268,7 +268,7 @@ export function useRcmCrud({
                 fechaEntrega: formValues.fechaEntrega,
                 fechaConfeccion: formValues.fechaConfeccion,
                 tomaMuestra: formValues.tomaMuestra,
-                cantidadMuestras: formValues.cantidadMuestras,
+                cantidadMuestras: formValues.rcmType === 'Muestra' ? formValues.cantidadMuestras : '',
                 estado: estadoRcm,
                 tieneVencimiento: formValues.tieneVencimiento,
                 submuestrasVencimiento: [...formValues.submuestrasVencimiento],
@@ -420,7 +420,7 @@ export function useRcmCrud({
                     cota1: rcm.cota1,
                     cota2: rcm.cota2,
                     informeEnsayo: rcm.informeEnsayo ?? true,
-                    cantidadMuestras: parseInt(rcm.cantidadMuestras) || 1,
+                    cantidadMuestras: rcm.rcmType === 'Muestra' ? (parseInt(rcm.cantidadMuestras) || 1) : null,
                     vencimiento: rcm.tieneVencimiento ?? false,
                     tomaMuestra: rcm.tomaMuestra,
                     ensayos: rcm.ensayos.map(e => ({

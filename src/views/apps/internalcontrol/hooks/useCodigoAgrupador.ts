@@ -359,7 +359,9 @@ export function useCodigoAgrupador({
                 rcmsVinculados: [rcmRef],
                 ensayos: allEnsayos,
                 descripcionServicio: '',
-                cantidad: 1,
+                cantidad: (rcm.rcmType === 'Control' || rcm.rcmType === 'Servicio')
+                    ? (rcm.ensayos[0]?.cantidad ?? 1)
+                    : 1,
                 unidad: 'unid',
                 facturacion: 'Unitario',
             }

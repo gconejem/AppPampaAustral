@@ -116,7 +116,6 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                     {rcm.tipoServicio && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.tipoServicio}</Typography></>}
                     <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{formatDateOnly(rcm.fechaServicio)}</Typography></>
                     {rcm.item && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.item}</Typography></>}
-                    {rcm.cantidadMuestras && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>×{rcm.cantidadMuestras}</Typography></>}
                 </>
             )
         }
@@ -126,7 +125,6 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                 {rcm.area && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.area}</Typography></>}
                 {rcm.tipoServicio && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.tipoServicio}</Typography></>}
                 <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{formatDateOnly(rcm.fechaServicio)}</Typography></>
-                {rcm.cantidadMuestras && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>×{rcm.cantidadMuestras}</Typography></>}
             </>
         )
     }
@@ -287,7 +285,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                     {textCell('Procedencia', rcm.procedencia)}
                     {textCell('Ubicación / Sector', rcm.ubicacionSector)}
 
-                    {rcm.cantidadMuestras
+                    {rcm.rcmType === 'Muestra' && rcm.cantidadMuestras
                         ? (
                             <Box sx={{ minWidth: 120 }}>
                                 <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>Cantidad</Typography>
@@ -511,7 +509,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                             {rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 && (
                                                 <><Typography variant='body2' color='text.secondary'>|</Typography>{renderVencimientoPill(rcm)}</>
                                             )}
-                                            {rcm.cantidadMuestras && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.cantidadMuestras}</Typography></>}
+                                            {rcm.rcmType === 'Muestra' && rcm.cantidadMuestras && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.cantidadMuestras}</Typography></>}
                                         </Box>
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
