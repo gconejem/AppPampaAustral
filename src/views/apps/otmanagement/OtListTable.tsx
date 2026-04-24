@@ -135,7 +135,7 @@ const OtListTable = ({
 
   // Hook de permisos
   const { hasPermission } = usePermissions()
-  
+
   // Verificar si el usuario solo tiene permisos de lectura
   const soloLectura =
     hasPermission(permisos.empresa.ver) &&
@@ -829,7 +829,7 @@ const OtListTable = ({
               <IconButton
                 disabled={soloLectura}
                 onClick={() =>
-                  window.open(`${window.location.origin}/en/apps/internalcontrol?otId=${ot.id}`, '_blank')
+                  window.location.href = `${window.location.origin}/en/apps/internalcontrol?otId=${ot.id}`
                 }
               >
                 <i className='ri-code-s-slash-line' style={{ fontSize: '1.2rem' }} />
