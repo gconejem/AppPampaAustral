@@ -362,7 +362,13 @@ export async function POST(request: Request) {
             const agrupadores = agrupadoresResultados.filter(
                 (a): a is { id: number; codigoId: string; codigoNombre: string } => a !== null
             )
-
+            // 3. Marcar la OT como CODIFICADA al finalizar la codificación
+            if (ordenTrabajoId) {
+                await tx.ordenTrabajo.update({
+                    where: { id: ordenTrabajoId },
+                    data: { estado: 'CODIFICADA' },
+                })
+            }
             return { rcms: rcmsCriados, agrupadores }
         }, {
             timeout: 15000, // margen de seguridad tras optimización
