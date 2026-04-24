@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import {
     Snackbar,
     Alert,
@@ -17,6 +18,9 @@ import {
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CloseIcon from '@mui/icons-material/Close'
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
+import BiotechOutlinedIcon from '@mui/icons-material/BiotechOutlined'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import type { RCMData, CodigoAgrupador } from '../types/rcm-types'
 
 interface RcmDialogsProps {
@@ -52,7 +56,7 @@ interface RcmDialogsProps {
         totalRcms: number; tipoControl: number; tipoMuestra: number; tipoServicio: number
         codigosProducto: number; modoPxQ: number; modoFijo: number
     }
-    handleGuardarTodo: () => Promise<void>
+    handleGuardarTodo: () => Promise<any>
     isSaving: boolean
     codigosAgrupadores: CodigoAgrupador[]
     savedRcms: RCMData[]
@@ -70,6 +74,10 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
     computeValidaciones, handleGuardarTodo, isSaving,
     codigosAgrupadores, savedRcms,
 }) => {
+    const router = useRouter()
+    const params = useParams()
+    const lang = (params?.lang as string) || 'es'
+    const [showFinalizadoSuccess, setShowFinalizadoSuccess] = useState(false)
     return (
         <>
             {/* Snackbar flotante para mensajes de error */}
@@ -453,8 +461,11 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                 </Button>
                                 <Button
                                     onClick={async () => {
-                                        setShowPreFinalizacion(false)
-                                        await handleGuardarTodo()
+                                        const result = await handleGuardarTodo()
+                                        if (result) {
+                                            setShowPreFinalizacion(false)
+                                            setShowFinalizadoSuccess(true)
+                                        }
                                     }}
                                     variant='contained'
                                     disabled={!allPassed || isSaving}
@@ -472,6 +483,85 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                     </Dialog>
                 )
             })()}
+            {/* Dialog: Codificación Finalizada (éxito) */}
+            <Dialog
+                open={showFinalizadoSuccess}
+                onClose={() => setShowFinalizadoSuccess(false)}
+                maxWidth='xs'
+                fullWidth
+                PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden' } }}
+            >
+                <DialogContent sx={{ px: 3, pt: 3, pb: 2 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 1.25 }}>
+                        <Typography variant='h6' sx={{ fontWeight: 700, color: 'success.main' }}>
+                            ¡Codificación Finalizada!
+                        </Typography>
+                        <Typography variant='body2' color='text.secondary'>
+                            La OT quedó en estado <Box component='span' sx={{ fontWeight: 700, color: 'text.primary' }}>Codificada</Box>.
+                            Los IDs definitivos de RCMs y Códigos Producto serán asignados por el sistema al procesar el cierre.
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%', mt: 1 }}>
+                            <Button
+                                onClick={() => {
+                                    setShowFinalizadoSuccess(false)
+                                    router.push(`/${lang}/apps/rcmnavigator`)
+                                }}
+                                variant='contained'
+                                startIcon={<Inventory2OutlinedIcon />}
+                                sx={{
+                                    textTransform: 'none', borderRadius: '8px', fontWeight: 700,
+                                    justifyContent: 'space-between', px: 2, py: 1.25,
+                                }}
+                            >
+                                <Box component='span' sx={{ flex: 1, textAlign: 'left', ml: 1 }}>
+                                    Ir al Navegador de Productos
+                                </Box>
+                                <Box component='span' sx={{ fontWeight: 400, fontSize: '0.72rem', opacity: 0.85, ml: 2 }}>
+                                    Ver estado de los Códigos generados
+                                </Box>
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setShowFinalizadoSuccess(false)
+                                    router.push(`/${lang}/apps/rcmnavigatordetail`)
+                                }}
+                                variant='outlined'
+                                startIcon={<BiotechOutlinedIcon />}
+                                sx={{
+                                    textTransform: 'none', borderRadius: '8px', fontWeight: 700,
+                                    justifyContent: 'space-between', px: 2, py: 1.25,
+                                }}
+                            >
+                                <Box component='span' sx={{ flex: 1, textAlign: 'left', ml: 1 }}>
+                                    Ir a Sala (Navegador RCM)
+                                </Box>
+                                <Box component='span' sx={{ fontWeight: 400, fontSize: '0.72rem', opacity: 0.85, ml: 2 }}>
+                                    Asignar ensayadores y ejecutar ensayos
+                                </Box>
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setShowFinalizadoSuccess(false)
+                                    router.push(`/${lang}/apps/otmanagement`)
+                                }}
+                                variant='outlined'
+                                startIcon={<ArrowBackIcon />}
+                                sx={{
+                                    textTransform: 'none', borderRadius: '8px', fontWeight: 600,
+                                    justifyContent: 'space-between', px: 2, py: 1.25,
+                                }}
+                            >
+                                <Box component='span' sx={{ flex: 1, textAlign: 'left', ml: 1 }}>
+                                    Volver a Órdenes de Trabajo
+                                </Box>
+                                <Box component='span' sx={{ fontWeight: 400, fontSize: '0.72rem', color: 'text.secondary', ml: 2 }}>
+                                    Seleccionar otra OT para codificar
+                                </Box>
+                            </Button>
+                        </Box>
+                    </Box>
+                </DialogContent>
+            </Dialog>
         </>
     )
 }
