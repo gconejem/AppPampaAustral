@@ -388,6 +388,8 @@ const Step2CreateRcms = ({
                 computeValidaciones={codigoReal.computeValidaciones}
                 handleGuardarTodo={() => crud.handleGuardarTodo(codigoReal.codigosAgrupadores)}
                 isSaving={crud.isSaving}
+                codigosAgrupadores={codigoReal.codigosAgrupadores}
+                savedRcms={savedRcms}
             />
 
             {/* Código Producto creation dialog */}
