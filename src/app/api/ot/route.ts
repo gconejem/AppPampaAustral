@@ -210,29 +210,34 @@ export async function POST(request: Request) {
     }
     console.log('No es aceptación de visita')
 
-    // Procesar todas las órdenes de trabajo normales
-    const ordenesTrabajo = await Promise.all(
-      data.data.map(async (ot: {
-        CLAVE: string
-        ESTADO?: string
-        ORIGEN?: string
-        FKLBRUTAS?: string
-        CORRELATIV?: string
-        FKLBDOCVER?: string
-        FKLBRUTSER?: string
-        RESPUESTA?: any
-        jsonOT?: any
-      }) => {
-        const tipoOTId = await getTipoOTFromDocCode(ot.FKLBDOCVER || '')
+    // Procesar todas las órdenes de trabajo normales (secuencial para asignar correlativo único)
+    const ordenesTrabajo: any[] = []
+    for (const ot of data.data as Array<{
+      CLAVE: string
+      ESTADO?: string
+      ORIGEN?: string
+      FKLBRUTAS?: string
+      CORRELATIV?: string
+      FKLBDOCVER?: string
+      FKLBRUTSER?: string
+      RESPUESTA?: any
+      jsonOT?: any
+    }>) {
+      const tipoOTId = await getTipoOTFromDocCode(ot.FKLBDOCVER || '')
 
-        // Extraer nTarjetaArray de RESPUESTA si existe
-        let numeroTarjeta: string | undefined = undefined
-        if (ot.RESPUESTA?.nTarjetaArray && Array.isArray(ot.RESPUESTA.nTarjetaArray)) {
-          numeroTarjeta = ot.RESPUESTA.nTarjetaArray.join(',')
-        }
+      // Extraer nTarjetaArray de RESPUESTA si existe
+      let numeroTarjeta: string | undefined = undefined
+      if (ot.RESPUESTA?.nTarjetaArray && Array.isArray(ot.RESPUESTA.nTarjetaArray)) {
+        numeroTarjeta = ot.RESPUESTA.nTarjetaArray.join(',')
+      }
 
-        const ordenData = {
-          clave: ot.CLAVE,
+      // Asignar correlativo global de forma atómica (solo si la OT es nueva)
+      const created = await prisma.$transaction(async tx => {
+        const existing = await tx.ordenTrabajo.findUnique({
+          where: { clave: ot.CLAVE },
+          select: { id: true }
+        })
+        const baseData = {
           estado: ot.ESTADO || 'PENDIENTE',
           origen: ot.ORIGEN || 'VISITA',
           fklbrutas: ot.FKLBRUTAS || '',
@@ -240,7 +245,7 @@ export async function POST(request: Request) {
           fklbdocver: ot.FKLBDOCVER || '',
           fklbrutser: ot.FKLBRUTSER || '',
           numeroTarjeta: numeroTarjeta,
-          jsonOT: ot.jsonOT || null, // Almacenar el JSON completo de la OT
+          jsonOT: ot.jsonOT || null,
           agenda: {
             connect: {
               id: parseInt(ot.FKLBRUTAS || '-1')
@@ -253,34 +258,58 @@ export async function POST(request: Request) {
           },
           user: {
             connect: {
-              //id: data.usuario.id
               id: user.id
             }
           }
         }
-
-        return prisma.ordenTrabajo.create({
-          data: ordenData,
-          include: {
-            aceptacionVisita: true,
-            densidad: true,
-            hormigonFresco: true,
-            testigos: true,
-            extraccionAsfaltica: true,
-            muestreoMaterial: true,
-            retiroProbeta: true,
-            tipoOT: true,
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true
-              }
+        const include = {
+          aceptacionVisita: true,
+          densidad: true,
+          hormigonFresco: true,
+          testigos: true,
+          extraccionAsfaltica: true,
+          muestreoMaterial: true,
+          retiroProbeta: true,
+          tipoOT: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
             }
           }
+        }
+        if (existing) {
+          return tx.ordenTrabajo.update({
+            where: { id: existing.id },
+            data: baseData,
+            include
+          })
+        }
+        // Garantizar fila singleton del contador
+        await tx.oTCorrelativoCounter.upsert({
+          where: { id: 1 },
+          update: {},
+          create: { id: 1, nextValue: 0 }
+        })
+        // Incrementar atómicamente y obtener el valor previo como correlativo asignado
+        const counter = await tx.oTCorrelativoCounter.update({
+          where: { id: 1 },
+          data: { nextValue: { increment: 1 } }
+        })
+        const numeroCorrelativo = counter.nextValue - 1
+        return tx.ordenTrabajo.create({
+          data: {
+            ...baseData,
+            clave: ot.CLAVE,
+            numeroCorrelativo
+          },
+          include
         })
       })
-    )
+
+      ordenesTrabajo.push(created)
+    }
 
     return NextResponse.json(ordenesTrabajo, { status: 201 })
   } catch (error) {

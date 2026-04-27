@@ -569,6 +569,7 @@ model OrdenTrabajo {
   fklbdocver          String
   fklbrutser          String
   numeroTarjeta       String?
+  numeroCorrelativo   Int?                 @unique
   jsonOT              Json?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -1050,4 +1051,10 @@ model CodigoAgrupadorEnsayo {
 
   @@index([codigoAgrupadorId])
   @@index([productoId])
+}
+
+model OTCorrelativoCounter {
+  id        Int      @id @default(1)
+  nextValue Int      @default(0)
+  updatedAt DateTime @updatedAt
 }

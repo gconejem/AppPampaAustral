@@ -327,6 +327,8 @@ const OtListTable = ({
           ot.estado, // Ahora ya viene mapeado desde la API
           ot.estadoOriginal, // También buscar en el estado original (código)
           ot.numeroTarjeta,
+          ot.numeroCorrelativo != null ? String(ot.numeroCorrelativo).padStart(6, '0') : undefined,
+          ot.numeroCorrelativo != null ? String(ot.numeroCorrelativo) : undefined,
           ot.clave,
           ot.correlativ,
           ot.fklbdocver,
@@ -648,9 +650,16 @@ const OtListTable = ({
         cell: ({ row }: any) => <Checkbox checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} />,
         size: 50
       },
-      columnHelper.accessor('tipoOT', {
+      columnHelper.accessor('numeroCorrelativo', {
         header: 'OT',
-        cell: info => <Typography>{getOTCode(info.getValue())}</Typography>
+        cell: info => {
+          const n = info.getValue() as number | null | undefined
+          return (
+            <Typography>
+              {n != null ? String(n).padStart(6, '0') : getOTCode(info.row.original.tipoOT)}
+            </Typography>
+          )
+        }
       }),
       columnHelper.accessor('createdAt', {
         header: 'FECHA',
