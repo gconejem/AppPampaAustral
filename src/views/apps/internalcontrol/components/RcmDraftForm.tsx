@@ -234,7 +234,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
     // Shared Sede Select (for Muestra / Control / Servicio)
     const renderSedeSelect = (labelId: string) => (
         <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
+            <FormControl fullWidth required>
                 <InputLabel id={labelId}>Sede</InputLabel>
                 <Select labelId={labelId} label='Sede' value={sede}
                     onChange={(e) => { setSede(e.target.value); if (e.target.value !== 'Otro') setCustomSede('') }}>
@@ -254,7 +254,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
     const renderAreaTipoServicio = (areaLabelId: string, tipoLabelId: string) => (
         <>
             <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
+                <FormControl fullWidth required>
                     <InputLabel id={areaLabelId} shrink>Área</InputLabel>
                     <Select labelId={areaLabelId} label='Área' value={area} displayEmpty notched
                         onChange={(e) => { setArea(e.target.value as number | ''); resetDynamicFieldsOnAreaChange() }}>
@@ -264,7 +264,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                 </FormControl>
             </Grid>
             <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
+                <FormControl fullWidth required>
                     <InputLabel id={tipoLabelId} shrink>Tipo Servicio</InputLabel>
                     <Select labelId={tipoLabelId} label='Tipo Servicio' value={tipoServicio} displayEmpty notched disabled={!area}
                         onChange={(e) => setTipoServicio(e.target.value as number | '')}>
@@ -516,10 +516,10 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                 <Grid container spacing={3}>
                                     <Grid item xs={12} md={3}>
                                         <TextField label='Fecha Confección' type='date' value={fechaConfeccion}
-                                            onChange={(e) => setFechaConfeccion(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
+                                            onChange={(e) => setFechaConfeccion(e.target.value)} required fullWidth InputLabelProps={{ shrink: true }} />
                                     </Grid>
                                     <Grid item xs={12} md={3}>
-                                        <TextField label='Elemento' value={elemento} onChange={(e) => setElemento(e.target.value)} fullWidth />
+                                        <TextField label='Elemento' value={elemento} onChange={(e) => setElemento(e.target.value)} required fullWidth />
                                     </Grid>
                                     <Grid item xs={12} md={3}>
                                         <FormControl fullWidth>
@@ -551,7 +551,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                 <Grid container spacing={3}>
                                     <Grid item xs={6} md={3}>
                                         <TextField label='Fecha Confección' type='date' value={fechaConfeccion}
-                                            onChange={(e) => setFechaConfeccion(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
+                                            onChange={(e) => setFechaConfeccion(e.target.value)} required fullWidth InputLabelProps={{ shrink: true }} />
                                     </Grid>
                                 </Grid>
                             </Box>

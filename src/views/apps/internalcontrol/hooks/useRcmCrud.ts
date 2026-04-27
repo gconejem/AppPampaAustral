@@ -1,6 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { toast } from 'react-hot-toast'
+import CancelIcon from '@mui/icons-material/Cancel'
 import type { RCMData, EnsayoAsociado, AreaType, FamiliaType, SubmuestraVencimiento, ParametroAreaType } from '../types/rcm-types'
 import { generateTemporaryRcmCode } from '../utils/temporaryCodes'
+
+const validationToastOptions = {
+    icon: React.createElement(CancelIcon, { sx: { color: '#d32f2f', fontSize: 20 } }),
+}
 
 interface UseRcmCrudParams {
     savedRcms: RCMData[]
@@ -173,22 +179,50 @@ export function useRcmCrud({
     const handleSaveRcm = async () => {
         const formValues = getFormValues()
 
+        // Validación: campos obligatorios comunes (Área, Tipo Servicio, Sede)
+        const missingFields: string[] = []
+        if (formValues.area === '' || formValues.area === null || formValues.area === undefined) {
+            missingFields.push('Área')
+        }
+        if (formValues.tipoServicio === '' || formValues.tipoServicio === null || formValues.tipoServicio === undefined) {
+            missingFields.push('Tipo Servicio')
+        }
+        if (!formValues.sede || !formValues.sede.toString().trim()) {
+            missingFields.push('Sede')
+        }
+
+        // Validación: campos dinámicos por área (solo aplica a tipo Muestra)
+        if (formValues.rcmType === 'Muestra' && formValues.area !== '') {
+            const areaNombreActual = (areas.find(a => a.id === formValues.area)?.nombre || '').toLowerCase()
+            if (areaNombreActual === 'hormigón' || areaNombreActual === 'elementos y componentes') {
+                if (!formValues.fechaConfeccion) missingFields.push('Fecha de Confección')
+                if (!formValues.elemento || !formValues.elemento.trim()) missingFields.push('Elemento')
+            } else if (areaNombreActual === 'asfalto') {
+                if (!formValues.fechaConfeccion) missingFields.push('Fecha de Confección')
+            }
+        }
+
+        if (missingFields.length > 0) {
+            toast(`Faltan campos obligatorios: ${missingFields.join(', ')}`, validationToastOptions)
+            return
+        }
+
         // Validación 1: Número de tarjeta obligatorio para tipo Muestra
         if (formValues.rcmType === 'Muestra' && !formValues.numeroTarjeta.trim()) {
-            setErrorVencimiento('El número de tarjeta es obligatorio para RCM tipo Muestra')
+            toast('El número de tarjeta es obligatorio para RCM tipo Muestra', validationToastOptions)
             return
         }
 
         // Validación 2: Al menos un ensayo asociado
         if (ensayosAsociados.length === 0) {
-            setErrorVencimiento('Debe agregar al menos un ensayo antes de guardar el RCM')
+            toast('Debe agregar al menos un ensayo antes de guardar el RCM', validationToastOptions)
             return
         }
 
         // Validar submuestras si el vencimiento está activado
         if (formValues.tieneVencimiento) {
             if (formValues.submuestrasVencimiento.length === 0) {
-                setErrorVencimiento('Debe agregar al menos una submuestra cuando el vencimiento está activado')
+                toast('Debe agregar al menos una submuestra cuando el vencimiento está activado', validationToastOptions)
                 return
             }
 
@@ -196,13 +230,13 @@ export function useRcmCrud({
             const cantidadRequerida = parseInt(formValues.cantidadMuestras) || 0
 
             if (sumaCantidades !== cantidadRequerida) {
-                setErrorVencimiento(`La suma de cantidades de submuestras (${sumaCantidades}) debe coincidir con la Cantidad de Muestras (${cantidadRequerida})`)
+                toast(`La suma de cantidades de submuestras (${sumaCantidades}) debe coincidir con la Cantidad de Muestras (${cantidadRequerida})`, validationToastOptions)
                 return
             }
 
             const sinFecha = formValues.submuestrasVencimiento.some(sub => !sub.fechaVencimiento)
             if (sinFecha) {
-                setErrorVencimiento('Todas las submuestras deben tener una fecha de vencimiento calculada o ingresada')
+                toast('Todas las submuestras deben tener una fecha de vencimiento calculada o ingresada', validationToastOptions)
                 return
             }
         }
