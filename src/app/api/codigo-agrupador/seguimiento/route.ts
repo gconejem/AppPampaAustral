@@ -67,8 +67,17 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const ordenTrabajoId = searchParams.get('ordenTrabajoId')
+    const idParam = searchParams.get('id')
 
-    const where = ordenTrabajoId ? { ordenTrabajoId } : {}
+    const codigoAgrupadorId = idParam ? Number.parseInt(String(idParam), 10) : null
+    if (idParam && (!Number.isFinite(codigoAgrupadorId) || (codigoAgrupadorId as number) <= 0)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    }
+
+    const where = {
+      ...(ordenTrabajoId ? { ordenTrabajoId } : {}),
+      ...(codigoAgrupadorId ? { id: codigoAgrupadorId } : {})
+    }
 
     const agrupadores = await prisma.codigoAgrupador.findMany({
       where,

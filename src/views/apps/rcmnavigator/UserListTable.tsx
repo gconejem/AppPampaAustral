@@ -389,6 +389,20 @@ const UserListTable2 = ({
   const [eventType, setEventType] = useState<string>('')
   const [eventReturnState, setEventReturnState] = useState<string>('')
 
+  // Meta para el popup de cierre de evento (se obtiene desde historial)
+  const [closeEventoLoading, setCloseEventoLoading] = useState(false)
+  const [closeEventoMeta, setCloseEventoMeta] = useState<
+    | null
+    | {
+        tipoLabel: string
+        motivoTitulo: string
+        descripcion: string | null
+        registradoTxt: string | null
+        venceTxt: string | null
+        tone: 'warning' | 'error' | 'secondary'
+      }
+  >(null)
+
   // ---- Helpers que dependen de `data` (dentro del componente) ----
   const normalizeState = (s?: string) => (s ?? '').toString().toUpperCase().trim()
 
@@ -555,8 +569,20 @@ const UserListTable2 = ({
   const [codigoDialogLoading, setCodigoDialogLoading] = useState(false)
   const [codigoDialogMeta, setCodigoDialogMeta] = useState<any>(null)
   const [codigoDialogData, setCodigoDialogData] = useState<any>(null)
+  const [codigoDialogHistory, setCodigoDialogHistory] = useState<any[]>([])
   const [codigoDialogDigitadoAt, setCodigoDialogDigitadoAt] = useState<string | null>(null)
   const [codigoDialogOpAt, setCodigoDialogOpAt] = useState<string | null>(null)
+
+  // Dialog: Editar CP
+  const [editCpOpen, setEditCpOpen] = useState(false)
+  const [editCpLoading, setEditCpLoading] = useState(false)
+  const [editCpSaving, setEditCpSaving] = useState(false)
+  const [editCpError, setEditCpError] = useState<string | null>(null)
+  const [editCpCodigoId, setEditCpCodigoId] = useState<number | null>(null)
+  const [editCpCodigoNombre, setEditCpCodigoNombre] = useState<string>('')
+  const [editCpSubtitle, setEditCpSubtitle] = useState<string>('')
+  const [editCpDescripcion, setEditCpDescripcion] = useState<string>('')
+  const [editCpNotasInternas, setEditCpNotasInternas] = useState<string>('')
 
   // simple cache en memoria para historial por RCM (evita refetchs)
   const historyCache: Map<number, any[]> = (global as any).__RCM_HISTORY_CACHE__ || new Map()
@@ -685,6 +711,7 @@ const UserListTable2 = ({
   const openCodigoProductoDialog = async (row: any) => {
     setCodigoDialogMeta(row)
     setCodigoDialogData(null)
+    setCodigoDialogHistory([])
     setCodigoDialogDigitadoAt(null)
     setCodigoDialogOpAt(null)
     setCodigoDialogOpen(true)
@@ -711,7 +738,7 @@ const UserListTable2 = ({
               if (cached) return cached
 
               // Sólo necesitamos entradas recientes para fechas (DIGITADO / estado actual)
-              const res = await fetch(`/api/rcm/${repRcmId}/history?take=120`)
+              const res = await fetch(`/api/rcm/${repRcmId}/history?take=300`)
               if (!res.ok) return []
               const json = await res.json().catch(() => [])
               const arr = Array.isArray(json) ? json : []
@@ -722,6 +749,7 @@ const UserListTable2 = ({
 
       const [detail, rows] = await Promise.all([detailPromise, historyPromise])
       if (detail) setCodigoDialogData(detail)
+      setCodigoDialogHistory(Array.isArray(rows) ? rows : [])
 
       // fechas desde historial del representative RCM
       if (rows && Array.isArray(rows) && rows.length) {
@@ -754,8 +782,119 @@ const UserListTable2 = ({
     setCodigoDialogLoading(false)
     setCodigoDialogMeta(null)
     setCodigoDialogData(null)
+    setCodigoDialogHistory([])
     setCodigoDialogDigitadoAt(null)
     setCodigoDialogOpAt(null)
+  }
+
+  const closeEditCpDialog = () => {
+    if (editCpSaving) return
+    setEditCpOpen(false)
+    setEditCpLoading(false)
+    setEditCpSaving(false)
+    setEditCpError(null)
+    setEditCpCodigoId(null)
+    setEditCpCodigoNombre('')
+    setEditCpSubtitle('')
+    setEditCpDescripcion('')
+    setEditCpNotasInternas('')
+  }
+
+  const openEditCpDialogFromRepresentativeRcmId = async (representativeRcmId: number | null) => {
+    handleCloseRowMenu()
+    setEditCpError(null)
+
+    if (!representativeRcmId) return
+    const agg = findAggregatedRowByRepresentativeRcmId(representativeRcmId)
+    const codigoAgrupadorId = Number((agg as any)?.id)
+    if (!Number.isFinite(codigoAgrupadorId) || codigoAgrupadorId <= 0) {
+      console.warn('Editar CP: codigoAgrupadorId inválido', codigoAgrupadorId, agg)
+      return
+    }
+
+    const codigoNombre = String((agg as any)?.codigoNombre ?? '').trim()
+    const clienteName =
+      String((agg as any)?.cliente?.razonSocial ?? (agg as any)?.cliente?.nombreCliente ?? '').trim() ||
+      String((agg as any)?.clienteNombre ?? '').trim()
+    const obraNum = String((agg as any)?.obra?.numeroObra ?? '').trim()
+    const obraTxt = obraNum ? `Obra ${obraNum}` : ''
+    const subtitle = [clienteName, obraTxt].filter(Boolean).join(' - ')
+
+    setEditCpCodigoId(codigoAgrupadorId)
+    setEditCpCodigoNombre(codigoNombre)
+    setEditCpSubtitle(subtitle)
+    setEditCpDescripcion(String((agg as any)?.descripcionServicio ?? '').trim())
+    setEditCpNotasInternas('')
+    setEditCpOpen(true)
+
+    try {
+      setEditCpLoading(true)
+      const res = await fetch(`/api/codigo-agrupador/${codigoAgrupadorId}?view=dialog`, { cache: 'no-store' })
+      if (!res.ok) return
+      const json = await res.json().catch(() => null)
+      if (!json) return
+      setEditCpCodigoNombre(String(json?.codigoNombre ?? codigoNombre ?? '').trim())
+      setEditCpDescripcion(String(json?.descripcionServicio ?? '').trim())
+    } catch (e) {
+      console.error('openEditCpDialog error', e)
+    } finally {
+      setEditCpLoading(false)
+    }
+  }
+
+  const saveEditCpDialog = async () => {
+    if (editCpSaving) return
+    const codigoId = editCpCodigoId
+    if (!codigoId) return
+
+    try {
+      setEditCpSaving(true)
+      setEditCpError(null)
+
+      const payload = {
+        descripcionServicio: editCpDescripcion
+      }
+
+      const res = await fetch(`/api/codigo-agrupador/${codigoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        throw new Error(txt || 'No se pudo guardar el CP')
+      }
+
+      // actualizar lista en memoria
+      setData(prev =>
+        prev.map(r =>
+          Number((r as any)?.id) === codigoId
+            ? { ...r, descripcionServicio: editCpDescripcion }
+            : r
+        )
+      )
+      setFilteredData(prev =>
+        prev.map(r =>
+          Number((r as any)?.id) === codigoId
+            ? { ...r, descripcionServicio: editCpDescripcion }
+            : r
+        )
+      )
+
+      try {
+        void refreshSeguimiento()
+      } catch {
+        /* noop */
+      }
+
+      closeEditCpDialog()
+    } catch (e: any) {
+      console.error('saveEditCpDialog error', e)
+      setEditCpError(String(e?.message ?? 'No se pudo guardar el CP.'))
+    } finally {
+      setEditCpSaving(false)
+    }
   }
 
   const validateInformeDialog = () => {
@@ -886,12 +1025,19 @@ const UserListTable2 = ({
       const funcionario = getCurrentUserName() ?? 'Usuario'
       const aplicadoA = getAppliedAForRow(rcmId)
 
-      const buildObservacion = (tipoInforme: string, refCliente: string, observaciones: string, anexoPrev: string) => {
+      const buildObservacion = (
+        tipoInforme: string,
+        refCliente: string,
+        observaciones: string,
+        anexoPrev: string,
+        rcms?: string[]
+      ) => {
         const parts = [
           tipoInforme ? `Tipo: ${tipoInforme}` : '',
           refCliente ? `Ref. Cliente: ${refCliente}` : '',
           observaciones ? `Obs: ${observaciones}` : '',
-          anexoPrev ? `Anexo Prev: ${anexoPrev}` : ''
+          anexoPrev ? `Anexo Prev: ${anexoPrev}` : '',
+          (rcms ?? []).length ? `RCMs: ${(rcms ?? []).join(', ')}` : ''
         ].filter(Boolean)
         return parts.length ? parts.join(' | ') : null
       }
@@ -912,13 +1058,17 @@ const UserListTable2 = ({
 
       const createdEntries: any[] = []
 
+      const metaRcms: string[] = Array.isArray(informeDialogMeta?.rcmNumeros)
+        ? (informeDialogMeta?.rcmNumeros ?? []).map((x: any) => String(x ?? '').trim()).filter(Boolean)
+        : []
+
       // 1) Persistir informes automáticos (si aplica)
       for (const a of autoCreates ?? []) {
         const payload: any = {
           tipo: 'Ope',
           tipoEstado: 'INFORME_AUTO',
           motivo: a.label,
-          observacion: buildObservacion('', a.refCliente, a.observaciones, a.anexoPrev),
+          observacion: buildObservacion('', a.refCliente, a.observaciones, a.anexoPrev, metaRcms),
           funcionario,
           estPrev: null,
           estNuevo: null,
@@ -947,7 +1097,7 @@ const UserListTable2 = ({
           tipo: 'Ope',
           tipoEstado: 'INFORME_MANUAL',
           motivo: null,
-          observacion: buildObservacion(m.tipoInforme, m.refCliente, m.observaciones, m.anexoPrev),
+          observacion: buildObservacion(m.tipoInforme, m.refCliente, m.observaciones, m.anexoPrev, m.rcms),
           funcionario,
           estPrev: null,
           estNuevo: null,
@@ -1043,6 +1193,8 @@ const UserListTable2 = ({
     setInformeNumber('')
     setCorrectionMotivo('')
     setCorrectionObservaciones('')
+    setCloseEventoLoading(false)
+    setCloseEventoMeta(null)
     // Para EVENTO, el tipo debe venir seleccionado por defecto
     setEventType(action === 'EVENTO' ? 'INFO_PENDIENTE' : '')
     if (action === 'EVENTO' && rowId != null) {
@@ -1389,6 +1541,8 @@ const UserListTable2 = ({
     setCorrectionObservaciones('')
     setEventType('')
     setEventReturnState('')
+    setCloseEventoLoading(false)
+    setCloseEventoMeta(null)
   }
 
   const handleOpenRowMenu = (e: React.MouseEvent<HTMLElement>, rowId: number) => {
@@ -1529,6 +1683,11 @@ const UserListTable2 = ({
   const handleView = (rowId: number | null) => {
     // reutilizar handleEdit en modo readonly para comportamiento idéntico
     handleEdit(rowId, { readonly: true })
+  }
+
+  const handleGoToCodificacion = (rowId: number | null) => {
+    // abrir formulario full de codificación (edición)
+    handleEdit(rowId)
   }
 
   const handleGenerateInforme = (rowId: number | null) => {
@@ -1788,6 +1947,127 @@ const UserListTable2 = ({
     const mm = String(d.getMonth() + 1).padStart(2, '0')
     const yyyy = d.getFullYear()
     return `${dd}-${mm}-${yyyy}`
+  }
+
+  const formatDateLikeDDMMYYYYDash = (raw: string | null | undefined) => {
+    const s = String(raw ?? '').trim()
+    if (!s) return null
+    const t = s.replace(/\//g, '-').trim()
+    if (/^\d{2}-\d{2}-\d{4}$/.test(t)) return t
+    if (/^\d{2}-\d{2}-\d{2}$/.test(t)) return t
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return formatDateDDMMYYYYDateOnlyDash(new Date(t))
+    const d = new Date(t)
+    if (!isNaN(d.getTime())) return formatDateDDMMYYYYDateOnlyDash(d)
+    return t
+  }
+
+  const extractDueTxtFromText = (raw: string | null | undefined) => {
+    const s = String(raw ?? '')
+    const m = s.match(/\bvence(?:\s*fecha)?\s*:?\s*(\d{2}[\/-]\d{2}[\/-]\d{4}|\d{4}[\/-]\d{2}[\/-]\d{2}|\d{2}[\/-]\d{2}[\/-]\d{2})\b/i)
+    if (!m) return null
+    return formatDateLikeDDMMYYYYDash(String(m[1] ?? '').trim())
+  }
+
+  const deriveActiveEventoMetaFromHistory = (rows: any[]) => {
+    const isEventoAbierto = (h: any) => {
+      const tipo = String(h?.tipo ?? '').trim()
+      const tipoEstado = String(h?.tipoEstado ?? '').trim().toUpperCase()
+      return tipo === 'Evento Abierto' || tipoEstado === 'EVENTO'
+    }
+    const isEventoCerrado = (h: any) => {
+      const tipo = String(h?.tipo ?? '').trim()
+      const tipoEstado = String(h?.tipoEstado ?? '').trim().toUpperCase()
+      return tipo === 'Evento Cerrado' || tipoEstado === 'EVENTO_CERRADO'
+    }
+
+    for (const h of rows ?? []) {
+      if (isEventoCerrado(h)) return null
+      if (!isEventoAbierto(h)) continue
+
+      const motivo = String(h?.motivo ?? '').trim()
+      const [head, ...rest] = motivo.split(' - ')
+      const tipoLabel = (head || 'Evento').trim() || 'Evento'
+      const motivoTitulo = (rest.join(' - ') || '').trim()
+
+      const obs = String(h?.observacion ?? '').trim()
+      const descripcion = obs ? obs.split(/\r?\n/).find(l => String(l).trim()) ?? null : null
+
+      const fechaIso = String(h?.fechaAccion ?? h?.createdAt ?? h?.date ?? '').trim()
+      const registradoDate = fechaIso ? formatDateDDMMYYYYDateOnlyDash(fechaIso) : null
+      const funcionario = String(h?.funcionario ?? h?.user ?? '').trim()
+      const registradoTxt = [registradoDate ? `Registrado ${registradoDate}` : null, funcionario ? funcionario : null]
+        .filter(Boolean)
+        .join(' · ') || null
+
+      const venceTxt = extractDueTxtFromText(obs) ?? extractDueTxtFromText(motivo)
+
+      const nt = normalizeText(tipoLabel)
+      const tone: 'warning' | 'error' | 'secondary' = nt.includes('error')
+        ? 'error'
+        : nt.includes('correc')
+          ? 'secondary'
+          : 'warning'
+
+      return { tipoLabel, motivoTitulo, descripcion, registradoTxt, venceTxt, tone }
+    }
+
+    return null
+  }
+
+  // Cargar meta del evento activo al abrir el popup de cierre
+  useEffect(() => {
+    if (!markDialogOpen) return
+    if (markDialogAction !== 'CERRAR_EVENTO') return
+    if (!markDialogRowId) return
+
+    let alive = true
+    const rcmId = markDialogRowId
+
+    setCloseEventoLoading(true)
+    setCloseEventoMeta(null)
+
+    void (async () => {
+      try {
+        let rows = historyCache.get(rcmId)
+        if (!rows) {
+          const res = await fetch(`/api/rcm/${rcmId}/history?take=200`)
+          if (!res.ok) rows = []
+          else {
+            const json = await res.json().catch(() => [])
+            rows = Array.isArray(json) ? json : []
+          }
+          historyCache.set(rcmId, rows)
+        }
+
+        const ordered = (Array.isArray(rows) ? rows : []).slice().sort((a: any, b: any) => {
+          const ta = new Date(a?.fechaAccion ?? a?.createdAt ?? a?.date ?? 0).getTime()
+          const tb = new Date(b?.fechaAccion ?? b?.createdAt ?? b?.date ?? 0).getTime()
+          return tb - ta
+        })
+
+        const meta = deriveActiveEventoMetaFromHistory(ordered)
+        if (alive) setCloseEventoMeta(meta)
+      } catch (e) {
+        if (alive) setCloseEventoMeta(null)
+      } finally {
+        if (alive) setCloseEventoLoading(false)
+      }
+    })()
+
+    return () => {
+      alive = false
+    }
+  }, [markDialogOpen, markDialogAction, markDialogRowId, historyCache])
+
+  // helper: formatear fecha a DD-MM-YY (sin hora)
+  const formatDateDDMMYYDateOnlyDash = (v: any) => {
+    if (!v) return '-'
+    const d = v instanceof Date ? v : new Date(v)
+    if (isNaN(d.getTime())) return '-'
+    const dd = String(d.getDate()).padStart(2, '0')
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const yy = String(d.getFullYear()).slice(-2)
+    return `${dd}-${mm}-${yy}`
   }
 
   const openOperationalHelp = (e: React.MouseEvent<HTMLElement>, rawState: any, row: any) => {
@@ -3070,8 +3350,11 @@ const UserListTable2 = ({
         <DialogTitle sx={{ pb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
             <Box sx={{ minWidth: 0 }}>
-              <Typography variant='subtitle1' sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-                {`Código Producto — ${String(codigoDialogMeta?.codigoNombre ?? codigoDialogData?.codigoNombre ?? '').trim() || '—'}`}
+              <Typography variant='caption' color='text.secondary' sx={{ display: 'block', fontWeight: 800, lineHeight: 1.1 }}>
+                Código Producto
+              </Typography>
+              <Typography variant='subtitle1' sx={{ fontWeight: 900, lineHeight: 1.2, color: 'primary.main' }}>
+                {String(codigoDialogMeta?.codigoNombre ?? codigoDialogData?.codigoNombre ?? '').trim() || '—'}
               </Typography>
               <Typography
                 variant='caption'
@@ -3085,7 +3368,15 @@ const UserListTable2 = ({
                     String(codigoDialogMeta?.clienteNombre ?? '').trim()
                   const obraNum = String(codigoDialogMeta?.obra?.numeroObra ?? '').trim()
                   const obraTxt = obraNum ? `Obra ${obraNum}` : ''
-                  return [ot ? `OT ${ot}` : '', clienteName, obraTxt].filter(Boolean).join(' · ') || ' '
+                  const ciudad = String(
+                    codigoDialogMeta?.ciudad ??
+                      codigoDialogMeta?.obra?.comuna ??
+                      codigoDialogMeta?.cliente?.comuna ??
+                      codigoDialogMeta?.cliente?.ciudad ??
+                      ''
+                  ).trim()
+
+                  return [ot ? `OT ${ot}` : '', clienteName, obraTxt, ciudad].filter(Boolean).join(' - ') || ' '
                 })()}
               </Typography>
             </Box>
@@ -3106,6 +3397,19 @@ const UserListTable2 = ({
 
                   const dateSrc = op ? (codigoDialogOpAt ?? (opKey === 'DIGITADO' ? codigoDialogDigitadoAt : null)) : null
                   const dateTxt = dateSrc ? formatDateDDMMYYYYDateOnly(dateSrc) : '-'
+
+                  const daysSinceDigitado = (() => {
+                    if (opKey !== 'DIGITADO') return null
+                    const raw = String(dateSrc ?? '').trim()
+                    if (!raw) return null
+                    const d = new Date(raw)
+                    if (isNaN(d.getTime())) return null
+                    const from = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+                    const now = new Date()
+                    const to = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+                    const diff = Math.floor((to - from) / (24 * 60 * 60 * 1000))
+                    return Number.isFinite(diff) && diff >= 0 ? diff : null
+                  })()
 
                   const admInfo = adm ? getAdministrativeInfo(adm) : null
 
@@ -3148,6 +3452,12 @@ const UserListTable2 = ({
                       {op ? (
                         <Typography variant='caption' color='text.secondary' sx={{ mt: 0.25, fontWeight: 700 }}>
                           Desde {dateTxt}
+                        </Typography>
+                      ) : null}
+
+                      {daysSinceDigitado != null ? (
+                        <Typography variant='caption' color='text.secondary' sx={{ mt: 0.15, fontWeight: 700 }}>
+                          {daysSinceDigitado === 1 ? 'Hace 1 día' : `Hace ${daysSinceDigitado} días`}
                         </Typography>
                       ) : null}
                     </Box>
@@ -3336,79 +3646,195 @@ const UserListTable2 = ({
             })()}
           </Box>
 
-          {/* Informes (generados) — derivado de SKUs (mientras no exista fuente explícita) */}
+          {/* Informes */}
           <Box sx={{ mb: 2 }}>
             <Typography variant='subtitle2' sx={{ fontWeight: 800, mb: 1 }}>
-              Informes (generados)
+              Informes
             </Typography>
 
             {(() => {
-              const hasGenerated = Number(codigoDialogMeta?.informe ?? 0) > 0
-              if (!hasGenerated) {
+              const normalize = (v: any) => String(v ?? '').trim().toUpperCase()
+
+              const formatInforme = (n: number) => {
+                const s = String(n)
+                if (s.length <= 3) return s
+                return `${s.slice(0, -3)}-${s.slice(-3)}`
+              }
+
+              const extractTipoFromObs = (obs: string) => {
+                const raw = String(obs ?? '')
+                const m = raw.match(/(?:^|\|\s)\s*Tipo:\s*([^|\n\r]+)/i)
+                return String(m?.[1] ?? '').trim() || null
+              }
+
+              const extractRcmsFromObs = (obs: string) => {
+                const raw = String(obs ?? '')
+                const m = raw.match(/RCMs?:\s*([^|\n\r]+)/i)
+                const bag = String(m?.[1] ?? '').trim()
+                if (!bag) return [] as string[]
+                return bag
+                  .split(/[,\s]+/)
+                  .map(x => String(x ?? '').trim())
+                  .filter(Boolean)
+              }
+
+              const rows = Array.isArray(codigoDialogHistory) ? codigoDialogHistory : []
+              const informes = rows
+                .map((r: any) => {
+                  const tipoEstado = normalize(r?.tipoEstado)
+                  if (tipoEstado !== 'INFORME_AUTO' && tipoEstado !== 'INFORME_MANUAL') return null
+                  const informeN = Number(r?.informe)
+                  const hasN = Number.isFinite(informeN) && informeN > 0
+                  const modo = tipoEstado === 'INFORME_AUTO' ? 'Digital' : 'Manual'
+                  const issuedAt = r?.fechaAccion ?? r?.createdAt ?? null
+                  const dateTxt = issuedAt ? formatDateDDMMYYYYDateOnly(issuedAt) : '-'
+
+                  const obs = String(r?.observacion ?? '').trim()
+                  const motivo = String(r?.motivo ?? '').trim()
+
+                  const nombre =
+                    modo === 'Manual'
+                      ? extractTipoFromObs(obs) ?? '—'
+                      : motivo || String(codigoDialogData?.descripcionServicio ?? codigoDialogMeta?.descripcionServicio ?? '').trim() || '—'
+
+                  const rcmsRaw = extractRcmsFromObs(obs)
+                  const repRcmFallback = (() => {
+                    const rep = Number(codigoDialogMeta?.representativeRcmId)
+                    return Number.isFinite(rep) && rep > 0 ? [String(rep)] : ([] as string[])
+                  })()
+                  const rcms = rcmsRaw.length ? rcmsRaw : repRcmFallback
+
+                  const slug = (() => {
+                    const norm = normalize(motivo)
+                    if (norm.includes('DENSIDAD')) return 'densidad'
+                    if (norm.includes('HORMIGON') || norm.includes('HORMIGÓN')) return 'hormigon'
+                    return null
+                  })()
+
+                  return {
+                    key: `${tipoEstado}-${String(r?.id ?? '')}-${String(r?.fechaAccion ?? r?.createdAt ?? '')}`,
+                    modo,
+                    informeN: hasN ? informeN : null,
+                    numeroTxt: hasN ? formatInforme(informeN) : '-',
+                    dateTxt,
+                    nombre,
+                    rcms,
+                    slug
+                  }
+                })
+                .filter(Boolean) as Array<{
+                key: string
+                modo: 'Digital' | 'Manual'
+                informeN: number | null
+                numeroTxt: string
+                dateTxt: string
+                nombre: string
+                rcms: string[]
+                slug: string | null
+              }>
+
+              if (!informes.length) {
                 return (
                   <Typography variant='body2' color='text.secondary'>
                     Sin informes generados manuales / digitales
                   </Typography>
                 )
               }
-
-              const ens = Array.isArray(codigoDialogData?.ensayos) ? codigoDialogData.ensayos : []
-              const uniq = new Map<string, { sku: string; nombre: string }>()
-              for (const e of ens) {
-                const sku = String(e?.sku ?? e?.producto?.sku ?? '').trim()
-                const nombre = String(e?.nombre ?? e?.producto?.nombre ?? '').trim()
-                if (!sku) continue
-                if (!uniq.has(sku)) uniq.set(sku, { sku, nombre })
-              }
-              const items = Array.from(uniq.values())
-              if (items.length === 0) {
-                return (
-                  <Typography variant='body2' color='text.secondary'>
-                    Sin informes generados manuales / digitales
-                  </Typography>
-                )
-              }
-
-              const totalEns = Number(codigoDialogMeta?.ensayos?.total ?? 0)
-              const ensayados = Number(codigoDialogMeta?.ensayos?.ensayados ?? 0)
-              const pend = Math.max(0, totalEns - ensayados)
-
-              const totalRcms = Array.isArray(codigoDialogData?.rcms) ? codigoDialogData.rcms.length : 0
-              const rcmTxt = totalRcms > 0 ? `${totalRcms} RCM${totalRcms === 1 ? '' : 's'}` : null
 
               return (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {items.slice(0, 10).map((it, idx) => (
-                    <Paper
-                      key={it.sku}
-                      variant='outlined'
-                      sx={theme => ({
-                        p: 1.25,
-                        borderRadius: 1.75,
-                        borderColor: alpha(theme.palette.divider, 0.9)
-                      })}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
-                          <EmojiEventsOutlinedIcon fontSize='small' sx={{ color: 'warning.main' }} />
-                          <Box sx={{ minWidth: 0 }}>
-                            <Typography variant='body2' sx={{ fontWeight: 800 }}>
-                              {it.nombre || it.sku}
+                  {informes.map(it => {
+                    const isManual = it.modo === 'Manual'
+                    const canViewPdf = !isManual && !!it.slug
+
+                    return (
+                      <Paper
+                        key={it.key}
+                        variant='outlined'
+                        sx={{
+                          p: 1.25,
+                          borderRadius: 1.75,
+                          bgcolor: isManual ? '#F1F1F1' : '#EFF6FF',
+                          border: isManual ? '1px solid #595959' : '1px solid #DBEAFE'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                            <Chip
+                              size='small'
+                              label={it.numeroTxt}
+                              sx={{ fontWeight: 900, bgcolor: 'primary.main', color: 'primary.contrastText' }}
+                            />
+
+                            <Chip
+                              size='small'
+                              label={it.modo}
+                              sx={
+                                isManual
+                                  ? { fontWeight: 900, bgcolor: '#595959', color: '#FFFFFF' }
+                                  : theme => ({
+                                      fontWeight: 900,
+                                      bgcolor: alpha(theme.palette.primary.main, 0.12),
+                                      border: `1px solid ${alpha(theme.palette.primary.main, 0.25)}`,
+                                      color: theme.palette.primary.main
+                                    })
+                              }
+                            />
+                          </Box>
+
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, whiteSpace: 'nowrap' }}>
+                            <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700 }}>
+                              {it.dateTxt}
                             </Typography>
-                            <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
-                              {`R-L-${String(idx + 1).padStart(3, '0')}`}{rcmTxt ? ` · ${rcmTxt}` : ''} · Manual
-                            </Typography>
+
+                            {canViewPdf ? (
+                              <Button
+                                size='small'
+                                variant='outlined'
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  const slug = it.slug
+                                  if (!slug) return
+
+                                  let url = `/api/informes/${slug}/mock`
+                                  if (slug === 'densidad') {
+                                    const params = new URLSearchParams()
+                                    const codigoId = Number(codigoDialogMeta?.id)
+                                    const repRcmId = Number(codigoDialogMeta?.representativeRcmId)
+                                    if (Number.isFinite(codigoId) && codigoId > 0) params.set('codigoAgrupadorId', String(codigoId))
+                                    if (Number.isFinite(repRcmId) && repRcmId > 0) params.set('rcmId', String(repRcmId))
+                                    if (it.informeN != null) params.set('informe', String(it.informeN))
+                                    const qs = params.toString()
+                                    if (qs) url = `/api/informes/densidad/generate?${qs}`
+                                  }
+
+                                  const w = window.open(url, '_blank')
+                                  if (w) {
+                                    try {
+                                      w.opener = null
+                                    } catch {
+                                      // noop
+                                    }
+                                  }
+                                }}
+                                sx={{ textTransform: 'none', borderRadius: 2 }}
+                              >
+                                Ver PDF
+                              </Button>
+                            ) : null}
                           </Box>
                         </Box>
 
-                        {pend > 0 ? (
-                          <Typography variant='caption' sx={{ fontWeight: 800, color: 'warning.main', whiteSpace: 'nowrap' }}>
-                            {pend} ens. pend.
-                          </Typography>
-                        ) : null}
-                      </Box>
-                    </Paper>
-                  ))}
+                        <Typography variant='body2' sx={{ fontWeight: 800, mt: 0.75 }}>
+                          {it.nombre}
+                        </Typography>
+
+                        <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 0.25, fontWeight: 700 }}>
+                          RCMs: {it.rcms.length ? it.rcms.join(', ') : '-'}
+                        </Typography>
+                      </Paper>
+                    )
+                  })}
                 </Box>
               )
             })()}
@@ -3436,7 +3862,22 @@ const UserListTable2 = ({
                 const obs = String(last?.observacion ?? '').trim()
                 const obsLine = obs ? obs.split(/\r?\n/).find(l => String(l).trim()) ?? '' : ''
 
-                return { r, last, evTipo, evMotivo, obsLine }
+                const extractDueTxt = (raw: string) => {
+                  const s = String(raw ?? '')
+                  const m = s.match(/\bvence(?:\s*fecha)?\s*:?\s*(\d{2}[\/-]\d{2}[\/-]\d{4}|\d{4}[\/-]\d{2}[\/-]\d{2})\b/i)
+                  if (!m) return null
+                  const v = String(m[1] ?? '').trim().replace(/\//g, '-')
+                  if (!v) return null
+                  if (/^\d{2}-\d{2}-\d{4}$/.test(v)) return v
+                  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return formatDateDDMMYYYYDateOnly(v)
+                  const d = new Date(v)
+                  if (!isNaN(d.getTime())) return formatDateDDMMYYYYDateOnly(d.toISOString())
+                  return v
+                }
+
+                const dueTxt = extractDueTxt(obs) ?? extractDueTxt(motivo)
+
+                return { r, last, evTipo, evMotivo, obsLine, dueTxt }
               })
               .filter(Boolean) as Array<any>
 
@@ -3466,14 +3907,29 @@ const UserListTable2 = ({
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25, minWidth: 0 }}>
                           <ReportProblemOutlinedIcon fontSize='small' sx={{ color: 'error.main', mt: 0.2 }} />
                           <Box sx={{ minWidth: 0 }}>
-                            <Typography variant='caption' sx={{ fontWeight: 900, color: 'error.main', display: 'block' }}>
-                              {ev.evTipo}
-                            </Typography>
-                            {ev.evMotivo ? (
-                              <Typography variant='caption' color='text.secondary' sx={{ display: 'block', fontWeight: 700 }}>
-                                {ev.evMotivo}
-                              </Typography>
-                            ) : null}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                              <Chip
+                                size='small'
+                                label={String(ev.evTipo ?? '').trim() || 'Evento'}
+                                sx={theme => ({
+                                  height: 22,
+                                  fontWeight: 900,
+                                  bgcolor: alpha(theme.palette.warning.main, 0.16),
+                                  border: `1px solid ${alpha(theme.palette.warning.main, 0.35)}`,
+                                  color: theme.palette.warning.main
+                                })}
+                              />
+
+                              {ev.evMotivo ? (
+                                <Typography
+                                  variant='caption'
+                                  sx={{ fontWeight: 800, color: 'text.primary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                >
+                                  {ev.evMotivo}
+                                </Typography>
+                              ) : null}
+                            </Box>
+
                             {ev.obsLine ? (
                               <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
                                 {ev.obsLine}
@@ -3481,6 +3937,16 @@ const UserListTable2 = ({
                             ) : null}
                           </Box>
                         </Box>
+
+                        {ev.dueTxt ? (
+                          <Typography
+                            variant='caption'
+                            color='text.secondary'
+                            sx={{ fontWeight: 700, whiteSpace: 'nowrap', mt: 0.35 }}
+                          >
+                            Vence: {ev.dueTxt}
+                          </Typography>
+                        ) : null}
 
                       </Box>
                     ))}
@@ -4384,13 +4850,22 @@ const UserListTable2 = ({
       <Dialog open={markDialogOpen} onClose={handleCancelMarkDialog} maxWidth='sm' fullWidth>
         <DialogTitle sx={{ pb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
-            <Box sx={{ minWidth: 0 }}>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
               {markDialogAction === 'EVENTO' || markDialogAction === 'CERRAR_EVENTO' ? (
                 <Box sx={{ minWidth: 0 }}>
                   <Typography variant='subtitle1' sx={{ fontWeight: 900, lineHeight: 1.2 }}>
                     {markDialogAction === 'EVENTO' ? 'Registrar Evento' : 'Cerrar Evento'}
                   </Typography>
-                  <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  <Typography
+                    variant='caption'
+                    color='text.secondary'
+                    sx={{
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                  >
                     {(() => {
                       const rcmId = markDialogRowId
                       if (!rcmId) return ''
@@ -4429,15 +4904,63 @@ const UserListTable2 = ({
                 })()
               )}
             </Box>
-
             <IconButton aria-label='Cerrar' onClick={handleCancelMarkDialog} size='small'>
               <CloseIcon fontSize='small' />
             </IconButton>
           </Box>
         </DialogTitle>
 
-        <DialogContent sx={{ pt: 0.5 }}>
+        <DialogContent sx={{ pt: 0.5, overflowX: 'hidden' }}>
           <Divider sx={{ mb: 2 }} />
+
+          {markDialogAction === 'EVENTO' && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+              <Box
+                sx={theme => {
+                  const currentState = markDialogRowId != null ? getCurrentStateForRow(markDialogRowId) : ''
+                  const info = getOperationalInfo(currentState)
+
+                  return {
+                    px: 1.25,
+                    py: 0.75,
+                    borderRadius: 2,
+                    border: `1px solid ${alpha(theme.palette.warning.main, 0.35)}`,
+                    bgcolor: alpha(theme.palette.warning.main, 0.08),
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    whiteSpace: 'nowrap',
+                    '& .MuiChip-root': {
+                      bgcolor: info.bgcolor,
+                      color: info.colorText,
+                      border: `1px solid ${info.border}`,
+                      fontWeight: 800,
+                      borderRadius: 2,
+                      textTransform: 'uppercase'
+                    }
+                  }
+                }}
+              >
+                <Typography variant='overline' color='text.secondary' sx={{ lineHeight: 1, fontWeight: 900 }}>
+                  ESTADO ACTUAL
+                </Typography>
+                <Box
+                  sx={theme => ({
+                    width: '1px',
+                    alignSelf: 'stretch',
+                    bgcolor: alpha(theme.palette.warning.main, 0.45)
+                  })}
+                />
+                <Chip
+                  size='small'
+                  label={(() => {
+                    const currentState = markDialogRowId != null ? getCurrentStateForRow(markDialogRowId) : ''
+                    return OPERATIONAL_STATES.find(s => s.value === currentState)?.label ?? (currentState || '—')
+                  })()}
+                />
+              </Box>
+            </Box>
+          )}
 
           {markDialogAction === 'EVENTO' && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -4567,7 +5090,7 @@ const UserListTable2 = ({
               {/* Estado destino */}
               <Box>
                 <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block', mb: 0.75 }}>
-                  ¿A QUÉ ESTADO DEBE IR EL CP PARA RESOLVER ESTE EVENTO? *
+                  ¿A qué estado debe ir el CP? *
                 </Typography>
 
                 <Box
@@ -4580,7 +5103,7 @@ const UserListTable2 = ({
                   })}
                 >
                   <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700 }}>
-                    El declarante envía el CP al estado donde se puede solucionar el problema. Ej: un error en el Digitado (para que lo corrijan y vuelvan a revisar).
+                    💡 El declarante envía el CP al estado donde se puede solucionar el problema.
                   </Typography>
                 </Box>
 
@@ -4611,21 +5134,12 @@ const UserListTable2 = ({
                           display: 'grid',
                           gridTemplateColumns: '1fr',
                           gap: 1,
-                          '& .MuiChip-root': {
-                            fontWeight: 800,
-                            ...(true && (() => {
-                              const celeste = lighten(theme.palette.primary.main, 0.35)
-                              return {
-                                bgcolor: celeste,
-                                border: `1px solid ${celeste}`,
-                                color: theme.palette.common.white
-                              }
-                            })())
-                          }
+                          '& .MuiChip-root': { fontWeight: 800 }
                         })}
                       >
                         {visible.map(opt => {
                           const st = OPERATIONAL_STATES.find(s => s.value === opt.value)
+                          const info = getOperationalInfo(opt.value)
                           const selected = eventReturnState === opt.value
 
                           return (
@@ -4644,16 +5158,19 @@ const UserListTable2 = ({
                                 }
                               }}
                               sx={theme => ({
-                                border: `1px solid ${selected ? alpha(theme.palette.primary.main, 0.55) : theme.palette.divider}`,
-                                bgcolor: selected ? alpha(theme.palette.primary.main, 0.06) : 'transparent',
+                                border: `1px solid ${selected ? alpha(String(info.border ?? theme.palette.primary.main), 0.8) : theme.palette.divider}`,
+                                bgcolor: selected ? alpha(String(info.bgcolor ?? theme.palette.primary.main), 0.08) : 'transparent',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 1,
                                 p: 0.75,
                                 borderRadius: 2,
                                 cursor: 'pointer',
+                                minWidth: 0,
                                 '&:hover': {
-                                  bgcolor: alpha(theme.palette.action.hover, 0.7)
+                                  bgcolor: selected
+                                    ? alpha(String(info.bgcolor ?? theme.palette.primary.main), 0.10)
+                                    : alpha(theme.palette.action.hover, 0.7)
                                 }
                               })}
                             >
@@ -4664,16 +5181,20 @@ const UserListTable2 = ({
                                 sx={theme => {
                                   return {
                                     '&.Mui-checked': {
-                                      color: theme.palette.primary.main
+                                      color: String(info.border ?? theme.palette.primary.main)
                                     }
                                   }
                                 }}
                               />
-                              <Chip size='small' label={st?.label ?? opt.value} />
+                              <Chip
+                                size='small'
+                                label={st?.label ?? opt.value}
+                                sx={{ bgcolor: info.bgcolor, color: info.colorText, border: `1px solid ${info.border}`, textTransform: 'uppercase' }}
+                              />
                               <Typography
                                 variant='caption'
                                 color='text.secondary'
-                                sx={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                sx={{ fontWeight: 600, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                               >
                                 {opt.desc}
                               </Typography>
@@ -4714,22 +5235,124 @@ const UserListTable2 = ({
 
           {markDialogAction === 'CERRAR_EVENTO' && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Box
+              {/* Tarjeta del evento activo */}
+              <Paper
+                variant='outlined'
                 sx={theme => ({
-                  p: 1.25,
+                  p: 1.5,
                   borderRadius: 2,
-                  border: `1px solid ${alpha(theme.palette.error.main, 0.25)}`,
+                  borderColor: alpha(theme.palette.error.main, 0.45),
                   bgcolor: alpha(theme.palette.error.main, 0.06)
                 })}
               >
-                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700 }}>
-                  Al confirmar, se registra el cierre del evento y el indicador “Con evento” desaparece.
+                {closeEventoLoading ? (
+                  <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700 }}>
+                    Cargando evento…
+                  </Typography>
+                ) : closeEventoMeta ? (
+                  <>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                          <Chip
+                            size='small'
+                            label={closeEventoMeta.tipoLabel}
+                            sx={theme => {
+                              const main = theme.palette[closeEventoMeta.tone].main
+                              return {
+                                height: 22,
+                                fontWeight: 900,
+                                bgcolor: alpha(main, 0.16),
+                                border: `1px solid ${alpha(main, 0.35)}`,
+                                color: main,
+                                borderRadius: 2
+                              }
+                            }}
+                          />
+
+                          {closeEventoMeta.motivoTitulo ? (
+                            <Typography
+                              variant='caption'
+                              sx={{ fontWeight: 900, color: 'text.primary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                            >
+                              {closeEventoMeta.motivoTitulo}
+                            </Typography>
+                          ) : null}
+                        </Box>
+
+                        {closeEventoMeta.descripcion ? (
+                          <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 0.35 }}>
+                            {closeEventoMeta.descripcion}
+                          </Typography>
+                        ) : null}
+
+                        {closeEventoMeta.registradoTxt ? (
+                          <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 0.6, fontWeight: 700 }}>
+                            {closeEventoMeta.registradoTxt}
+                          </Typography>
+                        ) : null}
+                      </Box>
+
+                      {closeEventoMeta.venceTxt ? (
+                        <Typography
+                          variant='caption'
+                          sx={theme => ({ fontWeight: 900, whiteSpace: 'nowrap', color: theme.palette.warning.main, mt: 0.1 })}
+                        >
+                          Vence: {closeEventoMeta.venceTxt}
+                        </Typography>
+                      ) : null}
+                    </Box>
+                  </>
+                ) : (
+                  <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700 }}>
+                    No se encontró información del evento activo.
+                  </Typography>
+                )}
+              </Paper>
+
+              {/* Estado actual del CP */}
+              <Box
+                sx={theme => {
+                  return {
+                    p: 1.25,
+                    borderRadius: 2,
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.20)}`,
+                    bgcolor: alpha(theme.palette.primary.main, 0.06),
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    flexWrap: 'wrap'
+                  }
+                }}
+              >
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900 }}>
+                  Estado actual del CP:
                 </Typography>
+                <Chip
+                  size='small'
+                  label={(() => {
+                    const currentState = markDialogRowId != null ? getCurrentStateForRow(markDialogRowId) : ''
+                    return OPERATIONAL_STATES.find(s => s.value === currentState)?.label ?? (currentState || '—')
+                  })()}
+                  sx={() => {
+                    const currentState = markDialogRowId != null ? getCurrentStateForRow(markDialogRowId) : ''
+                    const info = getOperationalInfo(currentState)
+                    return {
+                      bgcolor: info.bgcolor,
+                      color: info.colorText,
+                      border: `1px solid ${info.border}`,
+                      fontWeight: 900,
+                      borderRadius: 2,
+                      textTransform: 'uppercase'
+                    }
+                  }}
+                />
               </Box>
 
+              {/* Observación obligatoria */}
               <Box>
-                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block', mb: 0.75 }}>
-                  OBSERVACIÓN *
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, display: 'block', mb: 0.75 }}>
+                  ¿QUÉ SE HIZO PARA RESOLVER EL EVENTO? *
                 </Typography>
                 <TextField
                   value={correctionObservaciones}
@@ -4740,16 +5363,34 @@ const UserListTable2 = ({
                   size='small'
                   fullWidth
                   multiline
-                  minRows={3}
-                  placeholder='Indica cómo se resolvió el evento o por qué se cierra...'
+                  minRows={4}
+                  placeholder='Describe la corrección o acción tomada...'
                   error={!!formErrors.observacion}
                   helperText={formErrors.observacion}
                 />
               </Box>
+
+              {/* Nota visual */}
+              <Paper
+                variant='outlined'
+                sx={theme => ({
+                  p: 1.25,
+                  borderRadius: 2,
+                  borderColor: theme.palette.divider,
+                  bgcolor: alpha(theme.palette.action.hover, 0.75)
+                })}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                  <CheckBoxOutlinedIcon fontSize='small' sx={theme => ({ color: theme.palette.success.main, mt: 0.15 })} />
+                  <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700 }}>
+                    Al cerrar: el evento queda resuelto en el historial. El CP permanece en su estado actual — si necesitas avanzarlo, usa el botón de estado en la tabla.
+                  </Typography>
+                </Box>
+              </Paper>
             </Box>
           )}
 
-          {markDialogAction !== 'EVENTO' &&
+          {markDialogAction !== 'EVENTO' && markDialogAction !== 'CERRAR_EVENTO' &&
             (() => {
               const targetLabel = OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? (markDialogAction || '')
               if (!targetLabel) return null
@@ -4884,7 +5525,7 @@ const UserListTable2 = ({
           )}
 
           {/* Nota visual (no afecta lógica) */}
-          {markDialogAction !== 'EVENTO' &&
+          {markDialogAction !== 'EVENTO' && markDialogAction !== 'CERRAR_EVENTO' &&
             !['ENVIADO_DIGITACION', 'REVISADO', 'FIRMADO', 'ENVIADO'].includes(String(markDialogAction ?? '')) && (
             <Typography variant='caption' color='text.secondary' sx={{ mt: 2, display: 'block' }}>
               Retroceder: Registrar Evento → al resolver, el declarante indica el estado de retorno.
@@ -4901,13 +5542,14 @@ const UserListTable2 = ({
             onClick={handleSaveMarkDialog}
             disabled={savingHistory || !validateMarkDialog(false)}
             sx={{ textTransform: 'none' }}
+            startIcon={markDialogAction === 'CERRAR_EVENTO' ? <CheckCircleOutlineIcon fontSize='small' /> : undefined}
           >
             {savingHistory
               ? 'Guardando...'
               : markDialogAction === 'EVENTO'
                 ? 'Confirmar'
                 : markDialogAction === 'CERRAR_EVENTO'
-                  ? 'Confirmar cierre'
+                  ? 'Cerrar evento'
                 : `Confirmar → ${OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? (markDialogAction || '')}`}
           </Button>
         </DialogActions>
@@ -4931,7 +5573,9 @@ const UserListTable2 = ({
 
           return (
             <>
+              <MenuItem onClick={() => openEditCpDialogFromRepresentativeRcmId(menuRowId)}>Editar CP</MenuItem>
               <MenuItem onClick={() => handleHistorial(menuRowId)}>Ver Historial</MenuItem>
+              <MenuItem onClick={() => handleGoToCodificacion(menuRowId)}>Ir a codificación</MenuItem>
               <MenuItem
                 onClick={() => handleRegistrarEvento(menuRowId)}
                 disabled={!canRegistrarEvento}
@@ -4939,7 +5583,7 @@ const UserListTable2 = ({
               >
                 Registrar evento
               </MenuItem>
-              {hasEvento ? <MenuItem onClick={() => handleCerrarEvento(menuRowId)}>Cerrar evento</MenuItem> : null}
+              {hasEvento ? <MenuItem onClick={() => handleCerrarEvento(menuRowId)}>Cierre Operativo</MenuItem> : null}
               <MenuItem disabled title='Generar Informe deshabilitado'>
                 Generar Informe
               </MenuItem>
@@ -4948,43 +5592,92 @@ const UserListTable2 = ({
         })()}
       </Menu>
 
+      {/* Dialog: Editar CP */}
+      <Dialog open={editCpOpen} onClose={closeEditCpDialog} maxWidth='sm' fullWidth>
+        <DialogTitle sx={{ pb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant='subtitle1' sx={{ fontWeight: 900, lineHeight: 1.2 }}>
+                Editar CP — {editCpCodigoNombre || '—'}
+              </Typography>
+              <Typography
+                variant='caption'
+                color='text.secondary'
+                sx={{ mt: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              >
+                {editCpSubtitle || ' '}
+              </Typography>
+            </Box>
+
+            <IconButton aria-label='Cerrar' onClick={closeEditCpDialog} size='small' disabled={editCpSaving}>
+              <CloseIcon fontSize='small' />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 0.5 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box>
+              <Typography variant='caption' color='text.secondary' sx={{ display: 'block', fontWeight: 900, mb: 0.75 }}>
+                DESCRIPCIÓN DEL SERVICIO
+              </Typography>
+              <TextField
+                value={editCpDescripcion}
+                onChange={e => setEditCpDescripcion(e.target.value)}
+                fullWidth
+                multiline
+                minRows={2}
+                disabled={editCpSaving}
+              />
+            </Box>
+
+            <Box>
+              <Typography variant='caption' color='text.secondary' sx={{ display: 'block', fontWeight: 900, mb: 0.75 }}>
+                NOTAS INTERNAS
+              </Typography>
+              <TextField
+                value={editCpNotasInternas}
+                onChange={e => setEditCpNotasInternas(e.target.value)}
+                placeholder='Notas del controller o Jefe de Lab...'
+                fullWidth
+                multiline
+                minRows={2}
+                disabled={editCpSaving}
+              />
+            </Box>
+
+            {editCpLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
+                <CircularProgress size={22} />
+              </Box>
+            ) : null}
+
+            {editCpError ? (
+              <Typography variant='caption' sx={{ color: 'error.main', fontWeight: 700 }}>
+                {editCpError}
+              </Typography>
+            ) : null}
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={closeEditCpDialog} sx={{ textTransform: 'none' }} disabled={editCpSaving}>
+            Cancelar
+          </Button>
+          <Button variant='contained' onClick={saveEditCpDialog} sx={{ textTransform: 'none' }} disabled={editCpSaving}>
+            {editCpSaving ? 'Guardando...' : 'Guardar cambios'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Dialog: Historial */}
-      <Dialog fullWidth maxWidth='lg' open={histDialogOpen} onClose={handleCloseHistDialog}>
+      <Dialog fullWidth maxWidth='xl' open={histDialogOpen} onClose={handleCloseHistDialog}>
         <DialogTitle sx={{ pb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
             <Box sx={{ minWidth: 0 }}>
               <Typography variant='subtitle1' sx={{ fontWeight: 700, lineHeight: 1.2 }}>
                 Historial de cambios
               </Typography>
-              {(() => {
-                if (!histRowId) return null
-                const r = data.find(d => d.representativeRcmId === histRowId) ?? data.find(d => d.id === histRowId)
-                const code = (
-                  String(histCodigoData?.codigoNombre ?? r?.codigoNombre ?? r?.numeroRcm ?? '').trim()
-                )
-                const cliente =
-                  String(r?.cliente?.nombreCliente ?? (r as any)?.clienteNombre ?? (r as any)?.nombreCliente ?? '').trim() ||
-                  (typeof (r as any)?.cliente === 'string' ? String((r as any).cliente).trim() : '')
-                const obra = String(r?.obra?.nombreObra ?? r?.obra?.numeroObra ?? '').trim()
-                const descripcion = String(
-                  histCodigoData?.descripcionServicio ?? (r as any)?.descripcionServicio ?? ''
-                ).trim()
-
-                if (!code && !cliente && !obra && !descripcion) return null
-
-                const right = [cliente, obra, descripcion].filter(v => String(v ?? '').trim()).join(' - ')
-                const title = [code ? code : '', right ? `${code ? ', ' : ''}${right}` : ''].join('')
-                if (!title.trim()) return null
-                return (
-                  <Typography
-                    variant='caption'
-                    color='text.secondary'
-                    sx={{ mt: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                  >
-                    {title}
-                  </Typography>
-                )
-              })()}
             </Box>
 
             <IconButton aria-label='Cerrar' onClick={handleCloseHistDialog} size='small'>
@@ -4997,14 +5690,92 @@ const UserListTable2 = ({
           {(() => {
             if (!histRowId) return null
             const r = data.find(d => d.representativeRcmId === histRowId) ?? data.find(d => d.id === histRowId)
+            if (!r) return null
+
+            const code = String(histCodigoData?.codigoNombre ?? r?.codigoNombre ?? r?.numeroRcm ?? '').trim()
+            const area = String((r as any)?.area ?? '').trim()
+            const tipoServicio = String((r as any)?.familia ?? '').trim()
+            const cliente =
+              String(r?.cliente?.nombreCliente ?? (r as any)?.clienteNombre ?? (r as any)?.nombreCliente ?? '').trim() ||
+              (typeof (r as any)?.cliente === 'string' ? String((r as any).cliente).trim() : '')
+            const obraNum = String(r?.obra?.numeroObra ?? '').trim()
+            const fechaCodTxt = formatDateDDMMYYDateOnlyDash((r as any)?.fechaCodificacion)
+
+            const leftParts = [
+              area || null,
+              tipoServicio || null,
+              cliente || null,
+              obraNum ? `Obra ${obraNum}` : null
+            ].filter(Boolean)
+
+            return (
+              <Paper
+                variant='outlined'
+                sx={theme => ({
+                  mb: 2,
+                  px: 2,
+                  py: 1.25,
+                  borderRadius: 2,
+                  borderColor: alpha(theme.palette.primary.main, 0.18),
+                  bgcolor: alpha(theme.palette.primary.main, 0.05)
+                })}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                  <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', flex: 1 }}>
+                    <Typography
+                      variant='body2'
+                      sx={{ fontWeight: 900, color: 'primary.main', whiteSpace: 'nowrap' }}
+                    >
+                      {code || '—'}
+                    </Typography>
+                    {leftParts.length ? (
+                      <Typography
+                        variant='body2'
+                        color='text.primary'
+                        sx={{ fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                      >
+                        {leftParts.join(' · ')}
+                      </Typography>
+                    ) : null}
+                  </Box>
+
+                  <Box sx={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <Typography variant='caption' color='text.secondary' sx={{ display: 'block', fontWeight: 700 }}>
+                      Fecha codificación
+                    </Typography>
+                    <Typography variant='body2' sx={{ fontWeight: 800 }}>
+                      {fechaCodTxt}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+            )
+          })()}
+
+          {(() => {
+            if (!histRowId) return null
+            const r = data.find(d => d.representativeRcmId === histRowId) ?? data.find(d => d.id === histRowId)
             const currentState = getCurrentStateForRow(histRowId)
             const info = getOperationalInfo(currentState)
             const sinceHit = (histRows ?? []).find((h: any) => {
               const est = normalizeStateForCompare(h?.estNuevo)
               return currentState && est === currentState
             })
-            const since = sinceHit?.fechaAccion ? new Date(sinceHit.fechaAccion) : null
-            const days = since ? Math.max(0, Math.floor((Date.now() - since.getTime()) / (1000 * 60 * 60 * 24))) : null
+            const sinceRaw =
+              sinceHit?.fechaAccion ??
+              sinceHit?.createdAt ??
+              (r as any)?.fechaCodificacion ??
+              (r as any)?.fechaMuestreo ??
+              null
+            const since = sinceRaw ? new Date(sinceRaw) : null
+            const days = (() => {
+              if (!since) return null
+              const from = new Date(since.getFullYear(), since.getMonth(), since.getDate()).getTime()
+              const now = new Date()
+              const to = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+              const diff = Math.floor((to - from) / (24 * 60 * 60 * 1000))
+              return Number.isFinite(diff) && diff >= 0 ? diff : null
+            })()
             const hasEvento = Boolean((r as any)?.conEvento)
 
             if (!currentState && !hasEvento) return null
@@ -5042,9 +5813,23 @@ const UserListTable2 = ({
                     }}
                   />
                   {since && (
-                    <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      desde {formatDateDDMMYYYYDateOnlyDash(since.toISOString())}
-                      {typeof days === 'number' ? ` (${days} día${days === 1 ? '' : 's'})` : ''}
+                    <Typography
+                      variant='caption'
+                      color='text.secondary'
+                      sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                    >
+                      desde {formatDateDDMMYYDateOnlyDash(since.toISOString())}{' '}
+                      {typeof days === 'number' ? (
+                        days === 0 ? (
+                          <Typography component='span' variant='caption' color='text.secondary' sx={{ fontWeight: 800 }}>
+                            (hoy)
+                          </Typography>
+                        ) : (
+                          <Typography component='span' variant='caption' sx={{ fontWeight: 900, color: 'error.main' }}>
+                            ({days} día{days === 1 ? '' : 's'})
+                          </Typography>
+                        )
+                      ) : null}
                     </Typography>
                   )}
                 </Box>
@@ -5066,14 +5851,21 @@ const UserListTable2 = ({
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
               <CircularProgress />
             </Box>
+          ) : !histRows.length ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
+              <Typography variant='body2' color='text.secondary' sx={{ fontWeight: 700 }}>
+                Sin registros
+              </Typography>
+            </Box>
           ) : (
             <TableContainer
               component={Paper}
               variant='outlined'
               sx={theme => ({
+                overflowX: 'hidden',
                 '& .MuiTableCell-root': {
-                  fontSize: theme.typography.caption.fontSize,
-                  py: 1,
+                  fontSize: theme.typography.overline.fontSize,
+                  py: 0.75,
                   verticalAlign: 'top'
                 }
               })}
@@ -5088,30 +5880,51 @@ const UserListTable2 = ({
                   }}
                 >
                   <TableRow>
-                    <TableCell align='center' sx={{ width: 84 }}>REGISTRO</TableCell>
-                    <TableCell align='center' sx={{ width: 120 }}>FUNCIONARIO</TableCell>
-                    <TableCell align='center' sx={{ width: 140 }}>APLICADO A</TableCell>
-                    <TableCell align='center' sx={{ width: 160 }}>TIPO</TableCell>
-                    <TableCell align='center' sx={{ width: 156 }}>EST. ANTERIOR</TableCell>
-                    <TableCell align='center' sx={{ width: 156 }}>EST. NUEVO</TableCell>
-                    <TableCell align='center' sx={{ width: 120 }}>NR</TableCell>
-                    <TableCell align='center' sx={{ width: 170 }}>MOTIVO</TableCell>
-                    <TableCell sx={{ width: 240 }}>OBSERVACIONES</TableCell>
+                    <TableCell align='center' sx={{ width: 86 }}>
+                      REGISTRO
+                    </TableCell>
+                    <TableCell align='center' sx={{ width: 110 }}>
+                      FUNCIONARIO
+                    </TableCell>
+                    <TableCell align='center' sx={{ width: 86 }}>
+                      APLICADO A
+                    </TableCell>
+                    <TableCell align='center' sx={{ width: 140 }}>
+                      TIPO
+                    </TableCell>
+                    <TableCell align='center' sx={{ width: 124 }}>
+                      EST. ANTERIOR
+                    </TableCell>
+                    <TableCell align='center' sx={{ width: 124 }}>
+                      EST. NUEVO
+                    </TableCell>
+                    <TableCell align='center' sx={{ width: 160 }}>
+                      MOTIVO
+                    </TableCell>
+                    <TableCell sx={{ width: 260 }}>OBSERVACIONES</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {histRows.map((h, i) => (
                     <TableRow key={i}>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                        <Typography
-                          variant='body2'
-                          sx={{ fontWeight: 700, color: 'primary.main', lineHeight: 1.1, whiteSpace: 'nowrap' }}
-                        >
-                          {formatDateDDMMYYYYDateOnlyDash(h.fechaAccion)}
-                        </Typography>
-                        <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'nowrap' }}>
-                          {formatTimeHHmm(h.fechaAccion)}
-                        </Typography>
+                      <TableCell align='center' sx={{ whiteSpace: 'nowrap' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+                          <Typography
+                            component='div'
+                            variant='caption'
+                            sx={{ fontWeight: 900, color: 'primary.main', lineHeight: 1.1, whiteSpace: 'nowrap' }}
+                          >
+                            {formatDateDDMMYYDateOnlyDash(h.fechaAccion)}
+                          </Typography>
+                          <Typography
+                            component='div'
+                            variant='caption'
+                            color='text.secondary'
+                            sx={{ lineHeight: 1.1, whiteSpace: 'nowrap' }}
+                          >
+                            {formatTimeHHmm(h.fechaAccion)}
+                          </Typography>
+                        </Box>
                       </TableCell>
                       <TableCell>{h.funcionario ?? 'Usuario'}</TableCell>
                       <TableCell sx={{ whiteSpace: 'nowrap' }}>CP</TableCell>
@@ -5119,7 +5932,15 @@ const UserListTable2 = ({
                         {(() => {
                           const raw = String(h.tipo ?? '-')
                           const label = raw && raw !== 'null' && raw !== 'undefined' ? raw : '-'
-                          return <Chip label={label} size='small' variant='filled' />
+                          return (
+                            <Chip
+                              label={label}
+                              size='small'
+                              variant='filled'
+                              title={label}
+                              sx={{ maxWidth: '100%', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                            />
+                          )
                         })()}
                       </TableCell>
                       <TableCell>
@@ -5137,7 +5958,7 @@ const UserListTable2 = ({
                                   border: `1px solid ${info.border}`,
                                   textTransform: 'uppercase',
                                   fontWeight: 700,
-                                  fontSize: '0.72rem',
+                                  fontSize: '0.70rem',
                                   borderRadius: 2,
                                   px: 1,
                                   py: 0.4
@@ -5162,7 +5983,7 @@ const UserListTable2 = ({
                                   border: `1px solid ${info.border}`,
                                   textTransform: 'uppercase',
                                   fontWeight: 700,
-                                  fontSize: '0.72rem',
+                                  fontSize: '0.70rem',
                                   borderRadius: 2,
                                   px: 1,
                                   py: 0.4
@@ -5172,14 +5993,14 @@ const UserListTable2 = ({
                           )
                         })()}
                       </TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{''}</TableCell>
                       <TableCell>{h.motivo ?? '-'}</TableCell>
                       <TableCell
                         title={typeof h.observacion === 'string' ? h.observacion : h.observacion == null ? '' : String(h.observacion)}
                         sx={{
-                          whiteSpace: 'nowrap',
+                          whiteSpace: 'normal',
                           overflow: 'hidden',
-                          textOverflow: 'ellipsis'
+                          textOverflow: 'ellipsis',
+                          wordBreak: 'break-word'
                         }}
                       >
                         {h.observacion ?? '-'}

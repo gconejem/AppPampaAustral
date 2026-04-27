@@ -18,6 +18,9 @@ import Paper from '@mui/material/Paper'
 import { alpha } from '@mui/material/styles'
 
 import CloseIcon from '@mui/icons-material/Close'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import EditIcon from '@mui/icons-material/Edit'
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 
 import { OPERATIONAL_STATES } from '@/constants/operationalStates'
 import ADMINISTRATIVE_STATES from '@/constants/administrativeStates'
@@ -48,11 +51,14 @@ type RcmRow = {
   id: number
   numeroRcm?: string | null
   fechaMuestreo?: string | null
+  fechaServicio?: string | null
   numeroTarjeta?: string | null
   rcmType?: string | null
   estadoOperativo?: string | null
   estadoAdministrativo?: string | null
   sede?: string | null
+  vencimiento?: boolean | null
+  cantidadMuestras?: number | null
   cliente?: { razonSocial?: string | null; nombreCliente?: string | null } | null
   obra?: { numeroObra?: string | null; nombreObra?: string | null; comuna?: string | null } | null
   tipoMaterial?: string | null
@@ -282,6 +288,8 @@ export default function CodigoProductoDetallePanel({
   const [rcmDialogLoading, setRcmDialogLoading] = useState(false)
   const [rcmDialogError, setRcmDialogError] = useState<string | null>(null)
   const [rcmDialogData, setRcmDialogData] = useState<RcmRow | null>(null)
+  const [rcmDialogCpMeta, setRcmDialogCpMeta] = useState<any | null>(null)
+  const [rcmDialogHistory, setRcmDialogHistory] = useState<any[] | null>(null)
 
   useEffect(() => {
     const onRefresh = () => {
@@ -296,6 +304,7 @@ export default function CodigoProductoDetallePanel({
   useEffect(() => {
     if (!codigoAgrupadorId) {
       setData(null)
+      setRcmDialogCpMeta(null)
       return
     }
 
@@ -408,8 +417,32 @@ export default function CodigoProductoDetallePanel({
     setRcmDialogLoading(true)
     setRcmDialogError(null)
     setRcmDialogData(null)
+    setRcmDialogCpMeta(null)
+    setRcmDialogHistory(null)
 
     try {
+      const cpId = Number(codigoAgrupadorId ?? 0)
+      if (cpId > 0) {
+        fetch(`/api/codigo-agrupador/seguimiento?id=${cpId}&ts=${Date.now()}`, { cache: 'no-store' })
+          .then(r => (r.ok ? r.json().catch(() => null) : null))
+          .then(json => {
+            const row = Array.isArray(json) ? json[0] : null
+            setRcmDialogCpMeta(row)
+          })
+          .catch(() => {
+            setRcmDialogCpMeta(null)
+          })
+      }
+
+      fetch(`/api/rcm/${rcmId}/history?take=80`, { cache: 'no-store' })
+        .then(r => (r.ok ? r.json().catch(() => null) : null))
+        .then(json => {
+          setRcmDialogHistory(Array.isArray(json) ? json : null)
+        })
+        .catch(() => {
+          setRcmDialogHistory(null)
+        })
+
       const res = await fetch(`/api/rcm/${rcmId}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('No se pudo cargar el RCM')
       const json = await res.json().catch(() => null)
@@ -426,14 +459,7 @@ export default function CodigoProductoDetallePanel({
     setRcmDialogOpen(false)
     setRcmDialogError(null)
     setRcmDialogData(null)
-  }
-
-  const openReadOnlyCodificacion = (rcmId: number) => {
-    if (typeof window === 'undefined') return
-    const parts = window.location.pathname.split('/').filter(Boolean)
-    const lang = parts[0] || 'en'
-    const url = `${window.location.origin}/${lang}/apps/view-rcm/${rcmId}`
-    window.open(url, '_blank')
+    setRcmDialogHistory(null)
   }
 
   const handleEditRcm = (rcmId: number) => {
@@ -548,11 +574,11 @@ export default function CodigoProductoDetallePanel({
                   <th style={{ textAlign: 'left' }}>#</th>
                   <th style={{ textAlign: 'center' }}>TARJETA</th>
                   <th style={{ textAlign: 'center' }}>TIPO</th>
-                  <th style={{ textAlign: 'center' }}>ÁREA</th>
-                  <th style={{ textAlign: 'center' }}>SERVICIO</th>
+                  <th style={{ textAlign: 'center' }}>ÁREA / SERVICIO</th>
                   <th style={{ textAlign: 'left' }}>MATERIAL · ÍTEM · TOMA</th>
-                  <th style={{ textAlign: 'center' }}>F. MUESTREO</th>
-                  <th style={{ textAlign: 'center' }}>ENSAYOS</th>
+                  <th style={{ textAlign: 'center' }}>F. Muest. / Serv</th>
+                  <th style={{ textAlign: 'center' }}>ENS</th>
+                  <th style={{ textAlign: 'center' }}>SUB</th>
                   <th style={{ textAlign: 'center' }}>ESTADO</th>
                   <th style={{ textAlign: 'center' }} />
                 </tr>
@@ -560,7 +586,14 @@ export default function CodigoProductoDetallePanel({
               <tbody>
                 {rcms.map(r => {
                   const ens = computeEnsayos(r.servicios)
-                  const pct = ens.total > 0 ? Math.round((ens.ensayados / ens.total) * 100) : 0
+                  const fecha = r.fechaServicio ?? r.fechaMuestreo
+                  const sub = r.vencimiento ? Number(r.cantidadMuestras ?? 0) : 0
+                  const serviceName =
+                    String(r.familia?.nombre ?? '').trim() ||
+                    (r.servicios ?? [])
+                      .map(s => String(s?.nombre ?? '').trim())
+                      .find(Boolean) ||
+                    ''
 
                   return (
                     <tr key={r.id}>
@@ -595,19 +628,31 @@ export default function CodigoProductoDetallePanel({
                           sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', fontWeight: 800, fontSize: '0.72rem' }}
                         />
                       </td>
-                      <td style={{ textAlign: 'center' }}>{r.area?.nombre ?? '-'}</td>
-                      <td style={{ textAlign: 'center' }}>{r.familia?.nombre ?? '-'}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2 }}>
+                          <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                            {r.area?.nombre ?? '-'}
+                          </Typography>
+                          <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700 }}>
+                            {serviceName || ' '}
+                          </Typography>
+                        </Box>
+                      </td>
                       <td>{formatMaterialItemToma(r)}</td>
                       <td style={{ textAlign: 'center' }}>
                         <Typography variant='body2'>
-                          {r.fechaMuestreo ? formatDateDDMMYYYYDash(r.fechaMuestreo) : '-'}
+                          {fecha ? formatDateDDMMYYYYDash(fecha) : '-'}
                         </Typography>
                       </td>
-                      <td style={{ textAlign: 'center', minWidth: 120 }}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                          <LinearProgress variant='determinate' value={pct} sx={{ height: 6, borderRadius: 999, width: 60 }} />
-                          <Typography variant='caption' sx={{ fontWeight: 800 }}>{`${ens.ensayados}/${ens.total}`}</Typography>
-                        </Box>
+                      <td style={{ textAlign: 'center', minWidth: 56 }}>
+                        <Typography variant='body2' sx={{ fontWeight: 800 }}>
+                          {ens.total > 0 ? `${ens.ensayados}/${ens.total}` : '-'}
+                        </Typography>
+                      </td>
+                      <td style={{ textAlign: 'center', minWidth: 48 }}>
+                        <Typography variant='body2' sx={{ fontWeight: 800 }}>
+                          {sub > 0 ? String(sub) : ''}
+                        </Typography>
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         {(() => {
@@ -629,12 +674,61 @@ export default function CodigoProductoDetallePanel({
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-                          <Button size='small' variant='outlined' onClick={() => openRcmDialog(r.id)} sx={{ minWidth: 0, px: 1.25 }}>
-                            Ver
-                          </Button>
-                          <Button size='small' variant='outlined' onClick={() => handleEditRcm(r.id)} sx={{ minWidth: 0, px: 1.25 }}>
-                            Editar
-                          </Button>
+                          <IconButton
+                            size='small'
+                            aria-label='Ver'
+                            title='Ver'
+                            onClick={() => openRcmDialog(r.id)}
+                            sx={theme => ({
+                              width: 28,
+                              height: 28,
+                              borderRadius: 1,
+                              border: `1px solid ${theme.palette.divider}`,
+                              bgcolor: theme.palette.background.paper,
+                              '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.9) }
+                            })}
+                          >
+                            <VisibilityIcon fontSize='small' />
+                          </IconButton>
+
+                          <IconButton
+                            size='small'
+                            aria-label='Editar'
+                            title='Editar'
+                            onClick={() => handleEditRcm(r.id)}
+                            sx={theme => ({
+                              width: 28,
+                              height: 28,
+                              borderRadius: 1,
+                              border: `1px solid ${theme.palette.divider}`,
+                              bgcolor: theme.palette.background.paper,
+                              color: theme.palette.warning.main,
+                              '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.9) }
+                            })}
+                          >
+                            <EditIcon fontSize='small' />
+                          </IconButton>
+
+                          <IconButton
+                            size='small'
+                            aria-label='(sin acción)'
+                            title='(sin acción)'
+                            onClick={e => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                            }}
+                            sx={theme => ({
+                              width: 28,
+                              height: 28,
+                              borderRadius: 1,
+                              border: `1px solid ${theme.palette.divider}`,
+                              bgcolor: theme.palette.background.paper,
+                              color: theme.palette.success.main,
+                              '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.9) }
+                            })}
+                          >
+                            <EditIcon fontSize='small' />
+                          </IconButton>
                         </Box>
                       </td>
                     </tr>
@@ -744,24 +838,36 @@ export default function CodigoProductoDetallePanel({
           const numShort = rcmNumRaw.replace(/^RCM[-\s]?/i, '').trim()
           const title = `RCM — ${numShort || rcmNumRaw || (rcmId ? String(rcmId) : '-')}`
 
-          const subtitle = (() => {
-            const parts = [r?.tipoMaterial, r?.item, r?.tomaMuestra]
-              .map((v: any) => String(v ?? '').trim())
-              .filter(Boolean)
-            return parts.join(' · ')
+          const codificadoTxt = (() => {
+            const raw = r?.fechaCodificacion ?? null
+            if (!raw) return null
+            const txt = formatDateDDMMYYYYDash(raw)
+            return txt && txt !== '-' ? `Codificado: ${txt}` : null
           })()
 
           const belongsCodigo = String(r?.codigoAgrupador?.codigoNombre ?? data?.codigoNombre ?? '').trim()
-          const fallbackRow = (data?.rcms ?? []).find((x: any) => Number(x?.id) === rcmId) ?? null
+          const rcmsForFallback = (data?.rcms ?? []) as any[]
+          const fallbackRow = rcmsForFallback.find((x: any) => Number(x?.id) === rcmId) ?? null
+          const fallbackAny =
+            rcmsForFallback.find((x: any) => {
+              const hasCliente = String(x?.cliente?.razonSocial ?? x?.cliente?.nombreCliente ?? '').trim().length > 0
+              const hasObra = String(x?.obra?.numeroObra ?? x?.obra?.nombreObra ?? '').trim().length > 0
+              const hasCiudad = String(x?.obra?.comuna ?? x?.obra?.ciudad ?? '').trim().length > 0
+              return hasCliente || hasObra || hasCiudad
+            }) ?? null
           const cliente = String(
             r?.cliente?.razonSocial ??
               r?.cliente?.nombreCliente ??
               fallbackRow?.cliente?.razonSocial ??
               fallbackRow?.cliente?.nombreCliente ??
+              fallbackAny?.cliente?.razonSocial ??
+              fallbackAny?.cliente?.nombreCliente ??
               r?.obra?.razonSocial ??
               r?.obra?.nombreCliente ??
               fallbackRow?.obra?.razonSocial ??
               fallbackRow?.obra?.nombreCliente ??
+              fallbackAny?.obra?.razonSocial ??
+              fallbackAny?.obra?.nombreCliente ??
               ''
           ).trim()
           const obra = String(
@@ -769,13 +875,71 @@ export default function CodigoProductoDetallePanel({
               r?.obra?.nombreObra ??
               fallbackRow?.obra?.numeroObra ??
               fallbackRow?.obra?.nombreObra ??
+              fallbackAny?.obra?.numeroObra ??
+              fallbackAny?.obra?.nombreObra ??
               ''
           ).trim()
-          const ciudad = String(r?.obra?.comuna ?? fallbackRow?.obra?.comuna ?? fallbackRow?.obra?.ciudad ?? '').trim()
-          const belongsText = [cliente || null, obra ? `Obra ${obra}` : null, ciudad || null].filter(Boolean).join(' - ')
+          const ciudad = String(
+            r?.obra?.comuna ??
+              fallbackRow?.obra?.comuna ??
+              fallbackRow?.obra?.ciudad ??
+              fallbackAny?.obra?.comuna ??
+              fallbackAny?.obra?.ciudad ??
+              rcmDialogCpMeta?.ciudad ??
+              rcmDialogCpMeta?.obra?.comuna ??
+              rcmDialogCpMeta?.cliente?.comuna ??
+              rcmDialogCpMeta?.cliente?.ciudad ??
+              ''
+          ).trim()
+          const cpCliente = String(
+            rcmDialogCpMeta?.cliente?.razonSocial ?? rcmDialogCpMeta?.cliente?.nombreCliente ?? ''
+          ).trim()
+          const cpObra = String(rcmDialogCpMeta?.obra?.numeroObra ?? rcmDialogCpMeta?.obra?.nombreObra ?? '').trim()
+
+          const ot = String(
+            rcmDialogCpMeta?.ot ??
+              r?.ordenTrabajo?.correlativ ??
+              r?.ordenTrabajo?.correlativo ??
+              r?.ordenTrabajo?.clave ??
+              ''
+          ).trim()
+
+          const belongsText = [
+            ot ? `OT ${ot}` : null,
+            cliente || cpCliente || null,
+            (obra || cpObra) ? `Obra ${obra || cpObra}` : null,
+            ciudad || null
+          ]
+            .filter(Boolean)
+            .join(' - ')
 
           const servicios = (r?.servicios ?? []) as Servicio[]
           const stateKey = (computeEnsayoStateKey(servicios) ?? normalizeStateKey(r?.estadoOperativo) ?? null) as any
+
+          const informeFlags = (() => {
+            const rows = (rcmDialogHistory ?? r?.RCMHistory ?? []) as any[]
+            const hasManual = rows.some(h => normalizeStateKey(h?.tipoEstado) === 'INFORME_MANUAL')
+            const hasDigital = rows.some(h => normalizeStateKey(h?.tipoEstado) === 'INFORME_AUTO')
+            return { hasManual, hasDigital }
+          })()
+
+          const cpStateKey = (() => {
+            const counts = (rcmDialogCpMeta?.estadoOperativoCounts ?? null) as Record<string, number> | null
+            if (counts && typeof counts === 'object') {
+              return pickStateFromCounts(counts, [
+                'EVENTO',
+                'EN_PROCESO',
+                'CODIFICADO',
+                'ENSAYADO',
+                'ENVIADO_DIGITACION',
+                'DIGITADO',
+                'REVISADO',
+                'FIRMADO',
+                'ENVIADO'
+              ])
+            }
+            return null
+          })()
 
           const tipo = String(r?.rcmType ?? 'MUESTRA').trim().toUpperCase()
           const area = String(r?.area?.nombre ?? r?.area ?? '').trim()
@@ -783,27 +947,74 @@ export default function CodigoProductoDetallePanel({
           const sede = String(r?.sede ?? '').trim()
           const tarjeta = String(r?.numeroTarjeta ?? '').trim()
           const muestreo = r?.fechaMuestreo ? formatDateDDMMYYYYDash(r?.fechaMuestreo) : '-'
+          const ingreso = r?.fechaIngreso ? formatDateDDMMYYYYDash(r?.fechaIngreso) : '-'
+
+          const material = String(r?.tipoMaterial ?? '').trim()
+          const item = String(r?.item ?? '').trim()
+          const toma = String(r?.tomaMuestra ?? '').trim()
+          const cantidad = (() => {
+            const raw = r?.cantidadMuestras
+            const n = raw === null || raw === undefined ? NaN : Number(raw)
+            return Number.isFinite(n) && n > 0 ? String(n) : '-'
+          })()
 
           const ensayoCount = servicios.length
 
+          const submuestras = (() => {
+            const muestras = Array.isArray(r?.muestras) ? (r.muestras as any[]) : ([] as any[])
+            const probetas = muestras.flatMap(m => (Array.isArray(m?.probetas) ? (m.probetas as any[]) : []))
+            return probetas
+              .map((p, idx) => {
+                const numero = Number(p?.numero ?? idx + 1)
+                const dias = Number(p?.dias ?? 0)
+                const cantidad = Number(p?.cantidad ?? 0)
+                const fechaV = p?.fechaVencimiento ?? null
+                const estado = String(p?.estado ?? '').trim()
+
+                return {
+                  id: String(p?.id ?? `${numero}-${idx}`),
+                  numero: Number.isFinite(numero) && numero > 0 ? numero : idx + 1,
+                  dias: Number.isFinite(dias) && dias > 0 ? dias : 0,
+                  fecha: fechaV ? formatDateDDMMYYYYDash(fechaV) : '-',
+                  cantidad: Number.isFinite(cantidad) && cantidad > 0 ? cantidad : 0,
+                  estadoKey: normalizeStateKey(estado) ?? null
+                }
+              })
+              .filter(x => x != null)
+          })()
+
+          const showSubmuestras = Boolean(r?.vencimiento) && submuestras.length > 0
+
           return (
             <Box>
-              <Box sx={{ p: 2.5, pb: 2 }}>
+              <Box sx={{ p: 3.5, pb: 2.75 }}>
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography variant='h6' sx={{ fontWeight: 900, lineHeight: 1.1 }}>
-                      {title}
-                    </Typography>
-                    {subtitle ? (
-                      <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 0.25 }}>
-                        {subtitle}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Typography variant='h6' sx={{ fontWeight: 900, lineHeight: 1.1 }}>
+                        {title}
+                      </Typography>
+                      <Chip
+                        size='small'
+                        label={String(r?.rcmType ?? 'MUESTRA').trim().toUpperCase() || 'MUESTRA'}
+                        sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', fontWeight: 900, fontSize: '0.72rem' }}
+                      />
+                    </Box>
+                    {codificadoTxt ? (
+                      <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 0.25, fontWeight: 700 }}>
+                        {codificadoTxt}
                       </Typography>
                     ) : null}
                   </Box>
 
-                  <IconButton size='small' aria-label='Cerrar' onClick={closeRcmDialog}>
-                    <CloseIcon fontSize='small' />
-                  </IconButton>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                    {stateKey ? (
+                      <Chip size='small' label={getOperationalLabel(stateKey)} sx={getOperativeChipSx(stateKey)} />
+                    ) : null}
+                    <IconButton size='small' aria-label='Cerrar' onClick={closeRcmDialog}>
+                      <CloseIcon fontSize='small' />
+                    </IconButton>
+                  </Box>
                 </Box>
 
                 <Divider sx={{ mt: 2 }} />
@@ -819,13 +1030,13 @@ export default function CodigoProductoDetallePanel({
                   })}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
                       <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900 }}>
                         PERTENECE A
                       </Typography>
 
                       {belongsCodigo ? (
-                        <Chip size='small' label={belongsCodigo} variant='outlined' sx={{ fontWeight: 900 }} />
+                        <Chip size='small' label={belongsCodigo} sx={{ fontWeight: 900, bgcolor: 'primary.main', color: 'primary.contrastText' }} />
                       ) : null}
 
                       {belongsText ? (
@@ -833,6 +1044,7 @@ export default function CodigoProductoDetallePanel({
                           variant='body2'
                           sx={{
                             fontWeight: 600,
+                            flex: '1 1 auto',
                             minWidth: 0,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -845,9 +1057,7 @@ export default function CodigoProductoDetallePanel({
                       ) : null}
                     </Box>
 
-                    {stateKey ? (
-                      <Chip size='small' label={getOperationalLabel(stateKey)} sx={getOperativeChipSx(stateKey)} />
-                    ) : null}
+                    {cpStateKey ? <Chip size='small' label={getOperationalLabel(cpStateKey)} sx={getOperativeChipSx(cpStateKey)} /> : null}
                   </Box>
                 </Paper>
 
@@ -885,12 +1095,32 @@ export default function CodigoProductoDetallePanel({
                           {sede || '-'}
                         </Typography>
                       </Box>
+                      <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                            F.MUESTREO
+                          </Typography>
+                          <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                            {muestreo}
+                          </Typography>
+                        </Box>
+                      </Box>
+
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
-                          MUESTREO
+                          MATERIAL
                         </Typography>
                         <Typography variant='body2' sx={{ fontWeight: 700 }}>
-                          {muestreo}
+                          {material || '-'}
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          ÍTEM
+                        </Typography>
+                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                          {item || '-'}
                         </Typography>
                       </Box>
                     </Box>
@@ -924,8 +1154,58 @@ export default function CodigoProductoDetallePanel({
                           {tarjeta || '-'}
                         </Typography>
                       </Box>
+
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          F.INGRESO
+                        </Typography>
+                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                          {ingreso}
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          TOMA
+                        </Typography>
+                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                          {toma || '-'}
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          CANTIDAD
+                        </Typography>
+                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                          {cantidad}
+                        </Typography>
+                      </Box>
                     </Box>
                   </Box>
+
+                  {informeFlags.hasManual || informeFlags.hasDigital ? (
+                    <Box sx={{ mt: 1.25, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      {informeFlags.hasManual ? (
+                        <Chip
+                          size='small'
+                          icon={<DescriptionOutlinedIcon sx={{ fontSize: 16 }} />}
+                          label='Informe manual'
+                          variant='outlined'
+                          sx={{ fontWeight: 900 }}
+                        />
+                      ) : null}
+                      {informeFlags.hasDigital ? (
+                        <Chip
+                          size='small'
+                          icon={<DescriptionOutlinedIcon sx={{ fontSize: 16 }} />}
+                          label='Informe digital'
+                          variant='outlined'
+                          sx={{ fontWeight: 900 }}
+                        />
+                      ) : null}
+                    </Box>
+                  ) : null}
                 </Paper>
 
                 <Box sx={{ mt: 2.75 }}>
@@ -989,23 +1269,67 @@ export default function CodigoProductoDetallePanel({
                     </div>
                   </Paper>
                 </Box>
+
+                {showSubmuestras ? (
+                  <Box sx={{ mt: 2.25 }}>
+                    <Typography variant='subtitle2' sx={{ fontWeight: 900, mb: 1.25 }}>
+                      Submuestras ({submuestras.length})
+                    </Typography>
+
+                    <Paper variant='outlined' sx={{ borderRadius: 2, overflow: 'hidden' }}>
+                      <div className='overflow-x-auto'>
+                        <table className={tableStyles.table}>
+                          <thead>
+                            <tr>
+                              <th style={{ textAlign: 'center' }}>#</th>
+                              <th style={{ textAlign: 'center' }}>DÍAS</th>
+                              <th style={{ textAlign: 'center' }}>FECHA ENSAYO</th>
+                              <th style={{ textAlign: 'center' }}>CANT.</th>
+                              <th style={{ textAlign: 'center' }}>ESTADO</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {submuestras.map((sm: any) => (
+                              <tr key={String(sm.id)}>
+                                <td style={{ textAlign: 'center' }}>
+                                  <Chip size='small' label={String(sm.numero)} variant='outlined' sx={{ fontWeight: 800 }} />
+                                </td>
+                                <td style={{ textAlign: 'center' }}>
+                                  <Typography variant='body2' sx={{ fontWeight: 800 }}>
+                                    {sm.dias > 0 ? `${sm.dias}d` : '-'}
+                                  </Typography>
+                                </td>
+                                <td style={{ textAlign: 'center' }}>
+                                  <Typography variant='body2' sx={{ fontWeight: 800 }}>
+                                    {sm.fecha || '-'}
+                                  </Typography>
+                                </td>
+                                <td style={{ textAlign: 'center' }}>
+                                  <Typography variant='body2' sx={{ fontWeight: 800 }}>
+                                    {sm.cantidad > 0 ? String(sm.cantidad) : '-'}
+                                  </Typography>
+                                </td>
+                                <td style={{ textAlign: 'center' }}>
+                                  {sm.estadoKey ? (
+                                    <Chip size='small' label={getOperationalLabel(sm.estadoKey)} sx={getOperativeChipSx(sm.estadoKey)} />
+                                  ) : (
+                                    <Chip size='small' label='-' variant='outlined' sx={{ fontWeight: 800, fontSize: '0.72rem' }} />
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </Paper>
+                  </Box>
+                ) : null}
               </Box>
 
               <Divider />
 
-              <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-                <Button
-                  size='small'
-                  variant='outlined'
-                  onClick={() => {
-                    if (!Number.isFinite(rcmId) || rcmId <= 0) return
-                    openReadOnlyCodificacion(rcmId)
-                  }}
-                  sx={{ textTransform: 'none', borderRadius: 999 }}
-                >
-                  Ver en Codificación (solo lectura)
-                </Button>
-
+              <Box sx={{ p: 3.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                <Box />
                 <Button size='small' onClick={closeRcmDialog} sx={{ textTransform: 'none' }}>
                   Cerrar
                 </Button>

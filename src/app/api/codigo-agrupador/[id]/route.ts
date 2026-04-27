@@ -84,11 +84,14 @@ export async function GET(request: Request, { params }: Params) {
                             id: true,
                             numeroRcm: true,
                             fechaMuestreo: true,
+                            fechaServicio: true,
                             numeroTarjeta: true,
                             rcmType: true,
                             estadoOperativo: true,
                             estadoAdministrativo: true,
                             sede: true,
+                            vencimiento: true,
+                            cantidadMuestras: true,
                             cliente: {
                                 select: {
                                     razonSocial: true,
