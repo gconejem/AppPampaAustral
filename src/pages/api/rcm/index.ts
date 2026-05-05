@@ -256,6 +256,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           area: true,
           familia: true,
           codigoAgrupador: true,
+          obra: true,
+          cliente: true,
         },
         orderBy: { createdAt: 'desc' },
       })

@@ -1,11 +1,13 @@
 'use client'
 
 // React Imports
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 
 // Next Imports
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
+
+
 // NextAuth Imports
 import { useSession } from 'next-auth/react'
 
@@ -21,7 +23,7 @@ import TablePagination from '@mui/material/TablePagination'
 import TextField from '@mui/material/TextField'
 import type { TextFieldProps } from '@mui/material/TextField'
 import Menu from '@mui/material/Menu'
-import MenuItem from '@mui/material/MenuItem'  // ✅ UNA SOLA IMPORTACIÓN
+import MenuItem from '@mui/material/MenuItem'  // UNA SOLA IMPORTACIÓN
 import FormControl from '@mui/material/FormControl'
 import FormHelperText from '@mui/material/FormHelperText'
 import InputLabel from '@mui/material/InputLabel'
@@ -93,7 +95,9 @@ const Icon = styled('i')({})
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   const itemRank = rankItem(row.getValue(columnId), value)
+
   addMeta({ itemRank })
+
   return itemRank.passed
 }
 
@@ -108,11 +112,15 @@ const DebouncedInput = ({
   debounce?: number
 } & Omit<TextFieldProps, 'onChange'>) => {
   const [value, setValue] = useState(initialValue)
+
   useEffect(() => setValue(initialValue), [initialValue])
   useEffect(() => {
     const timeout = setTimeout(() => onChange(value), debounce)
+
+
     return () => clearTimeout(timeout)
   }, [value])
+
   return <TextField {...props} value={value} onChange={e => setValue(e.target.value)} size='small' />
 }
 
@@ -120,15 +128,18 @@ const DebouncedInput = ({
 const statusColor = (s?: string) => {
   if (!s) return 'default'
   const key = s.toString().toLowerCase()
+
   if (['codificado', 'activo', 'a', 'ok', 'firmado'].some(k => key.includes(k))) return 'success'
   if (['pendiente', 'p', 'pend'].some(k => key.includes(k))) return 'warning'
   if (['rechazado', 'cancelado', 'inactivo'].some(k => key.includes(k))) return 'error'
+
   return 'default'
 }
 
 // normalizar texto: quitar diacríticos, pasar a minúsculas y trim
 function normalizeText(v: any) {
   if (v === null || v === undefined) return ''
+
   try {
     let s = String(v)
 
@@ -157,14 +168,20 @@ function normalizeText(v: any) {
 const getAdministrativeStateColor = (raw?: string) => {
   if (!raw) return '#cccccc'
   const s = normalizeText(raw)
+
   // buscar por value exacto (value es mayúsculas)
   const byValue = ADMINISTRATIVE_STATES.find(a => String(a.value).toLowerCase() === String(raw).toLowerCase())
+
   if (byValue) return byValue.color ?? '#cccccc'
+
   // buscar por label normalizado
   const byLabel = ADMINISTRATIVE_STATES.find(a => normalizeText(a.label) === s)
+
   if (byLabel) return byLabel.color ?? '#cccccc'
+
   // fallback: si raw contiene 'pag' devolver verde
   if (s.includes('pag')) return '#2E7D32ff'
+
   return '#cccccc'
 }
 
@@ -252,10 +269,10 @@ interface Filters {
 // Component
 const columnHelper = createColumnHelper<RCM>()
 
-// ✅ AGREGAR esta función antes del componente UserListTable2
+// Ô£à AGREGAR esta funci├│n antes del componente UserListTable2
 /**
  * Obtiene los estados disponibles para un SERVICIO/ENSAYO
- * Lógica independiente de la tabla principal
+ * L├│gica independiente de la tabla principal
  */
 const getStatesForServicio = (servicioId: number | null, serviciosMuestra: any[]) => {
   if (!servicioId) return ENSAYO_STATES.map(s => ({ ...s, disabled: false }))
@@ -267,13 +284,13 @@ const getStatesForServicio = (servicioId: number | null, serviciosMuestra: any[]
 
   const estadoActual = servicio?.estado ?? servicio?.estadoServicio ?? 'CODIFICADO'
 
-  console.log('📊 getStatesForServicio:', {
+  console.log('­ƒôè getStatesForServicio:', {
     servicioId,
     estadoActual,
     servicio
   })
 
-  // Encontrar índice del estado actual
+  // Encontrar ├¡ndice del estado actual
   const currentIndex = ENSAYO_STATES.findIndex(s => s.value === estadoActual)
 
   if (currentIndex === -1) {
@@ -284,7 +301,7 @@ const getStatesForServicio = (servicioId: number | null, serviciosMuestra: any[]
   // Mostrar: estado actual (disabled) + siguiente (si existe)
   return ENSAYO_STATES.map((state, idx) => ({
     ...state,
-    disabled: idx === currentIndex, // Solo el actual está disabled
+    disabled: idx === currentIndex, // Solo el actual est├í disabled
     hidden: idx < currentIndex || idx > currentIndex + 1 // Ocultar anteriores y >siguiente
   })).filter(s => !s.hidden) // Filtrar los ocultos
 }
@@ -295,13 +312,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
   const getCurrentUserName = () => {
     const name = session?.user?.name
+
     if (typeof name === 'string' && name.trim()) return name.trim()
 
     const email = session?.user?.email
+
     if (typeof email === 'string' && email.trim()) return email.trim()
 
     return null
   }
+
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
   const [data, setData] = useState<RCM[]>([])
   const [filteredData, setFilteredData] = useState<RCM[]>([])
@@ -310,7 +330,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [savingHistory, setSavingHistory] = useState(false)
   const [formErrors, setFormErrors] = useState<{ eventType?: string; motivo?: string; informeNumber?: string; general?: string }>({})
 
-  // Reemplazar estados del dialog (línea ~224)
+  // Reemplazar estados del dialog (l├¡nea ~224)
   // ...existing code...
 
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
@@ -318,8 +338,15 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [muestraDetalle, setMuestraDetalle] = useState<any>(null)
   const [rcmDetalleModal, setRcmDetalleModal] = useState<any>(null)
   const [loadingServicios, setLoadingServicios] = useState(false)
+  const [selectedInlineRowId, setSelectedInlineRowId] = useState<number | null>(null)
+  const [inlineServicios, setInlineServicios] = useState<any[]>([])
+  const [inlineMuestraDetalle, setInlineMuestraDetalle] = useState<any>(null)
+  const [inlineRcmDetalle, setInlineRcmDetalle] = useState<any>(null)
+  const [loadingInlineDetalle, setLoadingInlineDetalle] = useState(false)
+  const [inlineActiveTab, setInlineActiveTab] = useState<'detalle' | 'ensayos'>('detalle')
+  const inlineDetailRef = useRef<HTMLDivElement | null>(null)
 
-  // ✅ AGREGAR: Estados para historial de servicioMuestra
+  // Ô£à AGREGAR: Estados para historial de servicioMuestra
   const [histServicioDialogOpen, setHistServicioDialogOpen] = useState(false)
   const [histServicioId, setHistServicioId] = useState<number | null>(null)
   const [histServicioRows, setHistServicioRows] = useState<any[]>([])
@@ -327,6 +354,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
   // Cache para historial de servicios
   const servicioHistoryCache: Map<number, any[]> = (global as any).__SERVICIO_HISTORY_CACHE__ || new Map()
+
     ; (global as any).__SERVICIO_HISTORY_CACHE__ = servicioHistoryCache
 
   // ...existing code...
@@ -337,25 +365,30 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     const r = parseInt(h.substring(0, 2), 16)
     const g = parseInt(h.substring(2, 4), 16)
     const b = parseInt(h.substring(4, 6), 16)
+
+
     return `rgba(${r}, ${g}, ${b}, ${alpha})`
   }
 
-  // devuelve información visual para un estado operativo
+  // devuelve informaci├│n visual para un estado operativo
   const getOperationalInfo = (s?: string) => {
     if (!s) return { hex: undefined as string | undefined, bgcolor: 'rgba(0,0,0,0.06)', colorText: '#000', border: 'transparent' }
     const key = String(s).toUpperCase().trim()
     const st = OPERATIONAL_STATES.find(item => item.value === key || item.label.toUpperCase() === key)
     const hex = st?.color ?? '#9E9E9E'
-    const bgcolor = hexToRgba(hex, 0.32) // fondo con más presencia
-    const border = hexToRgba(hex, 0.42) // borde sutil más visible
+    const bgcolor = hexToRgba(hex, 0.32) // fondo con m├ís presencia
+    const border = hexToRgba(hex, 0.42) // borde sutil m├ís visible
     const colorText = '#7c7778' // texto siempre negro para mayor nitidez
+
+
     return { hex, bgcolor, colorText, border }
   }
 
-  // devuelve información visual para un estado administrativo (usa ADMINISTRATIVE_STATES)
+  // devuelve informaci├│n visual para un estado administrativo (usa ADMINISTRATIVE_STATES)
   const getAdministrativeInfo = (raw?: string) => {
     if (!raw) return { hex: undefined as string | undefined, bgcolor: 'rgba(0,0,0,0.06)', colorText: '#000', border: 'transparent' }
     const sVal = String(raw).trim()
+
     // intentar mapear por value o por label
     const byValue = ADMINISTRATIVE_STATES.find(a => String(a.value).toLowerCase() === sVal.toLowerCase())
     const byLabel = ADMINISTRATIVE_STATES.find(a => normalizeText(a.label) === normalizeText(sVal))
@@ -364,8 +397,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     const bgcolor = hexToRgba(hex, 0.32)
     const border = hexToRgba(hex, 0.42)
     const colorText = '#7c7778'
+
+
     return { hex, bgcolor, colorText, border }
   }
+
   // ...existing code...
 
 
@@ -376,6 +412,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     const st = OPERATIONAL_STATES.find(item => item.value === key || item.label.toUpperCase() === key)
     const color = st?.color ?? '#9E9E9E'
     const bg = hexToRgba(color, 0.12)
+
+
     return { bgcolor: bg, color }
   }
 
@@ -387,14 +425,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [markAnchorEl, setMarkAnchorEl] = useState<null | HTMLElement>(null)
   const [markRowId, setMarkRowId] = useState<number | null>(null)
 
-  // Dialog para acciones de "Marcar" (ej. Digitado / En Corrección)
+  // Dialog para acciones de "Marcar" (ej. Digitado / En Correcci├│n)
   const [markDialogOpen, setMarkDialogOpen] = useState(false)
   const [markDialogAction, setMarkDialogAction] = useState<string | null>(null)
   const [markDialogRowId, setMarkDialogRowId] = useState<number | null>(null)
   const [informeNumber, setInformeNumber] = useState<string>('')
+
   // campos para "En Corrección" / EVENTO
   const [correctionMotivo, setCorrectionMotivo] = useState<string>('')
   const [correctionObservaciones, setCorrectionObservaciones] = useState<string>('')
+
   // Tipo de Evento: 'INFO_PENDIENTE' | 'ERROR_INTERNO' | 'CORRECCION'
   const [eventType, setEventType] = useState<string>('')
 
@@ -404,8 +444,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const getCurrentStateForRow = (rowId?: number | null) => {
     if (rowId == null) return ''
     const r = data.find(d => d.id === rowId)
+
     if (!r) return ''
     const s = r.estadoMuestra ?? r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '')
+
+
     return normalizeState(s)
   }
 
@@ -413,7 +456,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   // Reglas:
   // 1) Si el estado actual es EVENTO -> mostrar todos los estados (el actual disabled)
   // 2) En cualquier otro caso -> mostrar: estado actual (disabled), el siguiente inmediato (si existe),
-  //    y además EVENTO (sin duplicados)
+  //    y adem├ís EVENTO (sin duplicados)
   const getStatesForRow = (rowId?: number | null) => {
     const current = getCurrentStateForRow(rowId)
 
@@ -437,11 +480,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (currentItem) items.push({ ...currentItem, disabled: true })
     if (nextItem) items.push({ ...nextItem, disabled: false })
 
-    // añadir EVENTO si existe y no está ya en la lista
+    // a├▒adir EVENTO si existe y no est├í ya en la lista
     if (evento && !items.some(i => i.value === evento.value)) items.push({ ...evento, disabled: false })
 
     return items
   }
+
   // ---------------------------------------------------
 
   // Historial dialog
@@ -452,9 +496,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
   // simple cache en memoria para historial por RCM (evita refetchs)
   const historyCache: Map<number, any> = (global as any).__RCM_HISTORY_CACHE__ || new Map()
+
     ; (global as any).__RCM_HISTORY_CACHE__ = historyCache
 
-  // ── Gestionar Ensayos dialog ──────────────────────────────────────────────
+  // ÔöÇÔöÇ Gestionar Ensayos dialog ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   const [gestionarOpen, setGestionarOpen] = useState(false)
   const [gestionarRow, setGestionarRow] = useState<RCM | null>(null)
   const [gestionarLoading, setGestionarLoading] = useState(false)
@@ -466,6 +511,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [gestionarEnsayadores, setGestionarEnsayadores] = useState<Record<number, string>>({})
   const [gestionarEstados, setGestionarEstados] = useState<Record<number, string>>({})
   const [gestionarSaving, setGestionarSaving] = useState(false)
+  const [gestionarObservaciones, setGestionarObservaciones] = useState<Record<number, string>>({})
   const [ensayadorOptions, setEnsayadorOptions] = useState<string[]>([])
 
   useEffect(() => {
@@ -475,6 +521,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         const names = Array.isArray(d)
           ? Array.from(new Set(d.map((u: any) => String(u?.name ?? '').trim()).filter(Boolean)))
           : []
+
         setEnsayadorOptions(names)
       })
       .catch(() => setEnsayadorOptions([]))
@@ -490,43 +537,62 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setGestionarEnsayadorGlobal('')
     setGestionarEnsayadores({})
     setGestionarEstados({})
+    setGestionarObservaciones({})
     setGestionarOpen(true)
     setGestionarLoading(true)
+
     try {
       const muestraId = row.muestra.id
       const rcmId = row.rcmOriginalId ?? null
+
       const [resServicios, resRcm] = await Promise.all([
         fetch(`/api/muestra/${muestraId}/servicios?ts=${Date.now()}`, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }),
         rcmId ? fetch(`/api/rcm/${rcmId}?ts=${Date.now()}`, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }) : Promise.resolve(null)
       ])
+
       const dataServ = resServicios.ok ? await resServicios.json() : { servicios: [], muestra: {} }
       const detalleRcm = resRcm?.ok ? await resRcm.json() : null
+
       const muestraFromRcm = Array.isArray(detalleRcm?.muestras)
         ? detalleRcm.muestras.find((m: any) => Number(m?.id) === Number(muestraId))
         : null
+
       const serviciosDetalle = Array.isArray(muestraFromRcm?.servicios) ? muestraFromRcm.servicios : []
+
       const combined = (Array.isArray(dataServ.servicios) ? dataServ.servicios : []).map((s: any) => {
         const match = serviciosDetalle.find((sd: any) => Number(sd?.id) === Number(s?.id))
+
+
         return {
           ...s,
           norma: s?.norma ?? match?.produto?.norma ?? match?.producto?.norma ?? null,
           estado: s?.estado ?? match?.estado ?? 'CODIFICADO'
         }
       })
+
       const probetas = Array.isArray(muestraFromRcm?.probetas) ? muestraFromRcm.probetas : []
+
       setGestionarServicios(combined)
       setGestionarProbetas(probetas)
       setGestionarMuestra({ ...(dataServ.muestra ?? {}), probetas })
       setGestionarRcmData(detalleRcm)
+
       // inicializar estado y ensayador local con los valores actuales de cada servicio
       const estadosInit: Record<number, string> = {}
       const ensayadoresInit: Record<number, string> = {}
+      const observacionesInit: Record<number, string> = {}
+
       combined.forEach((s: any) => {
         estadosInit[s.id] = s.estado ?? 'CODIFICADO'
         if (s.ensayador) ensayadoresInit[s.id] = s.ensayador
+
+        if (typeof s.observacion === 'string' && s.observacion.trim()) {
+          observacionesInit[s.id] = s.observacion
+        }
       })
       setGestionarEstados(estadosInit)
       setGestionarEnsayadores(ensayadoresInit)
+      setGestionarObservaciones(observacionesInit)
     } catch (e) {
       console.error('Error loading gestionar ensayos:', e)
     } finally {
@@ -537,17 +603,21 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const handleGuardarGestionar = async () => {
     if (!gestionarRow) return
     setGestionarSaving(true)
+
     try {
       const user = getCurrentUserName() ?? 'Usuario'
+
       await Promise.all(
         gestionarServicios.map(async (s: any) => {
           const estadoNuevo = gestionarEstados[s.id] ?? s.estado ?? 'CODIFICADO'
           const estadoPrev = s.estado ?? 'CODIFICADO'
           const ensayadorNuevo = gestionarEnsayadores[s.id] ?? ''
           const ensayadorPrev = s.ensayador ?? ''
+          const observacionNueva = (gestionarObservaciones[s.id] ?? '').trim()
+          const observacionPrev = String(s.observacion ?? '').trim()
 
-          // Guardar si cambió estado o cambió ensayador
-          if (estadoNuevo === estadoPrev && ensayadorNuevo === ensayadorPrev) return
+          // Guardar si cambió estado, ensayador u observación
+          if (estadoNuevo === estadoPrev && ensayadorNuevo === ensayadorPrev && observacionNueva === observacionPrev) return
 
           await fetch(`/api/servicioMuestra/${s.id}/history`, {
             method: 'POST',
@@ -558,7 +628,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               estNuevo: estadoNuevo,
               funcionario: user,
               aplicadoA: ensayadorNuevo || null,
-              ensayoServicio: s.nombre
+              ensayoServicio: s.nombre,
+              observacion: observacionNueva || null
             })
           })
         })
@@ -566,6 +637,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       // Actualizar tabla principal: recalcular estado operativo del RCM
       const todosEstados = gestionarServicios.map((s: any) => gestionarEstados[s.id] ?? s.estado ?? 'CODIFICADO')
+
       const estadoFinal = todosEstados.every(e => String(e).toUpperCase().includes('ENSAYADO'))
         ? 'ENSAYADO'
         : todosEstados.some(e => String(e).toUpperCase().includes('PROCESO'))
@@ -582,6 +654,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         if (row.id === gestionarRow?.id) {
           return { ...row, estadoMuestra: estadoFinal, estadoOperativo: estadoFinal, ensayador: ensayadorFinal || row.ensayador }
         }
+
+
         return row
       }))
 
@@ -592,12 +666,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       setGestionarSaving(false)
     }
   }
-  // ─────────────────────────────────────────────────────────────────────────
+
+  // ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   const handleOpenMarkMenu = (e: React.MouseEvent<HTMLElement>, rowId: number) => {
     setMarkAnchorEl(e.currentTarget)
     setMarkRowId(rowId)
   }
+
   const handleCloseMarkMenu = () => {
     setMarkAnchorEl(null)
     setMarkRowId(null)
@@ -605,8 +681,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
   const openMarkDialogForRow = (action: string, rowId?: number | null) => {
     setMarkDialogAction(action)
-    setMarkDialogRowId(rowId ?? null) // importante: setear el id aquí
-    // reset campos del diálogo
+    setMarkDialogRowId(rowId ?? null) // importante: setear el id aqu├¡
+    // reset campos del di├ílogo
     setInformeNumber('')
     setCorrectionMotivo('')
     setCorrectionObservaciones('')
@@ -616,7 +692,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   }
 
   const handleMarkAction = async (action: string, rowId?: number | null) => {
-    // acciones que requieren diálogo (ELIMINADO CERRADO_OP)
+    // acciones que requieren di├ílogo (ELIMINADO CERRADO_OP)
     const ACTIONS_REQUIRING_DIALOG = new Set([
       'DIGITADO',
       'EVENTO',
@@ -625,9 +701,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       'FIRMADO',
       'ENVIADO'
     ])
+
     if (ACTIONS_REQUIRING_DIALOG.has(action)) {
-      // si no se pasó rowId, intenta usar el state existente (evita error)
+      // si no se pas├│ rowId, intenta usar el state existente (evita error)
       openMarkDialogForRow(action, rowId ?? markDialogRowId ?? null)
+
       return
     }
 
@@ -635,6 +713,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (!rowId) {
       console.warn('handleMarkAction: missing rowId for immediate action', action)
       handleCloseMarkMenu()
+
       return
     }
 
@@ -664,6 +743,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       if (!res.ok) {
         const txt = await res.text().catch(() => '')
+
         console.error('Failed to create history for immediate action:', res.status, txt)
         throw new Error('Error creating history')
       }
@@ -673,9 +753,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       // mantener cache local de historial
       try {
         const existing = historyCache.get(rowId) ?? []
+
         if (created) {
           historyCache.set(rowId, [created, ...existing])
-          // si el dialogo de historial está abierto para la misma fila, actualizarlo también
+
+
+          // si el dialogo de historial est├í abierto para la misma fila, actualizarlo tambi├®n
           if (histDialogOpen && histRowId === rowId) {
             setHistRows(prev => [created, ...prev])
           }
@@ -687,6 +770,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       // revertir optimista en caso de error
       console.error('Error marcar (inmediato):', err)
       setData(prev => prev.map(d => (d.id === rowId ? { ...d, estadoMuestra: prevState, estadoOperativo: prevState } : d)))
+
       // opcional: mostrar aviso al usuario
       alert('No se pudo actualizar el estado. Ver consola para detalles.')
     } finally {
@@ -696,6 +780,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
   const validateMarkDialog = (setErrors = true) => {
     const errors: Record<string, string> = {}
+
     if (!markDialogRowId) {
       errors.general = 'RCM no seleccionado'
     }
@@ -705,13 +790,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       else if (Number.isNaN(Number(informeNumber))) errors.informeNumber = 'Debe ser un número'
     }
 
-    // ELIMINADO: validación para CERRADO_OP
+    // ELIMINADO: validaci├│n para CERRADO_OP
     if (markDialogAction === 'EVENTO') {
       if (!eventType) errors.eventType = 'Seleccione tipo'
       if (!correctionMotivo || !correctionMotivo.trim()) errors.motivo = 'Ingrese motivo'
     }
 
-    // Para estos estados la observación es obligatoria
+    // Para estos estados la observaci├│n es obligatoria
     if (['ENVIADO_DIGITACION', 'REVISADO', 'FIRMADO', 'ENVIADO'].includes(String(markDialogAction ?? ''))) {
       if (!correctionObservaciones || !String(correctionObservaciones).trim()) {
         errors.observacion = 'Ingrese observación obligatoria'
@@ -719,15 +804,18 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     }
 
     if (setErrors) setFormErrors(errors)
+
     return Object.keys(errors).length === 0
   }
 
   const handleSaveMarkDialog = async () => {
     try {
       const rcmId = markDialogRowId
+
       if (!validateMarkDialog()) {
-        // mostrar feedback rápido en consola / UI
+        // mostrar feedback r├ípido en consola / UI
         console.warn('Validation failed', formErrors)
+
         return
       }
 
@@ -752,6 +840,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       if (!res.ok) {
         const txt = await res.text().catch(() => '')
+
         // eslint-disable-next-line no-console
         console.error('Failed to save RCMHistory:', res.status, txt)
         throw new Error('Error saving history')
@@ -760,11 +849,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       // success: obtener registro creado (si API lo devuelve)
       const created = await res.json().catch(() => null)
 
-      // actualizar sólo el registro afectado en el estado local (optimista / definitivo)
+      // actualizar s├│lo el registro afectado en el estado local (optimista / definitivo)
       setData(prev => prev.map(d => (d.id === rcmId ? { ...d, estadoMuestra: payload.estNuevo ?? d.estadoMuestra, estadoOperativo: payload.estNuevo ?? d.estadoOperativo } : d)))
       setFilteredData(prev => prev.map(d => (d.id === rcmId ? { ...d, estadoMuestra: payload.estNuevo ?? d.estadoMuestra, estadoOperativo: payload.estNuevo ?? d.estadoOperativo } : d)))
 
-      // actualizar caché de historial y vistas abiertas
+      // actualizar cach├® de historial y vistas abiertas
       const newHistEntry = created ?? {
         tipo: payload.tipo,
         funcionario: payload.funcionario ?? 'Usuario',
@@ -774,12 +863,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         fechaAccion: new Date().toISOString(),
         observacion: payload.observacion ?? null
       }
+
       historyCache.set(rcmId, [newHistEntry, ...(historyCache.get(rcmId) ?? [])])
+
       if (histDialogOpen && histRowId === rcmId) {
         setHistRows(prev => [newHistEntry, ...prev])
       }
 
-      // cerrar diálogo y limpiar formulario (sin recargar toda la tabla)
+      // cerrar di├ílogo y limpiar formulario (sin recargar toda la tabla)
       setMarkDialogOpen(false)
       setFormErrors({})
       setMarkDialogAction(null)
@@ -789,8 +880,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       setCorrectionObservaciones('')
       setEventType('')
       setSavingHistory(false)
+
+
       // ya actualizamos localmente setData/setFilteredData.
-      // Opcional: si el host expone una función para refrescar solo una fila, llámala
+      // Opcional: si el host expone una funci├│n para refrescar solo una fila, ll├ímala
       if (typeof (window as any).__REFRESH_RCM_ROW__ === 'function') {
         try {
           ; (window as any).__REFRESH_RCM_ROW__(rcmId, { estadoOperativo: payload.estNuevo ?? null })
@@ -819,6 +912,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setMenuAnchorEl(e.currentTarget)
     setMenuRowId(rowId)
   }
+
   const handleCloseRowMenu = () => {
     setMenuAnchorEl(null)
     setMenuRowId(null)
@@ -828,37 +922,48 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const findRowById = (rowId: any) => {
     if (rowId === null || typeof rowId === 'undefined') return null
     const sid = String(rowId).trim()
+
     // 1) buscar en data por id o _id (string/number)
     let r = data.find(d => String((d as any).id ?? '') === sid || String((d as any)._id ?? '') === sid)
+
     if (r) return r
-    // 2) buscar en filteredData (por si data no está sincronizada)
+
+    // 2) buscar en filteredData (por si data no est├í sincronizada)
     r = filteredData.find(d => String((d as any).id ?? '') === sid || String((d as any)._id ?? '') === sid)
     if (r) return r
-    // 3) intentar comparación numérica (si rowId convertible a número) contra id/_id
+
+    // 3) intentar comparaci├│n num├®rica (si rowId convertible a n├║mero) contra id/_id
     const n = Number(rowId)
+
     if (!Number.isNaN(n)) {
       r = data.find(d => !Number.isNaN(Number((d as any).id)) && Number((d as any).id) === n)
       if (r) return r
       r = filteredData.find(d => !Number.isNaN(Number((d as any).id)) && Number((d as any).id) === n)
       if (r) return r
     }
-    // 4) Fallback: si rowId es el índice interno de react-table (ej '0','1',...), devolver filteredData[idx]
+
+
+    // 4) Fallback: si rowId es el ├¡ndice interno de react-table (ej '0','1',...), devolver filteredData[idx]
     if (!Number.isNaN(n) && Number.isInteger(n) && n >= 0 && n < filteredData.length) {
       // eslint-disable-next-line no-console
       console.debug('findRowById: using index-fallback for react-table row id ->', n)
+
       return filteredData[n]
     }
+
+
     return null
   }
 
-  const handleEdit = (rowId: number | null, opts?: { readonly?: boolean }) => {
+  const handleEdit = (rowId: number | null, opts?: { readonly?: boolean; newTab?: boolean }) => {
     if (!rowId && rowId !== 0) {
       console.warn('handleEdit: missing rowId')
       handleCloseRowMenu()
+
       return
     }
 
-    // ✅ CORRECCIÓN: buscar por rcmOriginalId si menuRowId viene del menú contextual
+    // Ô£à CORRECCI├ôN: buscar por rcmOriginalId si menuRowId viene del men├║ contextual
     let row = findRowById(rowId)
 
     // Si no se encuentra, puede ser que rowId sea un rcmOriginalId
@@ -872,38 +977,151 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         filteredIds: filteredData.map(d => (d as any).id ?? (d as any)._id)
       })
       handleCloseRowMenu()
+
       return
     }
 
-    // ✅ Usar rcmOriginalId para construir la URL
+    // Ô£à Usar rcmOriginalId para construir la URL
     const rcmId = row.rcmOriginalId ?? row.id
     const otId = row.ordenTrabajo?.id ?? row.ordenTrabajoId ?? row.ot ?? ''
 
-    // Si readonly, abrir encoder en nueva pestaña (comportamiento original)
+    // Si readonly, abrir encoder en nueva pesta├▒a (comportamiento original)
     if (opts?.readonly) {
       const params = new URLSearchParams()
+
       params.set('rcmId', String(rcmId))
       if (otId) params.set('otId', String(otId))
       params.set('readonly', '1')
       window.open(`${window.location.origin}/en/apps/encoder?${params.toString()}`, '_blank')
       handleCloseRowMenu()
+
       return
     }
 
-    // Navegación a la página de edición en la misma pestaña
+    // Navegación a la página de edición (misma pestaña o nueva pestaña)
     const currentLang = (locale as string) || 'es'
-    router.push(`/${currentLang}/apps/rcm-edit/${rcmId}`)
+    const editUrl = `/${currentLang}/apps/rcm-edit/${rcmId}`
+
+    if (opts?.newTab) {
+      window.open(`${window.location.origin}${editUrl}`, '_blank')
+      handleCloseRowMenu()
+
+      return
+    }
+
+    router.push(editUrl)
     handleCloseRowMenu()
   }
 
+  const resetSelectedDetail = () => {
+    setSelectedRowId(null)
+    setServiciosMuestra([])
+    setMuestraDetalle(null)
+    setRcmDetalleModal(null)
+  }
+
+  const resetInlineDetail = () => {
+    setSelectedInlineRowId(null)
+    setInlineServicios([])
+    setInlineMuestraDetalle(null)
+    setInlineRcmDetalle(null)
+    setInlineActiveTab('detalle')
+  }
+
+  const handleSelectInlineDetail = async (row: RCM | null) => {
+    if (!row?.muestra?.id) return
+
+    if (selectedInlineRowId === row.id) {
+      resetInlineDetail()
+
+      return
+    }
+
+    setSelectedInlineRowId(row.id)
+    setInlineServicios([])
+    setInlineMuestraDetalle(null)
+    setInlineRcmDetalle(null)
+    setInlineActiveTab('detalle')
+    setLoadingInlineDetalle(true)
+
+    try {
+      const muestraId = row.muestra.id
+      const rcmId = row.rcmOriginalId ?? null
+
+      const [responseServicios, responseRcm] = await Promise.all([
+        fetch(`/api/muestra/${muestraId}/servicios`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' }
+        }),
+        rcmId
+          ? fetch(`/api/rcm/${rcmId}?ts=${Date.now()}`, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+          })
+          : Promise.resolve(null)
+      ])
+
+      if (!responseServicios.ok) throw new Error(`HTTP ${responseServicios.status}`)
+
+      const data = await responseServicios.json()
+      const detalleRcm = responseRcm && responseRcm.ok ? await responseRcm.json() : null
+
+      const muestraRcm = Array.isArray(detalleRcm?.muestras)
+        ? detalleRcm.muestras.find((m: any) => Number(m?.id) === Number(muestraId))
+        : null
+
+      const serviciosDetalle = Array.isArray(muestraRcm?.servicios) ? muestraRcm.servicios : []
+
+      const serviciosCombinados = (Array.isArray(data.servicios) ? data.servicios : []).map((servicio: any) => {
+        const match = serviciosDetalle.find((sd: any) => Number(sd?.id) === Number(servicio?.id))
+
+        return {
+          ...servicio,
+          norma: servicio?.norma ?? match?.producto?.norma ?? match?.norma ?? null,
+          codigo: servicio?.codigo ?? match?.producto?.sku ?? match?.codigo ?? null,
+          cantidad: servicio?.cantidad ?? match?.cantidad ?? 1,
+          estado: servicio?.estado ?? match?.estado ?? 'CODIFICADO'
+        }
+      })
+
+      setInlineMuestraDetalle({
+        ...(data.muestra ?? {}),
+        probetas: Array.isArray(muestraRcm?.probetas) ? muestraRcm.probetas : []
+      })
+      setInlineServicios(serviciosCombinados)
+      setInlineRcmDetalle(detalleRcm)
+    } catch {
+      resetInlineDetail()
+    } finally {
+      setLoadingInlineDetalle(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!selectedInlineRowId) return
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node
+
+      if (inlineDetailRef.current && !inlineDetailRef.current.contains(target)) {
+        resetInlineDetail()
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick)
+
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [selectedInlineRowId])
+
   // Igual que handleEdit pero abre en modo solo lectura (readonly=1)
   const handleView = async (row: RCM | null) => {
-    console.group('🔍 handleView called')
+    console.group('­ƒöì handleView called')
     console.log('row recibido:', row)
 
     if (!row) {
       console.warn('handleView: no row provided')
       console.groupEnd()
+
       return
     }
 
@@ -914,22 +1132,21 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (!row.muestra?.id) {
       console.warn('handleView: muestra sin ID', row.muestra)
       console.groupEnd()
+
       return
     }
 
-    // ✅ Si ya está abierto, cerrar
+    // Si ya está abierto, cerrar
     if (selectedRowId === row.id) {
-      console.log('🔒 Cerrando formulario')
-      setSelectedRowId(null)
-      setServiciosMuestra([])
-      setMuestraDetalle(null)
-      setRcmDetalleModal(null)
+      console.log('­ƒöÆ Cerrando formulario')
+      resetSelectedDetail()
       console.groupEnd()
+
       return
     }
 
-    // ✅ Abrir formulario y cargar datos
-    console.log('🔓 Abriendo formulario')
+    // Ô£à Abrir formulario y cargar datos
+    console.log('­ƒöô Abriendo formulario')
     setSelectedRowId(row.id)
     setServiciosMuestra([])
     setMuestraDetalle(null)
@@ -941,7 +1158,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       const rcmId = row.rcmOriginalId ?? null
       const urlServicios = `/api/muestra/${muestraId}/servicios`
 
-      console.log('📡 Fetching servicios:', urlServicios)
+      console.log('­ƒôí Fetching servicios:', urlServicios)
 
       const [responseServicios, responseRcm] = await Promise.all([
         fetch(urlServicios, {
@@ -962,13 +1179,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       const data = await responseServicios.json()
       const detalleRcm = responseRcm && responseRcm.ok ? await responseRcm.json() : null
+
       const muestraRcm = Array.isArray(detalleRcm?.muestras)
         ? detalleRcm.muestras.find((m: any) => Number(m?.id) === Number(muestraId))
         : null
 
       const serviciosDetalle = Array.isArray(muestraRcm?.servicios) ? muestraRcm.servicios : []
+
       const serviciosCombinados = (Array.isArray(data.servicios) ? data.servicios : []).map((servicio: any) => {
         const match = serviciosDetalle.find((sd: any) => Number(sd?.id) === Number(servicio?.id))
+
+
         return {
           ...servicio,
           norma: servicio?.norma ?? match?.producto?.norma ?? match?.norma ?? null,
@@ -978,11 +1199,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
       })
 
-      console.log('✅ Datos cargados:', data)
+      console.log('Ô£à Datos cargados:', data)
 
-      // ✅ AGREGAR: Log detallado de servicios
-      console.group('🔍 DEBUG servicios cargados')
+      // Ô£à AGREGAR: Log detallado de servicios
+      console.group('­ƒöì DEBUG servicios cargados')
       console.log('Total servicios:', data.servicios?.length ?? 0)
+
       if (data.servicios && data.servicios.length > 0) {
         console.log('Primer servicio completo:', data.servicios[0])
         console.log('IDs de servicios:', data.servicios.map((s: any) => ({
@@ -994,6 +1216,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           codigo: s.codigo
         })))
       }
+
       console.groupEnd()
 
       setMuestraDetalle({
@@ -1003,7 +1226,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       setServiciosMuestra(serviciosCombinados)
       setRcmDetalleModal(detalleRcm)
     } catch (err) {
-      console.error('❌ Error loading servicios:', err)
+      console.error('ÔØî Error loading servicios:', err)
       setServiciosMuestra([])
       setMuestraDetalle(null)
       setRcmDetalleModal(null)
@@ -1019,7 +1242,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (typeof window !== 'undefined' && rowId != null) window.open(`/informes/generar/${rowId}`, '_blank')
   }
 
-  // mock helper para historial (añadir aquí)
+  // mock helper para historial (a├▒adir aqu├¡)
   const getMockHistEntries = (rowId: number | null) => {
     return [
       {
@@ -1048,34 +1271,43 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const handleHistorial = async (rowId: number | null) => {
     if (!rowId) {
       console.warn('handleHistorial: no rowId provided')
+
       return
     }
 
-    // UX: abrir diálogo de inmediato y mostrar spinner mientras carga
+    // UX: abrir di├ílogo de inmediato y mostrar spinner mientras carga
     setHistRowId(rowId)
     setHistRows([])
     setHistDialogOpen(true)
 
-    // revisar caché primero
+    // revisar cach├® primero
     const cached = historyCache.get(rowId)
+
     if (cached) {
       setHistRows(cached)
       setHistLoading(false)
+
       return
     }
 
     setHistLoading(true)
+
     try {
-      // si tu API soporta limitar campos/registros, añade query params (?limit=20)
+      // si tu API soporta limitar campos/registros, a├▒ade query params (?limit=20)
       const res = await fetch(`/api/rcm/${rowId}/history`)
+
       if (!res.ok) {
         const txt = await res.text().catch(() => '')
+
         console.error('History API returned not ok:', res.status, txt)
         throw new Error('Error loading history')
       }
+
       const json = await res.json()
       const rows = Array.isArray(json) ? json : []
-      // guardar en caché para evitar refetchs posteriores
+
+
+      // guardar en cach├® para evitar refetchs posteriores
       historyCache.set(rowId, rows)
       setHistRows(rows)
     } catch (err) {
@@ -1087,57 +1319,65 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     }
   }
 
-  // ✅ AGREGAR: Función para manejar historial de servicioMuestra
+  // Ô£à AGREGAR: Funci├│n para manejar historial de servicioMuestra
   const handleHistorialServicio = async (servicioMuestraId: number | null) => {
     if (!servicioMuestraId) {
       console.warn('handleHistorialServicio: no servicioMuestraId provided')
+
       return
     }
 
-    console.group('📋 handleHistorialServicio')
+    console.group('­ƒôï handleHistorialServicio')
     console.log('servicioMuestraId:', servicioMuestraId)
 
     setHistServicioId(servicioMuestraId)
     setHistServicioRows([])
     setHistServicioDialogOpen(true)
 
-    // Revisar caché
+    // Revisar cach├®
     const cached = servicioHistoryCache.get(servicioMuestraId)
+
     if (cached) {
-      console.log('✅ Using cached data:', cached)
+      console.log('Ô£à Using cached data:', cached)
       setHistServicioRows(cached)
       setHistServicioLoading(false)
       console.groupEnd()
+
       return
     }
 
     setHistServicioLoading(true)
+
     try {
       const url = `/api/servicioMuestra/${servicioMuestraId}/history`
-      console.log('📡 Fetching:', url)
+
+      console.log('­ƒôí Fetching:', url)
 
       const res = await fetch(url)
 
-      console.log('📥 Response status:', res.status)
-      console.log('📥 Response headers:', Object.fromEntries(res.headers.entries()))
+      console.log('­ƒôÑ Response status:', res.status)
+      console.log('­ƒôÑ Response headers:', Object.fromEntries(res.headers.entries()))
 
       if (!res.ok) {
         const txt = await res.text().catch(() => '')
-        console.error('❌ API error:', res.status, txt)
+
+        console.error('ÔØî API error:', res.status, txt)
         throw new Error(`HTTP ${res.status}: ${txt}`)
       }
 
       const json = await res.json()
-      console.log('✅ Response JSON:', json)
+
+      console.log('Ô£à Response JSON:', json)
 
       const rows = Array.isArray(json) ? json : []
-      console.log('📊 Rows count:', rows.length)
 
-      // Guardar en caché
+      console.log('­ƒôè Rows count:', rows.length)
+
+      // Guardar en cach├®
       servicioHistoryCache.set(servicioMuestraId, rows)
       setHistServicioRows(rows)
     } catch (err) {
-      console.error('❌ Error loading servicio history:', err)
+      console.error('ÔØî Error loading servicio history:', err)
       setHistServicioRows([])
     } finally {
       setHistServicioLoading(false)
@@ -1146,14 +1386,15 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   }
 
 
-  // En handleMarkAs, después de invalidar servicioHistoryCache.delete(markRowId)
+  // En handleMarkAs, despu├®s de invalidar servicioHistoryCache.delete(markRowId)
   const handleMarkAs = async (nuevoEstado: string) => {
     if (!markRowId) {
       console.warn('handleMarkAs: no markRowId')
+
       return
     }
 
-    console.group('🔄 handleMarkAs')
+    console.group('­ƒöä handleMarkAs')
     console.log('servicioMuestraId:', markRowId)
     console.log('nuevo estado:', nuevoEstado)
 
@@ -1165,7 +1406,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     const estadoActual = servicio?.estado ?? servicio?.estadoServicio ?? 'CODIFICADO'
 
     try {
-      // ✅ CORRECCIÓN: Asegurar que servicioMuestraId se envíe correctamente
+      // Ô£à CORRECCI├ôN: Asegurar que servicioMuestraId se env├¡e correctamente
       const payload = {
         servicioMuestraId: markRowId,
         tipo: 'CAMBIO_ESTADO',
@@ -1180,7 +1421,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       }
 
       const url = `/api/servicioMuestra/${markRowId}/history`
-      console.log('📡 POST:', url, payload)
+
+      console.log('­ƒôí POST:', url, payload)
 
       const res = await fetch(url, {
         method: 'POST',
@@ -1188,39 +1430,45 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         body: JSON.stringify(payload)
       })
 
-      console.log('📥 Response status:', res.status)
+      console.log('­ƒôÑ Response status:', res.status)
 
       if (!res.ok) {
         const txt = await res.text().catch(() => '')
-        console.error('❌ API error:', res.status, txt)
+
+        console.error('ÔØî API error:', res.status, txt)
         throw new Error(`HTTP ${res.status}: ${txt}`)
       }
 
       const result = await res.json()
-      console.log('✅ Estado actualizado:', result)
+
+      console.log('Ô£à Estado actualizado:', result)
 
       // Actualizar UI localmente
       setServiciosMuestra(prev => prev.map(s => {
         const id = s.id ?? s.servicioMuestraId ?? s.servicioId
+
+
         return id === markRowId
           ? { ...s, estado: nuevoEstado }
           : s
       }))
 
-      // ✅ INVALIDAR caché del servicio individual
+      // Ô£à INVALIDAR cach├® del servicio individual
       servicioHistoryCache.delete(markRowId)
 
-      // ✅ AGREGAR: Invalidar caché combinada de la muestra
+      // Ô£à AGREGAR: Invalidar cach├® combinada de la muestra
       const row = findRowById(selectedRowId)
+
       if (row?.muestra?.id) {
         const cacheKey = `muestra-${row.muestra.id}`
-        console.log('🗑️ Invalidando caché combinada:', cacheKey)
+
+        console.log('Invalidando caché combinada:', cacheKey)
         servicioHistoryCache.delete(cacheKey)
       }
 
       handleCloseMarkMenu()
     } catch (err) {
-      console.error('❌ Error updating servicio estado:', err)
+      console.error('ÔØî Error updating servicio estado:', err)
       alert('No se pudo actualizar el estado del servicio')
     } finally {
       console.groupEnd()
@@ -1261,15 +1509,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         // --- fetch obras (igual que ya tienes) ---
         const obraIds = Array.from(new Set(raw.map((r: any) => (r.obraId ?? r.obra?.id) as number).filter(Boolean))) as number[]
         const obraMap: Record<number, any> = {}
+
         await Promise.all(
           obraIds.map(async id => {
             try {
               const or = await fetch(`/api/obra/${id}`)
+
               if (!or.ok) {
                 console.warn(`obra ${id} responded not ok:`, or.status)
+
                 return
               }
+
               const ct = (or.headers.get('content-type') || '').toLowerCase()
+
               if (ct.includes('application/json')) {
                 obraMap[id] = await or.json()
               } else {
@@ -1281,26 +1534,29 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           })
         )
 
-        // ✅ AGREGAR: fetch clientes
+        // Ô£à AGREGAR: fetch clientes
         const clienteIds = Array.from(new Set(raw.map((r: any) => r.clienteId ?? r.cliente?.id).filter(Boolean)))
         const clienteMap: Record<string, any> = {}
+
         if (clienteIds.length > 0) {
-          console.log('🔍 Fetching clientes:', clienteIds)
+          console.log('­ƒöì Fetching clientes:', clienteIds)
           await Promise.all(
             clienteIds.map(async id => {
               try {
                 const res = await fetch(`/api/cliente/${id}`)
+
                 if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
                   const data = await res.json()
+
                   clienteMap[String(id)] = data
-                  console.log(`✅ Loaded cliente ${id}:`, data)
+                  console.log(`Ô£à Loaded cliente ${id}:`, data)
                 }
               } catch (e) {
                 console.warn('No se pudo cargar cliente', id, e)
               }
             })
           )
-          console.log('📦 clienteMap final:', clienteMap)
+          console.log('­ƒôª clienteMap final:', clienteMap)
         }
 
         // DEBUG: mostrar muestra de clienteMap
@@ -1311,16 +1567,18 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         // --- fetch ordenes de trabajo ---
         const ordenIds = Array.from(new Set(raw.map((r: any) => r.ordenTrabajoId ?? r.ordenTrabajo?.id).filter(Boolean)))
         const ordenMap: Record<string | number, any> = {}
+
         if (ordenIds.length) {
-          console.log('🔍 Fetching ordenes de trabajo:', ordenIds)
+          console.log('­ƒöì Fetching ordenes de trabajo:', ordenIds)
           await Promise.all(
             ordenIds.map(async id => {
               try {
-                // ✅ CAMBIAR el endpoint si es incorrecto
-                const or = await fetch(`/api/ot/${id}`) // ← cambiar de /api/orden-trabajo/ a /api/ot/
+                // Ô£à CAMBIAR el endpoint si es incorrecto
+                const or = await fetch(`/api/ot/${id}`) // ÔåÉ cambiar de /api/orden-trabajo/ a /api/ot/
 
                 if (!or.ok) {
-                  console.warn(`❌ ordenTrabajo ${id} responded ${or.status}`)
+                  console.warn(`ÔØî ordenTrabajo ${id} responded ${or.status}`)
+
                   return
                 }
 
@@ -1328,26 +1586,30 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
                 if (!ct.includes('application/json')) {
                   const txt = await or.text().catch(() => '')
-                  console.warn(`⚠️ ordenTrabajo ${id} returned non-json (${ct}):`, txt.slice(0, 200))
+
+                  console.warn(`ÔÜá´©Å ordenTrabajo ${id} returned non-json (${ct}):`, txt.slice(0, 200))
+
                   return
                 }
 
                 const data = await or.json()
+
                 ordenMap[String(id)] = data
-                console.log(`✅ Loaded ordenTrabajo ${id}:`, data)
+                console.log(`Ô£à Loaded ordenTrabajo ${id}:`, data)
 
               } catch (err) {
-                console.warn(`❌ Error loading ordenTrabajo ${id}:`, err)
+                console.warn(`ÔØî Error loading ordenTrabajo ${id}:`, err)
               }
             })
           )
-          console.log('📦 ordenMap final:', ordenMap)
+          console.log('­ƒôª ordenMap final:', ordenMap)
         }
 
         // DEBUG: mostrar muestra de ordenMap
         if (Object.keys(ordenMap).length) {
-          console.group('🔍 DEBUG ordenMap')
+          console.group('­ƒöì DEBUG ordenMap')
           const sampleKeys = Object.keys(ordenMap).slice(0, 3)
+
           sampleKeys.forEach(key => {
             console.log(`Key: ${key}`, ordenMap[key])
             console.log('  -> correlativo:', ordenMap[key]?.correlativo)
@@ -1361,30 +1623,41 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         const findOrderCorrel = (o: any) => {
           if (!o || typeof o !== 'object') return undefined
           const keys = Object.keys(o)
+
           // prioridad por nombres comunes
           const prefer = ['correlativ', 'correlativo', 'correlacion', 'correl', 'correlativoNumero', 'numero', 'nro', 'nroOrden', 'correl_id']
+
           for (const p of prefer) {
             if (p in o && (o[p] || o[p] === 0)) return o[p]
           }
+
+
           // buscar cualquier key que contenga 'correl' o 'numero'
           for (const k of keys) {
             if (/correl|numero|nro/i.test(k) && (o[k] || o[k] === 0)) return o[k]
           }
+
+
           // buscar 1 nivel nested
           for (const k of keys) {
             const v = o[k]
+
             if (v && typeof v === 'object') {
               const nested = findOrderCorrel(v)
+
               if (nested) return nested
             }
           }
+
+
           return undefined
         }
 
-        // DEBUG: mostrar muestra de ordenMap para inspección
+        // DEBUG: mostrar muestra de ordenMap para inspecci├│n
         if (Object.keys(ordenMap).length) {
-          console.group('🔍 DEBUG ordenMap')
+          console.group('­ƒöì DEBUG ordenMap')
           const sampleKeys = Object.keys(ordenMap).slice(0, 3)
+
           sampleKeys.forEach(key => {
             console.log(`Key: ${key}`, ordenMap[key])
             console.log('  -> correlativo:', ordenMap[key]?.correlativo)
@@ -1397,37 +1670,41 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         // --- PRE-FETCH todos los servicioRCM faltantes ---
         const allMuestras = raw.flatMap((r: any) => Array.isArray(r.muestras) ? r.muestras : [])
 
-        // CORRECCIÓN: buscar servicioId, NO servicioRCMId
+        // CORRECCI├ôN: buscar servicioId, NO servicioRCMId
         const missingServiceIds = allMuestras
           .filter((m: any) => !m.servicioRCM && (m.servicioRCMId || m.servicioId))
           .map((m: any) => m.servicioRCMId || m.servicioId)
           .filter(Boolean)
 
         const servicioRCMMap: Record<string, any> = {}
+
         if (missingServiceIds.length > 0) {
-          console.log('🔍 Fetching servicioRCM for IDs:', missingServiceIds)
+          console.log('­ƒöì Fetching servicioRCM for IDs:', missingServiceIds)
           await Promise.all(
             missingServiceIds.map(async (id: any) => {
               try {
                 const res = await fetch(`/api/servicioRCM/${id}`)
+
                 if (res.ok) {
                   const data = await res.json()
+
                   servicioRCMMap[String(id)] = data
-                  console.log(`✅ Loaded servicioRCM ${id}:`, data)
+                  console.log(`Ô£à Loaded servicioRCM ${id}:`, data)
                 } else {
-                  console.warn(`❌ servicioRCM ${id} responded ${res.status}`)
+                  console.warn(`ÔØî servicioRCM ${id} responded ${res.status}`)
                 }
               } catch (e) {
                 console.warn('No se pudo cargar servicioRCM', id, e)
               }
             })
           )
-          console.log('📦 servicioRCMMap final:', servicioRCMMap)
+          console.log('­ƒôª servicioRCMMap final:', servicioRCMMap)
         }
 
         // normalizar y enriquecer - EXPANDIR POR MUESTRAS
         const normalized = raw.flatMap((r: any) => {
           const obraObj = r.obra ?? obraMap[r.obraId] ?? obraMap[r.obra?.id] ?? null
+
           const numeroObra =
             obraObj?.numeroObra ??
             obraObj?.numero_obra ??
@@ -1435,17 +1712,22 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             obraObj?.numeroobra ??
             (r.obraId ? String(r.obraId) : undefined)
 
-          // normalizar cliente: puede venir como string, objeto con keys distintas o en raíz
+          // normalizar cliente: puede venir como string, objeto con keys distintas o en ra├¡z
           let rawCliente = r.cliente ?? r.clienteData ?? r.clienteInfo ?? null
+
+
           // si no hay objeto cliente, intentar resolver desde clienteMap usando clienteId
           if (!rawCliente) {
             const cid = r.clienteId ?? r.clienteid ?? r.cliente_id ?? r.cliente?.id ?? null
+
             if (cid != null) {
               rawCliente = clienteMap[String(cid)] ?? rawCliente
             }
           }
+
           let clienteNombre: string | undefined = undefined
           let clienteComuna: string | undefined = undefined
+
           if (rawCliente) {
             if (typeof rawCliente === 'string') {
               clienteNombre = rawCliente
@@ -1454,11 +1736,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               clienteComuna = rawCliente.comuna ?? rawCliente.comunaName ?? rawCliente.comuna_nombre ?? rawCliente.city ?? rawCliente.localidad
             }
           }
-          // fallback a campos en raíz si existen
+
+
+          // fallback a campos en ra├¡z si existen
           clienteNombre = clienteNombre ?? r.clienteNombre ?? r.nombreCliente ?? r.cliente_name ?? r.cliente_nombre ?? r.nombre
           clienteComuna = clienteComuna ?? r.clienteComuna ?? r.comuna ?? r.comunaCliente ?? null
 
-          // DEBUG: logear información para investigar por qué cliente/comuna quedan vacíos
+          // DEBUG: logear informaci├│n para investigar por qu├® cliente/comuna quedan vac├¡os
           // eslint-disable-next-line no-console
           console.debug('normalizeCliente:', {
             rowId: r.id ?? r._id ?? null,
@@ -1473,29 +1757,29 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             }
           })
 
-          // --- CORRECCIÓN: NORMALIZAR ORDEN DE TRABAJO ---
+          // --- CORRECCI├ôN: NORMALIZAR ORDEN DE TRABAJO ---
           const orderKey = r.ordenTrabajoId ?? r.ordenTrabajo?.id ?? r.ordenTrabajo?._id ?? ''
           const orderObj = orderKey ? (ordenMap[String(orderKey)] ?? null) : null
 
-          // ✅ CORRECCIÓN: priorizar 'correlativ' (sin 'o')
+          // Ô£à CORRECCI├ôN: priorizar 'correlativ' (sin 'o')
           const orderCorrel =
-            orderObj?.correlativ ??           // ← PRIMERO: campo exacto de la BD
-            r.ordenTrabajo?.correlativ ??     // ← backup desde objeto anidado
-            orderObj?.correlativo ??          // ← fallback con 'o'
-            orderObj?.numero ??               // ← agregar correlativo como último recurso
-            r.ordenTrabajo?.correlativo ??    // ← también desde r.ordenTrabajo
-            r.ot ??                           // ← último recurso: r.ot
+            orderObj?.correlativ ??           // ÔåÉ PRIMERO: campo exacto de la BD
+            r.ordenTrabajo?.correlativ ??     // ÔåÉ backup desde objeto anidado
+            orderObj?.correlativo ??          // ÔåÉ fallback con 'o'
+            orderObj?.numero ??               // ÔåÉ agregar correlativo como ├║ltimo recurso
+            r.ordenTrabajo?.correlativo ??    // ÔåÉ tambi├®n desde r.ordenTrabajo
+            r.ot ??                           // ÔåÉ ├║ltimo recurso: r.ot
             null
 
           // LOG DETALLADO para debugging - MOSTRAR TODOS LOS CAMPOS del orderObj
           if (r.id <= 3) {
-            console.group(`🔧 DEBUG OT - RCM ${r.id}`)
+            console.group(`­ƒöº DEBUG OT - RCM ${r.id}`)
             console.log('orderKey:', orderKey)
-            console.log('📦 orderObj COMPLETO (todos los campos):', orderObj)
-            console.log('🔍 Object.keys(orderObj):', orderObj ? Object.keys(orderObj) : [])
-            console.log('✅ orderObj.correlativ (SIN o):', orderObj?.correlativ)
-            console.log('⚠️ orderObj.correlativo (CON o):', orderObj?.correlativo)
-            console.log('📋 orderCorrel final extraído:', orderCorrel)
+            console.log('­ƒôª orderObj COMPLETO (todos los campos):', orderObj)
+            console.log('­ƒöì Object.keys(orderObj):', orderObj ? Object.keys(orderObj) : [])
+            console.log('Ô£à orderObj.correlativ (SIN o):', orderObj?.correlativ)
+            console.log('ÔÜá´©Å orderObj.correlativo (CON o):', orderObj?.correlativo)
+            console.log('orderCorrel final extraído:', orderCorrel)
             console.log('---')
             console.log('r.ordenTrabajo original:', r.ordenTrabajo)
             console.log('r.ot original:', r.ot)
@@ -1506,7 +1790,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const ordenTrabajoNormalized = {
             ...(orderObj ?? r.ordenTrabajo ?? {}),
             id: r.ordenTrabajoId ?? orderObj?.id ?? r.ordenTrabajo?.id ?? undefined,
-            correlativ: orderCorrel,  // ✅ usar 'correlativ' como campo principal
+            correlativ: orderCorrel,  // Ô£à usar 'correlativ' como campo principal
             correlativo: orderCorrel  // mantener ambas versiones por compatibilidad
           }
 
@@ -1529,73 +1813,85 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             : [{ id: null, numeroMuestra: '-', servicio: null, cantidad: 0, estado: null }]
 
           return muestras.map((muestra: any, idx: number) => {
-            // ✅ DEBUG: Verificar TODOS los campos de muestra
+            // Ô£à DEBUG: Verificar TODOS los campos de muestra
             if (r.id <= 3) { // solo primeros 3 RCMs
-              console.group(`🔍 DEBUG MUESTRA COMPLETA - RCM ${r.id}-${idx}`)
-              console.log('📦 muestra RAW (todos los campos):', muestra)
-              console.log('📋 Keys disponibles en muestra:', Object.keys(muestra))
-              console.log('🔢 numeroTarjeta directo:', muestra.numeroTarjeta)
-              console.log('🔢 numero_tarjeta:', muestra.numero_tarjeta)
-              console.log('🔢 tarjeta.numero:', muestra.tarjeta?.numero)
-              console.log('🔢 tarjeta.numeroTarjeta:', muestra.tarjeta?.numeroTarjeta)
-              console.log('🔢 nroTarjeta:', muestra.nroTarjeta)
-              console.log('🔢 nro_tarjeta:', muestra.nro_tarjeta)
-              console.log('🔢 cardNumber:', muestra.cardNumber)
-              console.log('🔢 card_number:', muestra.card_number)
+              console.group(`­ƒöì DEBUG MUESTRA COMPLETA - RCM ${r.id}-${idx}`)
+              console.log('­ƒôª muestra RAW (todos los campos):', muestra)
+              console.log('­ƒôï Keys disponibles en muestra:', Object.keys(muestra))
+              console.log('­ƒöó numeroTarjeta directo:', muestra.numeroTarjeta)
+              console.log('­ƒöó numero_tarjeta:', muestra.numero_tarjeta)
+              console.log('­ƒöó tarjeta.numero:', muestra.tarjeta?.numero)
+              console.log('­ƒöó tarjeta.numeroTarjeta:', muestra.tarjeta?.numeroTarjeta)
+              console.log('­ƒöó nroTarjeta:', muestra.nroTarjeta)
+              console.log('­ƒöó nro_tarjeta:', muestra.nro_tarjeta)
+              console.log('­ƒöó cardNumber:', muestra.cardNumber)
+              console.log('­ƒöó card_number:', muestra.card_number)
               console.groupEnd()
             }
 
             // CASCADA DE FALLBACKS PARA PRODUCTO
             let producto = null
+
             // 1) Desde servicioRCM (si existe)
             let servicioRCM = muestra.servicioRCM ?? muestra.servicio_rcm ?? null
+
             if (!servicioRCM && (muestra.servicioRCMId || muestra.servicioId)) {
               const serviceKey = muestra.servicioRCMId || muestra.servicioId
+
               servicioRCM = servicioRCMMap[String(serviceKey)] ?? null
             }
+
             const servicio = servicioRCM?.servicio ?? null
+
             producto = servicio?.producto ?? null
 
             // 2) Fallback: servicio directo en muestra (sin pasar por servicioRCM)
             if (!producto) {
               const directServicio = muestra.servicio ?? muestra.servicioData ?? null
+
               producto = directServicio?.producto ?? null
             }
 
-            // 3) Fallback: array servicios en RCM raíz
+            // 3) Fallback: array servicios en RCM ra├¡z
             if (!producto && Array.isArray(r.servicios) && r.servicios.length > 0) {
               const svc = r.servicios[0]
+
               producto = svc.producto ?? svc.servicio?.producto ?? null
             }
 
-            // 4) Fallback: servicio directo en RCM raíz
+            // 4) Fallback: servicio directo en RCM ra├¡z
             if (!producto) {
               producto = r.servicio?.producto ?? r.servicioData?.producto ?? r.producto ?? null
             }
 
-            // Extraer área y familia del producto con múltiples fallbacks
+            // Extraer ├írea y familia del producto con m├║ltiples fallbacks
             const areaProducto = producto?.area?.nombre ??
               producto?.area?.name ??
-              producto?.areaNombre ??  // ← CORREGIDO
+              producto?.areaNombre ??  // ÔåÉ CORREGIDO
               (typeof producto?.area === 'string' ? producto.area : null)
 
             const familiaProducto = producto?.familia?.nombre ??
               producto?.familia?.name ??
-              producto?.familiaNombre ??  // ← CORREGIDO
+              producto?.familiaNombre ??  // ÔåÉ CORREGIDO
               (typeof producto?.familia === 'string' ? producto.familia : null)
 
-            // Fallbacks finales desde RCM raíz
+            // Fallbacks finales desde RCM ra├¡z
             const areaFinal = areaProducto ?? r.area ?? null
             const familiaFinal = familiaProducto ?? r.familia ?? null
             const serviciosMuestra = Array.isArray(muestra.servicios) ? muestra.servicios : []
             const totalEnsayos = serviciosMuestra.reduce((acc: number, servicioItem: any) => acc + Number(servicioItem?.cantidad ?? 1), 0)
+
             const ensayados = serviciosMuestra.reduce((acc: number, servicioItem: any) => {
               const estadoServicio = String(servicioItem?.estado ?? '').toUpperCase().trim()
+
+
               return acc + (estadoServicio === 'ENSAYADO' ? Number(servicioItem?.cantidad ?? 1) : 0)
             }, 0)
+
             const estadosServicios = serviciosMuestra
               .map((servicioItem: any) => String(servicioItem?.estado ?? '').toUpperCase().trim())
               .filter((estado: string) => Boolean(estado))
+
             const estadoDesdeEnsayo = estadosServicios.includes('EN_PROCESO')
               ? 'EN_PROCESO'
               : estadosServicios.includes('CODIFICADO')
@@ -1603,7 +1899,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 : estadosServicios.includes('ENSAYADO')
                   ? 'ENSAYADO'
                   : (estadosServicios[0] ?? '')
+
             const probetas = Array.isArray(muestra.probetas) ? muestra.probetas : []
+
             const nextProbeta = probetas
               .map((probeta: any) => ({
                 ...probeta,
@@ -1611,18 +1909,24 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               }))
               .filter((probeta: any) => probeta.fechaVencimiento)
               .sort((left: any, right: any) => compareDateOnly(left.fechaVencimiento, right.fechaVencimiento))[0] ?? null
+
             const tipoServicio =
               servicio?.nombre ??
               servicioRCM?.nombre ??
               serviciosMuestra[0]?.nombre ??
               r.tipoServicio ??
               null
+
             const ss = r.ss ?? orderObj?.clave ?? r.ordenTrabajo?.clave ?? null
+
+
             // Ensayador de laboratorio: viene del historial de servicios (aplicadoA), fallback al usuario de OT
             const ensayadorDesdeServicio = serviciosMuestra
               .map((sm: any) => sm?.history?.[0]?.aplicadoA ?? sm?.aplicadoA ?? null)
               .find((e: string | null) => Boolean(e)) ?? null
+
             const ensayador = ensayadorDesdeServicio ?? null
+
             const estadoMuestraResuelto =
               String(muestra.estado ?? '').trim() ||
               String(servicioRCM?.estado ?? '').trim() ||
@@ -1631,13 +1935,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               ''
 
             // LOG (mantener solo para debug)
-            console.group(`🔍 DEBUG Muestra ${r.id}-${idx}`)
-            console.log('📦 Muestra:', muestra)
-            console.log('🔗 servicioRCM:', servicioRCM)
-            console.log('⚙️ servicio:', servicio)
-            console.log('📋 producto final:', producto)
-            console.log('✅ area:', areaFinal)
-            console.log('✅ familia:', familiaFinal)
+            console.group(`­ƒöì DEBUG Muestra ${r.id}-${idx}`)
+            console.log('­ƒôª Muestra:', muestra)
+            console.log('­ƒöù servicioRCM:', servicioRCM)
+            console.log('ÔÜÖ´©Å servicio:', servicio)
+            console.log('­ƒôï producto final:', producto)
+            console.log('Ô£à area:', areaFinal)
+            console.log('Ô£à familia:', familiaFinal)
             console.groupEnd()
 
             return {
@@ -1645,7 +1949,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               rcmOriginalId: r.id,
               numeroRcm: r.numeroRcm,
 
-              // ✅ Agregar numeroTarjeta al objeto retornado
+              // Ô£à Agregar numeroTarjeta al objeto retornado
               numeroTarjeta: muestra.numeroTarjeta ??
                 muestra.numero_tarjeta ??
                 muestra.nroTarjeta ??
@@ -1707,7 +2011,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         console.log('Normalized data sample with area/familia:', normalized.slice(0, 3))
 
         // LOG ADICIONAL: Verificar estructura final
-        console.group('📊 VERIFICACIÓN FINAL DE DATOS')
+        console.group('VERIFICACIÓN FINAL DE DATOS')
         console.log('Total registros normalizados:', normalized.length)
         console.log('Primeros 3 registros completos:', normalized.slice(0, 3))
         console.log('---')
@@ -1747,19 +2051,23 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
   const toDateOnly = (input: any): Date | null => {
     if (!input) return null
+
     // Si ya es Date
     if (input instanceof Date) return new Date(input.getFullYear(), input.getMonth(), input.getDate())
     const s = String(input)
 
-    // Si viene en formato YYYY-MM-DD (o empieza así), parsearlo directamente para evitar shift por timezone
+    // Si viene en formato YYYY-MM-DD (o empieza as├¡), parsearlo directamente para evitar shift por timezone
     const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+
     if (m) {
       return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
     }
 
-    // Fallback: crear Date y tomar sólo la parte fecha local
+    // Fallback: crear Date y tomar s├│lo la parte fecha local
     const d = new Date(s)
+
     if (isNaN(d.getTime())) return null
+
     return new Date(d.getFullYear(), d.getMonth(), d.getDate())
   }
 
@@ -1778,6 +2086,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const formatDateDDMMYYYY = (v: any) => {
     if (!v) return '-'
     const d = v instanceof Date ? v : new Date(v)
+
     if (isNaN(d.getTime())) return '-'
     const dd = String(d.getDate()).padStart(2, '0')
     const mm = String(d.getMonth() + 1).padStart(2, '0')
@@ -1785,32 +2094,41 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     const hh = String(d.getHours()).padStart(2, '0')
     const min = String(d.getMinutes()).padStart(2, '0')
     const ss = String(d.getSeconds()).padStart(2, '0')
+
+
     return `${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}`
   }
 
-  // helper: formatear sólo fecha a DD/MM/AAAA (sin hora)
+  // helper: formatear s├│lo fecha a DD/MM/AAAA (sin hora)
   const formatDateDDMMYYYYDateOnly = (v: any) => {
     if (!v) return '-'
     const d = v instanceof Date ? v : new Date(v)
+
     if (isNaN(d.getTime())) return '-'
     const dd = String(d.getDate()).padStart(2, '0')
     const mm = String(d.getMonth() + 1).padStart(2, '0')
     const yyyy = d.getFullYear()
+
+
     return `${dd}/${mm}/${yyyy}`
   }
 
   const formatDateDDMMYYYYDateOnlyDash = (v: any) => {
     if (!v) return '-'
     const d = v instanceof Date ? v : new Date(v)
+
     if (isNaN(d.getTime())) return '-'
     const dd = String(d.getDate()).padStart(2, '0')
     const mm = String(d.getMonth() + 1).padStart(2, '0')
     const yyyy = d.getFullYear()
+
+
     return `${dd}-${mm}-${yyyy}`
   }
 
   const formatDateLikeDDMMYYYYDash = (raw: string | null | undefined) => {
     const s = String(raw ?? '').trim()
+
     if (!s) return null
     const t = s.replace(/\//g, '-').trim()
 
@@ -1819,7 +2137,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return formatDateDDMMYYYYDateOnlyDash(new Date(t))
 
     const d = new Date(t)
+
     if (isNaN(d.getTime())) return null
+
     return formatDateDDMMYYYYDateOnlyDash(d)
   }
 
@@ -1827,6 +2147,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (!raw) return '-'
     const key = String(raw).toUpperCase().trim()
     const match = OPERATIONAL_STATES.find(item => item.value === key || item.label.toUpperCase() === key)
+
+
     return match?.label ?? raw
   }
 
@@ -1834,8 +2156,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (!raw) return null
     const date = toDateOnly(raw)
     const today = toDateOnly(new Date())
+
     if (!date || !today) return null
     const diff = date.getTime() - today.getTime()
+
+
     return Math.round(diff / (1000 * 60 * 60 * 24))
   }
 
@@ -1890,6 +2215,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     // determine which property to use for date filtering
     const dfRaw = filters?.dateField ? String(filters.dateField).toLowerCase() : ''
     let fieldName: 'fechaCodificacion' | 'fechaMuestreo' | 'fechaIngreso' | 'proximoVencimiento' | null = null
+
     if (dfRaw === 'fecha_codificacion' || dfRaw === 'fechacodificacion' || dfRaw === 'fecha-codificacion') {
       fieldName = 'fechaCodificacion'
     } else if (dfRaw === 'fecha_muestreo' || dfRaw === 'fechamuestreo' || dfRaw === 'fecha-muestreo') {
@@ -1906,35 +2232,43 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (fieldName && filters && (filters.start || filters.end)) {
       const start = filters.start ? toDateOnly(filters.start) : null
       const end = filters.end ? toDateOnly(filters.end) : null
+
       if (start || end) {
         result = result.filter(r => {
           const raw = (r as any)[fieldName]
           const dOnly = toDateOnly(raw)
+
           if (!dOnly) return false
           if (start && dOnly.getTime() < start.getTime()) return false
           if (end && dOnly.getTime() > end.getTime()) return false
+
           return true
         })
       }
     }
 
-    // Estado Operativo filtering (if provided) — case-insensitive contains
+    // Estado Operativo filtering (if provided) ÔÇö case-insensitive contains
     if (filters && filters.estadoOperativo) {
       const q = String(filters.estadoOperativo).toLowerCase()
+
       result = result.filter(r => {
         const op = (r.estadoMuestra ?? r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '') ?? '')
+
+
         return String(op).toLowerCase().includes(q)
       })
     }
 
     if (filters && filters.ensayador) {
       const qEns = normalizeText(filters.ensayador)
+
       result = result.filter(r => normalizeText(r.ensayador ?? '').includes(qEns))
     }
 
-    // Estado Administrativo filtering (if provided) — case-insensitive contains
+    // Estado Administrativo filtering (if provided) ÔÇö case-insensitive contains
     if (filters && filters.estadoAdministrativo) {
       const qAdm = String(filters.estadoAdministrativo).toLowerCase()
+
       result = result.filter(r => {
         const adm =
           r.estadoAdministrativo ??
@@ -1944,13 +2278,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           r.administrativo ??
           (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estadoAdministrativo ?? '' : '') ??
           ''
+
+
         return String(adm).toLowerCase().includes(qAdm)
       })
     }
 
     // Area filtering: prefer header.areaName, fallback to header.area or areaId.
-    // Compara por nombre normalizado (quita acentos, case-insensitive). Si se envía id numérico, lo acepta.
+    // Compara por nombre normalizado (quita acentos, case-insensitive). Si se env├¡a id num├®rico, lo acepta.
     const areaValue = (filters as any)?.areaName ?? (filters as any)?.area ?? (filters as any)?.areaId ?? null
+
     if (areaValue !== null && typeof areaValue !== 'undefined' && String(areaValue).toString().trim() !== '') {
       const raw = areaValue
       const rawNorm = normalizeText(raw)
@@ -1961,6 +2298,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         // quick arrays if present
         const areaNamesArr = Array.isArray(r._areaNames) ? r._areaNames.map((x: any) => normalizeText(x)) : []
         const areaIdsArr = Array.isArray(r._areaIds) ? r._areaIds.map((x: any) => Number(x)) : []
+
         if (isNumeric) {
           if (areaIdsArr.some((id: number) => Number(id) === targetNum)) return true
         } else {
@@ -1971,7 +2309,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         try {
           // r.area puede ser string o objeto { nombre | name }
           const topAreaName = r.area?.nombre ?? r.area?.name ?? r.area
+
           if (!isNumeric && topAreaName && normalizeText(topAreaName).includes(rawNorm)) return true
+
           if (isNumeric) {
             if (r.area && !isNaN(Number(r.area)) && Number(r.area) === targetNum) return true
             if (r.areaId && Number(r.areaId) === targetNum) return true
@@ -1984,17 +2324,24 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         if (Array.isArray(r.servicios)) {
           for (const s of r.servicios) {
             const p: any = s?.producto ?? s?.product ?? null
+
             if (!p) continue
+
+
             // textual candidates
             const candNames = [
               p.area?.nombre ?? p.area?.name ?? p.area ?? p.productoArea ?? p.producto_area ?? null
             ]
+
             for (const cn of candNames) {
               if (!cn) continue
               if (!isNumeric && normalizeText(cn).includes(rawNorm)) return true
             }
+
+
             // numeric candidates
             const candIds = [p.area?.id ?? p.areaId ?? p.area_id ?? p.productoArea?.id ?? null]
+
             for (const cid of candIds) {
               if (cid === null || typeof cid === 'undefined') continue
               if (isNumeric && Number(cid) === targetNum) return true
@@ -2006,8 +2353,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       })
     }
 
-    // Familia filtering: comparar por nombre (normalizado). Si se envía id numérico lo acepta como fallback.
+    // Familia filtering: comparar por nombre (normalizado). Si se env├¡a id num├®rico lo acepta como fallback.
     const familiaValue = (filters as any)?.familia ?? null
+
     if (familiaValue !== null && typeof familiaValue !== 'undefined' && String(familiaValue).toString().trim() !== '') {
       const rawF = familiaValue
       const rawFNorm = normalizeText(rawF)
@@ -2018,8 +2366,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       const tokenMatch = (candidateNorm: string) => {
         if (!candidateNorm) return false
         if (candidateNorm.includes(rawFNorm)) return true
+
         // require that every token in rawF is present in candidate (order-insensitive)
         const candTokens = candidateNorm.split(' ').filter(Boolean)
+
+
         return rawFTokens.every(t => candTokens.includes(t))
       }
 
@@ -2040,6 +2391,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         try {
           const topFamRaw = r.familia?.nombre ?? r.familia?.name ?? r.familia ?? ''
           const topFam = normalizeText(topFamRaw)
+
           if (!isNumF && tokenMatch(topFam)) return true
           if (isNumF && topFamRaw && !isNaN(Number(topFamRaw)) && Number(topFamRaw) === targetF) return true
         } catch (e) {
@@ -2050,13 +2402,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         if (Array.isArray(r.servicios)) {
           for (const s of r.servicios) {
             const p: any = s?.producto ?? s?.product ?? null
+
             if (!p) continue
+
             const famCandidates = [
               p.familia ?? p.familia?.nombre ?? p.familia?.name ?? p.productoFamilia ?? p.producto_familia ?? null
             ]
+
             for (const fc of famCandidates) {
               if (!fc) continue
               const fcNorm = normalizeText(fc)
+
               if (!isNumF && tokenMatch(fcNorm)) return true
               if (isNumF && !isNaN(Number(fc)) && Number(fc) === targetF) return true
               if (isNumF && String(fc) === String(familiaValue)) return true
@@ -2065,7 +2421,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
 
         // DEBUG: no match for this row -> print diagnostic for investigation
-        // (mantener sólo mientras debuggeas)
+        // (mantener s├│lo mientras debuggeas)
         // eslint-disable-next-line no-console
         console.debug('Familia filter: row excluded', {
           id: r.id,
@@ -2076,6 +2432,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           topFamilia: r.familia,
           serviciosSample: Array.isArray(r.servicios) ? r.servicios.slice(0, 3).map((s: any) => ({ producto: s.producto ?? s.product })) : []
         })
+
         return false
       })
     }
@@ -2104,6 +2461,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               onChange={() => {
                 if (!allSelected) {
                   const next: any = {}
+
                   visibleIds.forEach(id => (next[id] = true))
                   setRowSelection(next)
                 } else {
@@ -2113,23 +2471,43 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             />
           )
         },
-        cell: ({ row }) => <Checkbox size='small' checked={Boolean((rowSelection as any)[row.id])} onChange={e => setRowSelection(prev => ({ ...prev, [row.id]: e.target.checked }))} />
+        cell: ({ row }) => (
+          <Checkbox
+            size='small'
+            checked={Boolean((rowSelection as any)[row.id])}
+            onChange={e => {
+              const checked = e.target.checked
+
+              setRowSelection(prev => ({ ...prev, [row.id]: checked }))
+
+              if (checked) {
+                void handleSelectInlineDetail(row.original)
+
+                return
+              }
+
+              if (selectedInlineRowId === row.original.id) {
+                resetInlineDetail()
+              }
+            }}
+          />
+        )
       },
       {
         id: 'rcm',
-        header: 'RCM',
+        header: 'RCM / Sede',
         accessorFn: row => [
           row.numeroRcm,
-          row.ss,
+          row.sede,
           row.ot,
           row.obra?.numeroObra,
           row.area,
           row.tipoServicio,
-          row.ensayador
+          row.cliente?.nombreCliente
         ].filter(Boolean).join(' '),
         cell: ({ row }: any) => {
           const numeroRcm = row.original.numeroRcm || '-'
-          const ss = String(row.original.ss ?? '').trim()
+          const sede = String(row.original.sede ?? '').trim()
 
           return (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.25 }}>
@@ -2137,7 +2515,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 {numeroRcm}
               </Typography>
               <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 500 }}>
-                {ss ? `SS: ${ss}` : '-'}
+                {sede || '-'}
               </Typography>
             </Box>
           )
@@ -2149,6 +2527,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         accessorKey: 'numeroTarjeta',
         cell: ({ row }) => {
           const numeroTarjeta = row.original.numeroTarjeta || '-'
+
+
           return (
             <Typography variant='body2' sx={{ fontSize: '0.95rem', fontWeight: 800, color: 'primary.main' }}>
               {numeroTarjeta}
@@ -2162,10 +2542,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         accessorKey: 'ot',
         cell: ({ row }: any) => {
           const ot = row.original.ot
+
           if (ot) {
             return <Typography variant='body2'>{ot}</Typography>
           }
+
           const ordenId = row.original.ordenTrabajoId
+
           if (ordenId) {
             return (
               <Typography variant='body2' color='text.secondary' title={`ID: ${ordenId}`}>
@@ -2173,12 +2556,34 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               </Typography>
             )
           }
+
+
           return <Typography variant='body2'>-</Typography>
         }
       },
       {
+        id: 'obraCliente',
+        header: 'Obra / Cliente',
+        accessorFn: row => `${row.obra?.numeroObra ?? ''} ${row.cliente?.nombreCliente ?? ''}`.trim(),
+        cell: ({ row }) => {
+          const obra = row.original.obra?.numeroObra ?? '-'
+          const cliente = row.original.cliente?.nombreCliente ?? '-'
+
+          return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.2 }}>
+              <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                {obra}
+              </Typography>
+              <Typography variant='caption' color='text.secondary' sx={{ fontSize: '0.82rem' }}>
+                {cliente}
+              </Typography>
+            </Box>
+          )
+        }
+      },
+      {
         id: 'areaTipoServicio',
-        header: 'Área / Tipo Servicio',
+        header: 'Área / Servicio',
         accessorFn: row => `${row.area ?? ''} ${row.tipoServicio ?? ''}`.trim(),
         cell: ({ row }) => {
           const area = row.original.area
@@ -2221,13 +2626,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       },
       {
         id: 'fechaCod',
-        header: 'F. Codificación',
-        accessorKey: 'fechaCodificacion',
-        cell: ({ row }) => <span>{row.original.fechaCodificacion ? formatDateDDMMYYYYDateOnlyDash(row.original.fechaCodificacion) : '-'}</span>
+        header: 'F. Ingreso',
+        accessorKey: 'fechaIngreso',
+        cell: ({ row }) => <span>{row.original.fechaIngreso ? formatDateDDMMYYYYDateOnlyDash(row.original.fechaIngreso) : '-'}</span>
       },
       {
         id: 'proximoVencimiento',
-        header: 'Próx. Vencimiento',
+        header: 'Próx. Venc.',
         accessorKey: 'proximoVencimiento',
         cell: ({ row }) => {
           if (!row.original.proximoVencimiento) {
@@ -2261,22 +2666,28 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
       },
       {
+        id: 'material',
+        header: 'Material',
+        accessorFn: row => row.tipoMaterial ?? '',
+        cell: ({ row }) => {
+          const material = row.original.tipoMaterial ?? '-'
+
+
+          return <Typography variant='body2'>{material}</Typography>
+        }
+      },
+      {
         id: 'ensayos',
-        header: 'Ensayos',
+        header: 'Ens.',
         accessorFn: row => row.ensayos?.total ?? 0,
         cell: ({ row }) => {
           const ensayos = getEnsayosMeta(row.original.ensayos)
 
           return (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.75 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.75 }}>
               <Typography variant='body2' sx={{ fontWeight: 800 }}>
-                {ensayos.total}
+                {`${ensayos.ensayados}/${ensayos.total}`}
               </Typography>
-              {ensayos.total > 0 && (ensayos.ensayados > 0 || ensayos.pendientes > 0) ? (
-                <Typography variant='caption' sx={{ color: 'primary.main', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                  ✓{ensayos.ensayados} • {ensayos.pendientes}
-                </Typography>
-              ) : null}
             </Box>
           )
         }
@@ -2289,6 +2700,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const op = row.original.estadoMuestra ?? ''
           const info = getOperationalInfo(op)
           const label = getOperationalLabel(op)
+
+
           return (
             <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
               <Chip
@@ -2312,26 +2725,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
       },
       {
-        id: 'ensayador',
-        header: 'Ensayador',
-        accessorFn: row => row.ensayador ?? '',
-        cell: ({ row }) => {
-          const ensayador = String(row.original.ensayador ?? '').trim()
-          return (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.75 }}>
-              <i className='ri-user-3-line' style={{ fontSize: 16, color: ensayador ? '#424242' : '#ef6c00' }} />
-              {ensayador ? (
-                <Typography variant='body2'>{ensayador}</Typography>
-              ) : (
-                <Typography variant='body2' sx={{ color: '#ef6c00' }}>Sin asignar</Typography>
-              )}
-            </Box>
-          )
-        }
-      },
-      {
         id: 'acciones',
-        header: 'ACCIONES',
+        header: 'Acciones',
         cell: ({ row }) => (
           <Stack direction='row' spacing={0.5}>
             <Tooltip title='Ver RCM' placement='top'>
@@ -2388,7 +2783,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         )
       }
     ]
-  }, []) // ✅ QUITAR 'rowSelection' de las dependencias
+  }, [rowSelection, selectedRowId])
 
   const table = useReactTable({
     data: filteredData,
@@ -2405,11 +2800,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    filterFromLeafRows: true, // ← AGREGAR esto
-    maxLeafRowFilterDepth: 0 // ← AGREGAR esto
+    filterFromLeafRows: true, // ÔåÉ AGREGAR esto
+    maxLeafRowFilterDepth: 0 // ÔåÉ AGREGAR esto
   })
 
-  // <-- añadir: conteo de filas seleccionadas
+  // <-- a├▒adir: conteo de filas seleccionadas
   const selectedCount = useMemo(() => {
     return Object.values(rowSelection as any).filter(Boolean).length
   }, [rowSelection])
@@ -2423,6 +2818,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       if (selectedRows.length === 0) {
         console.warn('No rows selected for export')
+
         return
       }
 
@@ -2458,6 +2854,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
+
       a.href = url
       a.download = 'rcm-detalle-export.csv'
       a.click()
@@ -2467,103 +2864,25 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     }
   }
 
-  // reemplazado: indicadores usando OPERATIONAL_STATES.value para comparaciones
-  /*
-  const indicators = useMemo(() => {
-    const total = filteredData.length
-
-    // helper: normalizar estado operativo a valor comparable (por ejemplo "CODIFICADO" / "EN_PROCESO")
-
-    }
-      CODIFICADO: 'CODIFICADO',
-      EN_PROCESO: 'EN_PROCESO',
-      ENSAYADO: 'ENSAYADO',
-      ENVIADO_DIGITACION: 'ENVIADO_DIGITACION',
-      DIGITADO: 'DIGITADO',
-      REVISADO: 'REVISADO',
-      FIRMADO: 'FIRMADO',
-      ENVIADO: 'ENVIADO',
-      EVENTO: 'EVENTO',
-      CERRADO_OP: 'CERRADO_OP'
-    } as const
-
-    const countIf = (pred: (opVal: string, adm: string) => boolean) =>
-      filteredData.reduce((acc, d) => {
-        const opRaw = d.estadoOperativo ?? (Array.isArray(d.servicios) && d.servicios.length ? (d.servicios[0] as any).estado : '') ?? ''
-        const admRaw = d.estadoAdministrativo ?? ''
-        const opVal = normOp(opRaw)
-        const adm = normAdmText(admRaw)
-        return acc + (pred(opVal, adm) ? 1 : 0)
-      }, 0)
-
-    // Por Ensayar: estados CODIFICADO o EN_PROCESO (o admin menciona 'ensayar'/'codificado'/'en proceso')
-    const porEnsayar = countIf((op, adm) => {
-      if ([S.CODIFICADO, S.EN_PROCESO].includes(op as any)) return true
-      return adm.includes('ensayar') || adm.includes('codificad') || adm.includes('en proceso')
-    })
-
-    // Por Digitar: estado ENSAYADO o ENVIADO_DIGITACION (pendiente digitación) y NO estar ya DIGITADO
-    const porDigitar = countIf((op, adm) => {
-      if (op === S.ENSAYADO || op === S.ENVIADO_DIGITACION) return true
-      // fallback por administrativa que indique digitación pendiente (no digitado aún)
-      if (adm.includes('digit') && !adm.includes('digitad')) return true
-      return false
-    })
-
-    // Por Revisar: REVISADO o admin menciona revisar/revisado
-    const porRevisar = countIf((op, adm) => op === S.DIGITADO)
-
-    // Por Corregir: estado EVENTO
-    const porCorregir = countIf((op, adm) => op === S.EVENTO)
-
-    // Por Firmar: estado FIRMADO (o admin menciona 'firmado' pero no enviado)
-    const porFirmar = countIf((op, adm) => op === S.REVISADO)
-
-    // Por Enviar (Firmados): estado ENVIADO o admin contiene 'enviar' + 'firmad'
-    const porEnviarFirmados = countIf((op, adm) => op === S.FIRMADO)
-
-    // Firmados Pagados: operativo FIRMADO y administrativo PAGADO (usando ADMINISTRATIVE_STATES)
-    const firmadosPagados = countIf((op, adm) => {
-      // requiere operativo exactamente FIRMADO (valor de OPERATIONAL_STATES)
-      if (op !== S.FIRMADO) return false
-
-      // adm viene normalizado (lowercase, sin tildes) por normalizeText
-      // 1) comprobar por label mapeando ADMINISTRATIVE_STATES
-      const admMatch = ADMINISTRATIVE_STATES.find(a => normalizeText(a.label) === adm)
-      if (admMatch) return admMatch.value === 'PAGADO'
-
-      // 2) fallback textual (acepta 'pag', 'pagad', 'pagado')
-      return adm.includes('pag') || adm.includes('pagad') || adm.includes('pagado')
-    })
-
-    return {
-      total,
-      porEnsayar,
-      porDigitar,
-      porRevisar,
-      porCorregir,
-      porFirmar,
-      porEnviarFirmados,
-      firmadosPagados
-    }
-  }, [filteredData])
-  */
-
   const dashboardStats = useMemo(() => {
     const totalActivos = filteredData.length
 
     const vencenHoy = filteredData.reduce((acc, row) => {
       if (!row.proximoVencimiento) return acc
+
       return acc + (diffDaysFromToday(row.proximoVencimiento) === 0 ? 1 : 0)
     }, 0)
 
     const vencenManana = filteredData.reduce((acc, row) => {
       if (!row.proximoVencimiento) return acc
+
       return acc + (diffDaysFromToday(row.proximoVencimiento) === 1 ? 1 : 0)
     }, 0)
 
     const enProceso = filteredData.reduce((acc, row) => {
       const op = String(row.estadoMuestra ?? row.estadoOperativo ?? '').toUpperCase().trim().replace(/\s+/g, '_')
+
+
       return acc + (op === 'EN_PROCESO' ? 1 : 0)
     }, 0)
 
@@ -2686,7 +3005,19 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           </thead>
           <tbody>
             {table.getRowModel().rows.map(row => (
-              <tr key={row.id}>
+              <tr
+                key={row.id}
+                onClick={e => {
+                  const target = e.target as HTMLElement
+
+                  if (target.closest('button, a, input, textarea, select, [role="button"], [role="menuitem"], label')) return
+                  void handleSelectInlineDetail(row.original)
+                }}
+                style={{
+                  cursor: 'pointer',
+                  backgroundColor: Number(selectedInlineRowId) === Number(row.original.id) ? 'rgba(59, 130, 246, 0.08)' : undefined
+                }}
+              >
                 {row.getVisibleCells().map(cell => (
                   <td key={cell.id} style={{ verticalAlign: 'middle', textAlign: cell.column.id === 'acciones' || cell.column.id === 'select' || cell.column.id === 'proximoVencimiento' ? 'center' : 'left' }}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -2708,255 +3039,410 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
       />
 
+      {selectedInlineRowId && (() => {
+        const row = findRowById(selectedInlineRowId)
+        const rcmData = inlineRcmDetalle ?? null
+
+        const muestraFromRcm = Array.isArray(rcmData?.muestras)
+          ? rcmData.muestras.find((m: any) => Number(m?.id) === Number(inlineMuestraDetalle?.id ?? row?.muestra?.id))
+          : null
+
+        const muestra = inlineMuestraDetalle ?? muestraFromRcm ?? row?.muestra ?? {}
+
+        const probetas = Array.isArray(muestra?.probetas)
+          ? muestra.probetas
+          : (Array.isArray(muestraFromRcm?.probetas) ? muestraFromRcm.probetas : [])
+
+        const estadoActual = row?.estadoMuestra ?? row?.estadoOperativo ?? 'CODIFICADO'
+        const area = rcmData?.area?.nombre ?? row?.area ?? '-'
+        const tarjeta = muestra?.numeroTarjeta || row?.numeroTarjeta || rcmData?.numeroTarjeta || '-'
+        const numeroMuestra = muestra?.numeroMuestra || '-'
+        const ensayosCount = inlineServicios.length
+        const cp = rcmData?.codigoAgrupador?.codigo ?? row?.ss ?? '-'
+        const material = muestra?.tipoMaterial || rcmData?.tipoMaterial || row?.tipoMaterial || '-'
+        const item = muestra?.item || rcmData?.item || '-'
+        const cantidad = muestra?.cantidadMuestras ?? rcmData?.cantidadMuestras ?? muestra?.cantidad ?? '-'
+        const vencimiento = muestra?.vencimiento ?? rcmData?.vencimiento ?? false
+        const informeEnsayo = rcmData?.informeEnsayo ?? true
+
+        const inlineEstadoPillSx = (raw?: string) => {
+          const key = String(raw ?? '').toUpperCase().trim()
+
+          if (key.includes('ENSAYADO')) return { color: '#08794c', borderColor: 'rgba(16, 185, 129, 0.55)', bgcolor: 'rgba(16, 185, 129, 0.16)' }
+          if (key.includes('PROCESO')) return { color: '#2557d6', borderColor: 'rgba(59, 130, 246, 0.55)', bgcolor: 'rgba(59, 130, 246, 0.14)' }
+          if (key.includes('CODIFIC')) return { color: '#4b5563', borderColor: 'rgba(107, 114, 128, 0.45)', bgcolor: 'rgba(156, 163, 175, 0.16)' }
+
+          return { color: '#334155', borderColor: 'rgba(148, 163, 184, 0.5)', bgcolor: 'rgba(148, 163, 184, 0.18)' }
+        }
+
+        return (
+          <Paper ref={inlineDetailRef} variant='outlined' sx={{ mt: 2, borderRadius: 1.5, overflow: 'hidden', borderColor: '#d9deea', boxShadow: '0 6px 20px rgba(15, 23, 42, 0.06)' }}>
+            <Box sx={{ px: 2, py: 1.15, bgcolor: '#f8f9fc', borderBottom: '1px solid #d9deea', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.25 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <Typography sx={{ color: '#0f1fb0', fontWeight: 800, fontSize: '1.25rem', lineHeight: 1 }}>{row?.numeroRcm ?? '-'}</Typography>
+                <Typography sx={{ color: '#9aa3b4', fontSize: '0.78rem' }}>{String(tarjeta).startsWith('T-') ? tarjeta : `T-${tarjeta}`}</Typography>
+                <Chip size='small' label={area} variant='outlined' sx={{ height: 22, fontWeight: 700 }} />
+                <Typography sx={{ color: '#374151', fontSize: '0.9rem' }}>{row?.tipoServicio ?? '-'}</Typography>
+                <Chip size='small' label={getOperationalLabel(estadoActual)} variant='outlined' sx={{ height: 22, fontWeight: 700 }} />
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Button
+                  size='small'
+                  variant='text'
+                  onClick={() => setInlineActiveTab('detalle')}
+                  sx={{
+                    minWidth: 0,
+                    px: 0,
+                    py: 0,
+                    borderRadius: 0,
+                    textTransform: 'none',
+                    fontSize: '0.83rem',
+                    fontWeight: 700,
+                    color: inlineActiveTab === 'detalle' ? '#0f1fb0' : '#6b7280',
+                    borderBottom: inlineActiveTab === 'detalle' ? '2px solid #0f1fb0' : '2px solid transparent'
+                  }}
+                >
+                  Detalle
+                </Button>
+                <Button
+                  size='small'
+                  variant='text'
+                  onClick={() => setInlineActiveTab('ensayos')}
+                  sx={{
+                    minWidth: 0,
+                    px: 0,
+                    py: 0,
+                    borderRadius: 0,
+                    textTransform: 'none',
+                    fontSize: '0.83rem',
+                    fontWeight: 700,
+                    color: inlineActiveTab === 'ensayos' ? '#0f1fb0' : '#6b7280',
+                    borderBottom: inlineActiveTab === 'ensayos' ? '2px solid #0f1fb0' : '2px solid transparent'
+                  }}
+                >
+                  {`Ensayos (${ensayosCount})`}
+                </Button>
+                <Button
+                  size='small'
+                  variant='contained'
+                  onClick={() => {
+                    if (row) void handleOpenGestionarEnsayos(row)
+                  }}
+                  sx={{ textTransform: 'none', minWidth: 0, px: 1.1, py: 0.2, borderRadius: 1 }}
+                >
+                  <i className='ri-flask-line' style={{ marginRight: 4 }} />Ensayar
+                </Button>
+              </Box>
+            </Box>
+
+            <Box sx={{ p: 2, bgcolor: '#f5f6f8' }}>
+              {loadingInlineDetalle ? (
+                <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}><CircularProgress size={24} /></Box>
+              ) : (
+                inlineActiveTab === 'detalle' ? (
+                  <>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(7, 1fr)' }, gap: 1.5, mb: 1.6 }}>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>N° OT</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{rcmData?.ordenTrabajo?.correlativo || row?.ot || '-'}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>MUESTREADO POR</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{rcmData?.tomaMuestra || row?.ensayador || '-'}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>F. CODIFICACIÓN</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{formatDateDDMMYYYYDateOnlyDash(rcmData?.fechaCodificacion ?? row?.fechaCodificacion)}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>F. MUESTREO</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{formatDateDDMMYYYYDateOnlyDash(rcmData?.fechaMuestreo ?? row?.fechaMuestreo)}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>F. INGRESO</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{formatDateDDMMYYYYDateOnlyDash(rcmData?.fechaIngreso ?? row?.fechaIngreso)}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>SEDE</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{rcmData?.sede ?? row?.sede ?? '-'}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>CP</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{cp}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>MATERIAL</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{material}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>ÍTEM</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{item}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>N° TARJETA</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{String(tarjeta).startsWith('T-') ? tarjeta : `T-${tarjeta}`}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>N° MUESTRA</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{String(numeroMuestra).startsWith('#') ? numeroMuestra : `#${numeroMuestra}`}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>CANTIDAD</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{cantidad}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>VENCIMIENTO</Typography><Typography sx={{ fontSize: '0.9rem', color: vencimiento ? '#047857' : '#9ca3af', fontWeight: 700 }}>{vencimiento ? '✓ Sí' : 'No'}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>INF. ENSAYO</Typography><Typography sx={{ fontSize: '0.9rem', color: informeEnsayo ? '#047857' : '#9ca3af', fontWeight: 700 }}>{informeEnsayo ? '✓ Sí' : 'No'}</Typography></Box>
+                    </Box>
+
+                    <Box sx={{ mb: 1.7, border: '1px solid #f2b93c', borderRadius: 1.1, bgcolor: '#fdf8e8', px: 1.4, py: 1.05, display: 'flex', gap: 2.25, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <Typography sx={{ fontSize: '0.73rem', fontWeight: 800, color: '#8a5a00' }}>{String(area).toUpperCase()}</Typography>
+                      <Typography sx={{ fontSize: '0.88rem', color: '#374151' }}><b>Elemento:</b> {muestra?.elemento ?? rcmData?.elemento ?? '-'}</Typography>
+                      <Typography sx={{ fontSize: '0.88rem', color: '#374151' }}><b>Grado:</b> {muestra?.grado ?? rcmData?.grado ?? '-'}</Typography>
+                    </Box>
+
+                    {probetas.length > 0 && (
+                      <>
+                        <Typography sx={{ mb: 0.9, fontSize: '0.82rem', fontWeight: 800, color: '#7b8498', letterSpacing: 0.3 }}>{`SUBMUESTRAS (${probetas.length})`}</Typography>
+                        <Box sx={{ display: 'flex', gap: 0.8, flexWrap: 'wrap', pt: 0.15 }}>
+                          {probetas
+                            .slice()
+                            .sort((a: any, b: any) => Number(a?.numero ?? 0) - Number(b?.numero ?? 0))
+                            .map((p: any, i: number) => {
+                              const daysToDue = diffDaysFromToday(p?.fechaVencimiento)
+                              const safeDays = daysToDue ?? 0
+                              const isToday = safeDays === 0
+                              const isTomorrow = safeDays === 1
+                              const alertLabel = isToday ? 'Hoy' : isTomorrow ? 'Mañana' : `en ${Math.max(safeDays, 0)}d`
+
+                              return (
+                                <Box key={p?.id ?? i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.8, py: 0.45, borderRadius: 1, border: '1px solid #d0d7e2', bgcolor: '#fff' }}>
+                                  <Box sx={{ width: 16, height: 16, borderRadius: '999px', bgcolor: '#0b2acc', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 700 }}>{p?.numero ?? i + 1}</Box>
+                                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#111827' }}>{p?.dias ?? '-'}d</Typography>
+                                  <Typography sx={{ fontSize: '0.75rem', color: '#8b95a7' }}>{formatDateDDMMYYYYDateOnlyDash(p?.fechaVencimiento)}</Typography>
+                                  <Typography sx={{ fontSize: '0.75rem', color: '#374151', fontWeight: 700 }}>{alertLabel}</Typography>
+                                </Box>
+                              )
+                            })}
+                        </Box>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <TableContainer component={Paper} variant='outlined' sx={{ borderColor: '#d7dde9', borderRadius: 1.1, bgcolor: '#fff' }}>
+                    <Table size='small'>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: '#eef1f6' }}>
+                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>SKU</TableCell>
+                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>ENSAYO / SERVICIO</TableCell>
+                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>ENSAYADOR</TableCell>
+                          <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>ESTADO</TableCell>
+                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>OBS.</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {inlineServicios.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} align='center' sx={{ py: 3 }}>
+                              <Typography sx={{ color: '#9ca3af' }}>No hay ensayos cargados</Typography>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          inlineServicios.map((servicio: any, idx: number) => {
+                            const servicioId = servicio.id ?? servicio.servicioMuestraId ?? servicio.servicioId ?? servicio._id ?? idx
+                            const estadoRaw = servicio.estado ?? servicio.estadoServicio ?? 'CODIFICADO'
+
+                            return (
+                              <TableRow key={servicioId}>
+                                <TableCell>
+                                  <Typography sx={{ display: 'inline-flex', px: 0.9, py: 0.18, borderRadius: 0.8, bgcolor: '#f1f5f9', border: '1px solid #d0d7e2', fontSize: '0.76rem', fontWeight: 700, color: '#374151' }}>
+                                    {servicio.codigo ?? '-'}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#111827', lineHeight: 1.2 }}>
+                                    {servicio.nombre ?? servicio.servicio?.nombre ?? '-'}
+                                  </Typography>
+                                  <Typography sx={{ fontSize: '0.75rem', color: '#8b95a7' }}>
+                                    {servicio.norma ?? '-'}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography sx={{ fontSize: '0.84rem', color: '#374151' }}>
+                                    {servicio.ensayador ?? row?.ensayador ?? '-'}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align='center'>
+                                  <Chip label={getOperationalLabel(estadoRaw)} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.72rem', ...inlineEstadoPillSx(String(estadoRaw)) }} />
+                                </TableCell>
+                                <TableCell>
+                                  <Typography sx={{ fontSize: '0.82rem', color: '#9ca3af' }}>{servicio.observacion ?? '—'}</Typography>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )
+              )}
+            </Box>
+          </Paper>
+        )
+      })()}
+
       <Dialog
         open={Boolean(selectedRowId)}
-        onClose={() => {
-          setSelectedRowId(null)
-          setServiciosMuestra([])
-          setMuestraDetalle(null)
-          setRcmDetalleModal(null)
-        }}
+        onClose={resetSelectedDetail}
         maxWidth='md'
         fullWidth
         PaperProps={{
           sx: {
             borderRadius: 2,
             overflow: 'hidden',
-            maxWidth: 720
+            maxWidth: 760,
+            maxHeight: '94vh',
+            display: 'flex',
+            flexDirection: 'column'
           }
         }}
       >
-        <DialogContent sx={{ p: 0, bgcolor: '#f4f5f7' }}>
-          {(() => {
-            const row = findRowById(selectedRowId)
-            const rcmData = rcmDetalleModal ?? null
-            const muestraFromRcm = Array.isArray(rcmData?.muestras)
-              ? rcmData.muestras.find((m: any) => Number(m?.id) === Number(muestraDetalle?.id ?? row?.muestra?.id))
-              : null
-            const muestra = muestraDetalle ?? muestraFromRcm ?? row?.muestra ?? {}
-            const probetas = Array.isArray(muestra?.probetas)
-              ? muestra.probetas
-              : (Array.isArray(muestraFromRcm?.probetas) ? muestraFromRcm.probetas : [])
+        {(() => {
+          const row = findRowById(selectedRowId)
+          const rcmData = rcmDetalleModal ?? null
 
-            const estadoTipo = String(rcmData?.rcmType ?? 'MUESTRA').toUpperCase()
-            const estadoActual = row?.estadoMuestra ?? row?.estadoOperativo ?? 'CODIFICADO'
+          const muestraFromRcm = Array.isArray(rcmData?.muestras)
+            ? rcmData.muestras.find((m: any) => Number(m?.id) === Number(muestraDetalle?.id ?? row?.muestra?.id))
+            : null
 
-            const estadoPillSx = (raw?: string) => {
-              const key = String(raw ?? '').toUpperCase().trim()
-              if (key.includes('ENSAYADO')) {
-                return {
-                  color: '#08794c',
-                  borderColor: 'rgba(16, 185, 129, 0.55)',
-                  bgcolor: 'rgba(16, 185, 129, 0.16)'
-                }
-              }
-              if (key.includes('PROCESO')) {
-                return {
-                  color: '#2557d6',
-                  borderColor: 'rgba(59, 130, 246, 0.55)',
-                  bgcolor: 'rgba(59, 130, 246, 0.14)'
-                }
-              }
-              if (key.includes('CODIFIC')) {
-                return {
-                  color: '#4b5563',
-                  borderColor: 'rgba(107, 114, 128, 0.45)',
-                  bgcolor: 'rgba(156, 163, 175, 0.16)'
-                }
-              }
-              return {
-                color: '#334155',
-                borderColor: 'rgba(148, 163, 184, 0.5)',
-                bgcolor: 'rgba(148, 163, 184, 0.18)'
-              }
-            }
+          const muestra = muestraDetalle ?? muestraFromRcm ?? row?.muestra ?? {}
 
-            const belongsTag = rcmData?.codigoAgrupador?.codigo ?? row?.ss ?? '---'
-            const belongsParts = [
-              rcmData?.obra?.numeroObra ?? row?.obra?.numeroObra ?? row?.otDisplay ?? '-',
-              rcmData?.cliente?.nombreCliente ?? row?.cliente?.nombreCliente ?? '-',
-              rcmData?.obra?.nombreObra ?? rcmData?.obra?.nombre ?? ''
-            ].filter(Boolean)
-            const belongsText = belongsParts.join(' · ')
+          const probetas = Array.isArray(muestra?.probetas)
+            ? muestra.probetas
+            : (Array.isArray(muestraFromRcm?.probetas) ? muestraFromRcm.probetas : [])
 
-            const ensayador = row?.ensayador ?? rcmData?.ordenTrabajo?.user?.name ?? '-'
-            const ensayosCount = serviciosMuestra.length
-            const submuestrasCount = probetas.length
+          const estadoTipo = String(rcmData?.rcmType ?? 'MUESTRA').toUpperCase()
+          const estadoActual = row?.estadoMuestra ?? row?.estadoOperativo ?? 'CODIFICADO'
 
-            const detailLeft = [
-              { label: 'ÁREA', value: rcmData?.area?.nombre ?? row?.area ?? '-' },
-              { label: 'TIPO SERVICIO', value: row?.tipoServicio ?? serviciosMuestra?.[0]?.nombre ?? '-' },
-              { label: 'SEDE', value: rcmData?.sede ?? '-' },
-              { label: 'F. MUESTREO', value: formatDateDDMMYYYYDateOnlyDash(rcmData?.fechaMuestreo ?? row?.fechaMuestreo) },
-              { label: 'F. INGRESO', value: formatDateDDMMYYYYDateOnlyDash(rcmData?.fechaIngreso ?? row?.fechaIngreso) },
-              { label: 'MATERIAL', value: muestra?.tipoMaterial ?? rcmData?.tipoMaterial ?? '-' }
-            ]
+          const closeModal = () => {
+            resetSelectedDetail()
+          }
 
-            const detailRight = [
-              { label: 'ÍTEM', value: muestra?.item ?? rcmData?.item ?? '-' },
-              { label: 'ELEMENTO', value: muestra?.elemento ?? rcmData?.elemento ?? '-' },
-              { label: 'GRADO', value: muestra?.grado ?? rcmData?.grado ?? '-' },
-              { label: 'TARJETA', value: muestra?.numeroTarjeta ?? row?.numeroTarjeta ?? rcmData?.numeroTarjeta ?? '-' },
-              { label: '# TOMA', value: rcmData?.tomaMuestra ?? '-' },
-              { label: 'PROCEDENCIA', value: muestra?.procedencia ?? rcmData?.procedencia ?? '-' }
-            ]
+          const estadoPillSx = (raw?: string) => {
+            const key = String(raw ?? '').toUpperCase().trim()
 
-            return (
-              <Box sx={{ p: { xs: 2.5, md: 3.5 } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexWrap: 'wrap' }}>
-                    <Typography sx={{ fontSize: '2rem', fontWeight: 700, color: '#111827', lineHeight: 1.05 }}>
-                      {row?.numeroRcm ?? '-'}
-                    </Typography>
-                    <Chip
-                      label={estadoTipo}
-                      size='small'
-                      sx={{
-                        height: 24,
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        color: '#1f3fb8',
-                        borderColor: 'rgba(77, 121, 255, 0.45)',
-                        bgcolor: 'rgba(77, 121, 255, 0.16)'
-                      }}
-                      variant='outlined'
-                    />
-                    <Chip
-                      label={getOperationalLabel(estadoActual)}
-                      size='small'
-                      sx={{
-                        height: 24,
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        ...estadoPillSx(String(estadoActual))
-                      }}
-                      variant='outlined'
-                    />
+            if (key.includes('ENSAYADO')) return { color: '#08794c', borderColor: 'rgba(16, 185, 129, 0.55)', bgcolor: 'rgba(16, 185, 129, 0.16)' }
+            if (key.includes('PROCESO')) return { color: '#2557d6', borderColor: 'rgba(59, 130, 246, 0.55)', bgcolor: 'rgba(59, 130, 246, 0.14)' }
+            if (key.includes('CODIFIC')) return { color: '#4b5563', borderColor: 'rgba(107, 114, 128, 0.45)', bgcolor: 'rgba(156, 163, 175, 0.16)' }
+
+            return { color: '#334155', borderColor: 'rgba(148, 163, 184, 0.5)', bgcolor: 'rgba(148, 163, 184, 0.18)' }
+          }
+
+          const area = rcmData?.area?.nombre ?? row?.area ?? '-'
+          const familia = rcmData?.familia?.nombre ?? row?.familia ?? '-'
+          const tipoServicio = row?.tipoServicio ?? serviciosMuestra?.[0]?.nombre ?? '-'
+          const agrupador = rcmData?.codigoAgrupador?.codigo ?? row?.ss ?? '-'
+          const nombreObra = rcmData?.obra?.nombreObra ?? rcmData?.obra?.nombre ?? '-'
+
+          const clienteNombre = rcmData?.cliente?.nombreCliente ?? row?.cliente?.nombreCliente ?? '-'
+          const clienteRut = rcmData?.cliente?.rut ?? '-'
+          const obraNumero = rcmData?.obra?.numeroObra ?? row?.obra?.numeroObra ?? '-'
+          const ciudad = rcmData?.obra?.comuna ?? rcmData?.cliente?.ciudad ?? '-'
+          const region = rcmData?.obra?.region ?? rcmData?.cliente?.region ?? '-'
+          const mandante = rcmData?.obra?.mandante ?? '-'
+
+          const nroOt = rcmData?.ordenTrabajo?.correlativo || rcmData?.ordenTrabajo?.correlativ || row?.ot || '-'
+          const muestreadoPor = rcmData?.tomaMuestra || row?.ensayador || '-'
+
+          const tipoMaterial = muestra?.tipoMaterial || rcmData?.tipoMaterial || row?.tipoMaterial || '-'
+          const item = muestra?.item || rcmData?.item || '-'
+          const tarjeta = muestra?.numeroTarjeta || row?.numeroTarjeta || rcmData?.numeroTarjeta || '-'
+          const numeroMuestra = muestra?.numeroMuestra || '-'
+          const procedencia = muestra?.procedencia || rcmData?.procedencia || '-'
+          const ubicacionSector = muestra?.ubicacionSector || rcmData?.ubicacionSector || '-'
+          const cantidad = muestra?.cantidadMuestras ?? rcmData?.cantidadMuestras ?? '-'
+          const vencimiento = muestra?.vencimiento ?? rcmData?.vencimiento ?? false
+          const informeEnsayo = rcmData?.informeEnsayo ?? true
+          const elemento = muestra?.elemento || rcmData?.elemento || '-'
+          const grado = muestra?.grado || rcmData?.grado || '-'
+          const ensayador = row?.ensayador ?? rcmData?.ordenTrabajo?.user?.name ?? '-'
+          const ensayosCount = serviciosMuestra.length
+          const submuestrasCount = probetas.length
+          const observaciones = muestra?.observaciones ?? rcmData?.observaciones ?? '-'
+
+          return (
+            <>
+              <Box sx={{ px: 3, py: 2.2, bgcolor: '#f3f4f8', borderBottom: '1px solid #d9deea', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <Typography sx={{ color: '#0f1fb0', fontWeight: 800, fontSize: '1.6rem', lineHeight: 1 }}>{`RCM-${row?.numeroRcm ?? '-'}`}</Typography>
+                  <Chip label={estadoTipo} size='small' variant='outlined' sx={{ fontWeight: 700, color: '#273ab6', borderColor: '#aab7ff', bgcolor: 'rgba(99,102,241,.08)', height: 22 }} />
+                  <Chip label={getOperationalLabel(estadoActual)} size='small' variant='outlined' sx={{ fontWeight: 700, height: 22, ...estadoPillSx(String(estadoActual)) }} />
+                </Box>
+
+                <Button size='small' variant='outlined' color='inherit' onClick={closeModal} sx={{ color: '#4b5563', borderColor: '#c8cfda', textTransform: 'none', minWidth: 0, px: 1.1 }}>
+                  <i className='ri-close-line' style={{ marginRight: 4 }} /> Cerrar
+                </Button>
+              </Box>
+
+              <Box sx={{ p: 2.5, bgcolor: '#f4f5f7', overflowY: 'auto' }}>
+                <Box sx={{ border: '1px solid #d7dcee', borderRadius: 1.2, bgcolor: '#eef0f8', p: 1.4, mb: 1.6 }}>
+                  <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, color: '#7b8498', letterSpacing: 0.6, mb: 0.8 }}>PERTENECE A</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, flexWrap: 'wrap' }}>
+                    <Typography sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.9rem' }}>{rcmData?.sede ?? row?.sede ?? '-'}</Typography>
+                    <Chip label={familia} size='small' variant='outlined' sx={{ height: 22, fontSize: '0.78rem', fontWeight: 700, color: '#6d28d9', borderColor: 'rgba(124, 58, 237, .35)', bgcolor: 'rgba(124, 58, 237, .08)' }} />
+                    <Typography sx={{ color: '#374151', fontSize: '0.9rem' }}>{tipoServicio}</Typography>
+                    <Chip label={agrupador} size='small' variant='outlined' sx={{ height: 22, fontSize: '0.78rem', fontWeight: 700, color: '#1e40af', borderColor: '#93c5fd', bgcolor: '#eff6ff' }} />
+                    <Typography sx={{ color: '#9ca3af', fontSize: '0.9rem', fontStyle: 'italic' }}>{nombreObra}</Typography>
                   </Box>
 
-                  <Button
-                    size='small'
-                    variant='outlined'
-                    color='inherit'
-                    onClick={() => {
-                      setSelectedRowId(null)
-                      setServiciosMuestra([])
-                      setMuestraDetalle(null)
-                      setRcmDetalleModal(null)
-                    }}
-                    sx={{ minWidth: 0, px: 1.25 }}
-                  >
-                    <i className='ri-close-line' style={{ marginRight: 4 }} /> Cerrar
-                  </Button>
-                </Box>
-
-                <Box
-                  sx={{
-                    mb: 2.1,
-                    p: 1.35,
-                    borderRadius: 1,
-                    border: '1px solid #d7dcee',
-                    bgcolor: '#eceffd',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.25,
-                    flexWrap: 'wrap'
-                  }}
-                >
-                  <Typography sx={{ fontSize: '0.83rem', fontWeight: 700, color: '#7a8498', letterSpacing: 0.5 }}>
-                    PERTENECE A
-                  </Typography>
-                  <Chip
-                    label={belongsTag}
-                    size='small'
-                    sx={{
-                      height: 24,
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      color: '#1f3fb8',
-                      borderColor: 'rgba(77, 121, 255, 0.5)',
-                      bgcolor: 'rgba(77, 121, 255, 0.14)'
-                    }}
-                    variant='outlined'
-                  />
-                  <Typography sx={{ fontSize: '0.95rem', color: '#374151' }}>
-                    {belongsText}
-                  </Typography>
-                </Box>
-
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 2.5 }}>
-                  {[detailLeft, detailRight].map((list, colIndex) => (
-                    <Box key={colIndex}>
-                      {list.map(item => (
-                        <Box
-                          key={item.label}
-                          sx={{
-                            display: 'grid',
-                            gridTemplateColumns: '136px minmax(0, 1fr)',
-                            alignItems: 'center',
-                            py: 0.95,
-                            borderBottom: '1px solid #d7dde9',
-                            columnGap: 1.5
-                          }}
-                        >
-                          <Typography sx={{ fontSize: '0.84rem', fontWeight: 700, color: '#6b7280', letterSpacing: 0.35 }}>
-                            {item.label}
-                          </Typography>
-
-                          {item.label === 'ÁREA' ? (
-                            <Chip
-                              label={item.value}
-                              size='small'
-                              sx={{
-                                height: 24,
-                                width: 'fit-content',
-                                fontSize: '0.8rem',
-                                fontWeight: 700,
-                                color: '#6f39cf',
-                                borderColor: 'rgba(140, 94, 255, 0.45)',
-                                bgcolor: 'rgba(140, 94, 255, 0.14)'
-                              }}
-                              variant='outlined'
-                            />
-                          ) : item.label === 'TARJETA' ? (
-                            <Typography sx={{ fontSize: '1.05rem', fontWeight: 700, color: '#1d4ed8' }}>
-                              {item.value || '-'}
-                            </Typography>
-                          ) : (
-                            <Typography sx={{ fontSize: '1.05rem', fontWeight: 600, color: '#111827' }}>
-                              {item.value || '-'}
-                            </Typography>
-                          )}
-                        </Box>
-                      ))}
+                  <Box sx={{ mt: 1.2, display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1.2 }}>
+                    <Box>
+                      <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7', letterSpacing: 0.4 }}>CLIENTE</Typography>
+                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>{clienteNombre}</Typography>
+                      <Typography sx={{ fontSize: '0.74rem', color: '#9ca3af' }}>{clienteRut}</Typography>
                     </Box>
-                  ))}
+                    <Box>
+                      <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7', letterSpacing: 0.4 }}>OBRA</Typography>
+                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>{obraNumero}</Typography>
+                      <Typography sx={{ fontSize: '0.74rem', color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombreObra}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7', letterSpacing: 0.4 }}>CIUDAD / REGION</Typography>
+                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#374151' }}>{`${ciudad} / ${region}`}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7', letterSpacing: 0.4 }}>MANDANTE</Typography>
+                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#374151' }}>{mandante}</Typography>
+                    </Box>
+                  </Box>
                 </Box>
 
-                <Typography sx={{ mb: 1.05, fontSize: '1rem', fontWeight: 800, color: '#374151', letterSpacing: 0.35 }}>
-                  ENSAYOS ({ensayosCount})
-                </Typography>
+                <Box sx={{ border: '1px solid #dfe3ed', borderRadius: 1.2, bgcolor: '#eef0f3', p: 1.3, mb: 1.5, display: 'grid', gridTemplateColumns: { xs: 'repeat(3, 1fr)', md: 'repeat(6, 1fr)' }, gap: 1.2 }}>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>N° OT</Typography><Typography sx={{ fontWeight: 700, color: '#374151' }}>{nroOt}</Typography></Box>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>MUESTREADO POR</Typography><Typography sx={{ fontWeight: 700, color: '#374151' }}>{muestreadoPor}</Typography></Box>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>F. CODIFICACION</Typography><Typography sx={{ color: '#374151' }}>{formatDateDDMMYYYYDateOnlyDash(rcmData?.fechaCodificacion ?? row?.fechaCodificacion)}</Typography></Box>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>F. MUESTREO</Typography><Typography sx={{ color: '#374151' }}>{formatDateDDMMYYYYDateOnlyDash(rcmData?.fechaMuestreo ?? row?.fechaMuestreo)}</Typography></Box>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>F. INGRESO</Typography><Typography sx={{ color: '#374151' }}>{formatDateDDMMYYYYDateOnlyDash(rcmData?.fechaIngreso ?? row?.fechaIngreso)}</Typography></Box>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>F. ENTREGA</Typography><Typography sx={{ color: '#374151' }}>{formatDateDDMMYYYYDateOnlyDash(rcmData?.fechaEntrega)}</Typography></Box>
+                </Box>
+
+                <Box sx={{ mb: 1.5, display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 1.2 }}>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>TIPO DE MATERIAL</Typography><Typography sx={{ color: '#374151', fontWeight: 600 }}>{tipoMaterial}</Typography></Box>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>ITEM</Typography><Typography sx={{ color: '#374151', fontWeight: 600 }}>{item}</Typography></Box>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>N° TARJETA</Typography><Typography sx={{ color: '#1d4ed8', fontWeight: 800 }}>{String(tarjeta).startsWith('T-') ? tarjeta : `T-${tarjeta}`}</Typography></Box>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>N° DE MUESTRA</Typography><Typography sx={{ color: '#374151', fontWeight: 600 }}>{String(numeroMuestra).startsWith('#') ? numeroMuestra : `#${numeroMuestra}`}</Typography></Box>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>PROCEDENCIA</Typography><Typography sx={{ color: '#374151', fontWeight: 600 }}>{procedencia}</Typography></Box>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>UBICACION / SECTOR</Typography><Typography sx={{ color: '#374151', fontWeight: 600 }}>{ubicacionSector}</Typography></Box>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>CANTIDAD</Typography><Typography sx={{ color: '#374151', fontWeight: 600 }}>{cantidad}</Typography></Box>
+                  <Box>
+                    <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>VENCIMIENTO</Typography>
+                    <Typography sx={{ color: vencimiento ? '#047857' : '#9ca3af', fontWeight: 700 }}>{vencimiento ? '✓ Si' : 'No'}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>INF. ENSAYO</Typography>
+                    <Typography sx={{ color: informeEnsayo ? '#047857' : '#9ca3af', fontWeight: 700 }}>{informeEnsayo ? '✓ Si' : 'No'}</Typography>
+                  </Box>
+                </Box>
+
+                <Box sx={{ mb: 1.6, border: '1px solid #f2b93c', borderRadius: 1.1, bgcolor: '#fdf8e8', px: 1.3, py: 1.05, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Typography sx={{ fontSize: '0.74rem', fontWeight: 800, color: '#8a5a00' }}>{String(area).toUpperCase()}</Typography>
+                  <Box>
+                    <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>ELEMENTO</Typography>
+                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>{elemento}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>GRADO</Typography>
+                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>{grado}</Typography>
+                  </Box>
+                </Box>
+
+                <Typography sx={{ mb: 0.8, fontSize: '0.95rem', fontWeight: 800, color: '#374151', letterSpacing: 0.35 }}>{`ENSAYOS (${ensayosCount})`}</Typography>
 
                 {loadingServicios ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
                     <CircularProgress />
                   </Box>
                 ) : (
-                  <TableContainer component={Paper} variant='outlined' sx={{ mb: 2.5, borderColor: '#d7dde9', borderRadius: 1.25 }}>
+                  <TableContainer component={Paper} variant='outlined' sx={{ mb: 1.7, borderColor: '#d7dde9', borderRadius: 1.1 }}>
                     <Table size='small'>
                       <TableHead>
                         <TableRow sx={{ bgcolor: '#eef1f6' }}>
-                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.78rem' }}>SKU</TableCell>
-                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.78rem' }}>Ensayo / Servicio</TableCell>
-                          <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.78rem' }}>Cant.</TableCell>
-                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.78rem' }}>Ensayador</TableCell>
-                          <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.78rem' }}>Estado</TableCell>
+                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.74rem' }}>SKU</TableCell>
+                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.74rem' }}>ENSAYO / SERVICIO</TableCell>
+                          <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.74rem' }}>CANT.</TableCell>
+                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.74rem' }}>ENSAYADOR</TableCell>
+                          <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.74rem' }}>ESTADO</TableCell>
+                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.74rem' }}>OBSERVACIONES</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {serviciosMuestra.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={5} align='center' sx={{ py: 3 }}>
+                            <TableCell colSpan={6} align='center' sx={{ py: 3 }}>
                               <Typography color='text.secondary'>No hay ensayos cargados</Typography>
                             </TableCell>
                           </TableRow>
@@ -2968,47 +3454,29 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                             return (
                               <TableRow key={servicioId ?? idx}>
                                 <TableCell>
-                                  <Typography
-                                    sx={{
-                                      display: 'inline-flex',
-                                      px: 1,
-                                      py: 0.2,
-                                      borderRadius: 1,
-                                      bgcolor: '#eceff3',
-                                      border: '1px solid #d0d7e2',
-                                      fontSize: '0.86rem',
-                                      fontWeight: 700,
-                                      color: '#313845'
-                                    }}
-                                  >
+                                  <Typography sx={{ display: 'inline-flex', px: 1, py: 0.2, borderRadius: 1, bgcolor: '#eceff3', border: '1px solid #d0d7e2', fontSize: '0.82rem', fontWeight: 700, color: '#313845' }}>
                                     {servicio.codigo ?? '-'}
                                   </Typography>
                                 </TableCell>
                                 <TableCell>
-                                  <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: '#111827', lineHeight: 1.15 }}>
+                                  <Typography sx={{ fontSize: '0.92rem', fontWeight: 700, color: '#111827', lineHeight: 1.15 }}>
                                     {servicio.nombre ?? servicio.servicio?.nombre ?? '-'}
                                   </Typography>
-                                  <Typography sx={{ fontSize: '0.82rem', color: '#818b9a' }}>
+                                  <Typography sx={{ fontSize: '0.78rem', color: '#818b9a' }}>
                                     {servicio.norma ?? '-'}
                                   </Typography>
                                 </TableCell>
                                 <TableCell align='center'>
-                                  <Typography sx={{ fontSize: '1rem', color: '#111827' }}>{servicio.cantidad ?? 1}</Typography>
+                                  <Typography sx={{ fontSize: '0.95rem', color: '#111827' }}>{servicio.cantidad ?? 1}</Typography>
                                 </TableCell>
                                 <TableCell>
-                                  <Typography sx={{ fontSize: '1rem', color: '#374151' }}>{ensayador}</Typography>
+                                  <Typography sx={{ fontSize: '0.92rem', color: '#374151' }}>{ensayador}</Typography>
                                 </TableCell>
                                 <TableCell align='center'>
-                                  <Chip
-                                    label={getOperationalLabel(estadoRaw)}
-                                    size='small'
-                                    variant='outlined'
-                                    sx={{
-                                      fontWeight: 700,
-                                      fontSize: '0.78rem',
-                                      ...estadoPillSx(String(estadoRaw))
-                                    }}
-                                  />
+                                  <Chip label={getOperationalLabel(estadoRaw)} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.74rem', ...estadoPillSx(String(estadoRaw)) }} />
+                                </TableCell>
+                                <TableCell>
+                                  <Typography sx={{ fontSize: '0.9rem', color: '#9ca3af' }}>{servicio.observacion ?? '—'}</Typography>
                                 </TableCell>
                               </TableRow>
                             )
@@ -3019,95 +3487,56 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                   </TableContainer>
                 )}
 
-                {submuestrasCount > 0 && (
+                {probetas.length > 0 && (
                   <>
-                    <Typography sx={{ mb: 1.05, fontSize: '1rem', fontWeight: 800, color: '#374151', letterSpacing: 0.35 }}>
-                      SUBMUESTRAS / PROBETAS ({submuestrasCount})
-                    </Typography>
+                    <Typography sx={{ mb: 0.8, fontSize: '0.95rem', fontWeight: 800, color: '#374151', letterSpacing: 0.35 }}>{`SUBMUESTRAS (${submuestrasCount})`}</Typography>
 
-                    <TableContainer component={Paper} variant='outlined' sx={{ borderColor: '#d7dde9', borderRadius: 1.25 }}>
+                    <TableContainer component={Paper} variant='outlined' sx={{ mb: 1.6, borderColor: '#d7dde9', borderRadius: 1.1 }}>
                       <Table size='small'>
                         <TableHead>
                           <TableRow sx={{ bgcolor: '#eef1f6' }}>
-                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6' }}>#</TableCell>
-                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6' }}>Días</TableCell>
-                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6' }}>Fecha Ensayo</TableCell>
-                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6' }}>Cant.</TableCell>
-                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6' }}>Estado</TableCell>
-                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6' }}>Vencimiento</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.74rem' }}>#</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.74rem' }}>DIAS</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.74rem' }}>FECHA ENSAYO</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.74rem' }}>CANT.</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.74rem' }}>ESTADO</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.74rem' }}>ALERTA</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {probetas.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={6} align='center' sx={{ py: 3 }}>
-                                <Typography color='text.secondary'>No hay submuestras disponibles</Typography>
-                              </TableCell>
-                            </TableRow>
-                          ) : (
+                          {(
                             probetas
                               .slice()
                               .sort((a: any, b: any) => Number(a?.numero ?? 0) - Number(b?.numero ?? 0))
                               .map((probeta: any, idx: number) => {
-                                const meta = getVencimientoMeta(probeta?.fechaVencimiento, probeta?.cantidad ?? 0)
                                 const estadoRaw = probeta?.estado ?? 'CODIFICADO'
-                                const isUrgent = String(meta.label).includes('(HOY)') || String(meta.label).includes('(MAÑANA)')
+                                const daysToDue = diffDaysFromToday(probeta?.fechaVencimiento)
+                                const isToday = daysToDue === 0
+                                const isTomorrow = daysToDue === 1
+                                const isUrgent = isToday || isTomorrow
+                                const alertLabel = isToday ? 'Hoy' : isTomorrow ? 'Mañana' : `en ${Math.max(daysToDue, 0)}d`
 
                                 return (
-                                  <TableRow key={probeta?.id ?? idx} sx={{ bgcolor: isUrgent ? 'rgba(245, 158, 11, 0.08)' : 'inherit' }}>
+                                  <TableRow key={probeta?.id ?? idx} sx={{ bgcolor: isUrgent ? 'rgba(245, 158, 11, 0.12)' : 'inherit' }}>
                                     <TableCell>
-                                      <Box
-                                        sx={{
-                                          width: 24,
-                                          height: 24,
-                                          borderRadius: '999px',
-                                          bgcolor: '#0b2acc',
-                                          color: '#fff',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center',
-                                          fontSize: '0.78rem',
-                                          fontWeight: 700
-                                        }}
-                                      >
+                                      <Box sx={{ width: 22, height: 22, borderRadius: '999px', bgcolor: '#0b2acc', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700 }}>
                                         {probeta?.numero ?? idx + 1}
                                       </Box>
                                     </TableCell>
                                     <TableCell>
-                                      <Typography sx={{ fontSize: '1rem', color: '#111827' }}>{probeta?.dias ?? '-'}d</Typography>
+                                      <Typography sx={{ fontSize: '0.9rem', color: '#111827', fontWeight: 700 }}>{probeta?.dias ?? '-'}d</Typography>
                                     </TableCell>
                                     <TableCell>
-                                      <Typography sx={{ fontSize: '1rem', color: '#111827' }}>
-                                        {formatDateDDMMYYYYDateOnlyDash(probeta?.fechaVencimiento)}
-                                      </Typography>
+                                      <Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{formatDateDDMMYYYYDateOnlyDash(probeta?.fechaVencimiento)}</Typography>
                                     </TableCell>
                                     <TableCell align='center'>
-                                      <Typography sx={{ fontSize: '1rem', color: '#111827' }}>{probeta?.cantidad ?? '-'}</Typography>
+                                      <Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{probeta?.cantidad ?? '-'}</Typography>
                                     </TableCell>
                                     <TableCell align='center'>
-                                      <Chip
-                                        label={getOperationalLabel(estadoRaw)}
-                                        size='small'
-                                        variant='outlined'
-                                        sx={{
-                                          fontWeight: 700,
-                                          fontSize: '0.78rem',
-                                          ...estadoPillSx(String(estadoRaw))
-                                        }}
-                                      />
+                                      <Chip label={getOperationalLabel(estadoRaw)} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.74rem', ...estadoPillSx(String(estadoRaw)) }} />
                                     </TableCell>
                                     <TableCell align='center'>
-                                      <Chip
-                                        label={meta.label}
-                                        size='small'
-                                        variant='outlined'
-                                        sx={{
-                                          fontWeight: 700,
-                                          color: meta.colors.color,
-                                          borderColor: meta.colors.borderColor,
-                                          bgcolor: meta.colors.backgroundColor
-                                        }}
-                                      />
+                                      <Typography sx={{ fontSize: '0.86rem', fontWeight: 700, color: isUrgent ? '#dc2626' : '#4b5563' }}>{alertLabel}</Typography>
                                     </TableCell>
                                   </TableRow>
                                 )
@@ -3118,26 +3547,37 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                     </TableContainer>
                   </>
                 )}
+
+                <Typography sx={{ mb: 0.7, fontSize: '0.92rem', fontWeight: 800, color: '#374151', letterSpacing: 0.35 }}>OBSERVACIONES</Typography>
+                <Box sx={{ border: '1px solid #d7dde9', borderRadius: 1.1, bgcolor: '#eceff3', p: 1.15, mb: 1.7 }}>
+                  <Typography sx={{ fontSize: '0.9rem', color: '#374151' }}>{observaciones || '-'}</Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button variant='outlined' color='inherit' onClick={closeModal} sx={{ textTransform: 'none', borderColor: '#c8cfda', color: '#4b5563' }}>
+                    Cerrar
+                  </Button>
+                </Box>
               </Box>
-            )
-          })()}
-        </DialogContent>
+            </>
+          )
+        })()}
       </Dialog>
 
-      {/* ── Dialog: Gestionar Ensayos ──────────────────────────────────────── */}
+      {/* ─── Dialog: Gestionar Ensayos ─────────────────────────────────────── */}
       <Dialog
         open={gestionarOpen}
         onClose={() => setGestionarOpen(false)}
         maxWidth='md'
         fullWidth
-        PaperProps={{ sx: { borderRadius: 2, overflow: 'hidden', maxWidth: 720 } }}
+        PaperProps={{ sx: { borderRadius: 2, overflow: 'hidden', maxWidth: 780, maxHeight: '94vh', display: 'flex', flexDirection: 'column' } }}
       >
         {(() => {
           const row = gestionarRow
           const rcmData = gestionarRcmData
           const estadoTipo = String(rcmData?.rcmType ?? 'MUESTRA').toUpperCase()
           const estadoActual = row?.estadoMuestra ?? row?.estadoOperativo ?? 'CODIFICADO'
-          const { bgcolor: estadoBg, colorText: estadoColor, border: estadoBorder } = getOperationalInfo(estadoActual)
+
           const tipoChipSx = estadoTipo === 'MUESTRA'
             ? { bgcolor: '#ede9fe', color: '#5b21b6', borderColor: '#c4b5fd' }
             : estadoTipo === 'CONTROL'
@@ -3146,142 +3586,185 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
           const areaLabel = rcmData?.area?.nombre ?? row?.area ?? '-'
           const tipoServicioLabel = row?.tipoServicio ?? gestionarServicios?.[0]?.nombre ?? '-'
-          const materialLabel = gestionarMuestra?.tipoMaterial ?? '-'
-          const itemLabel = gestionarMuestra?.item ?? '-'
-          const tarjetaLabel = gestionarMuestra?.numeroTarjeta ?? row?.numeroTarjeta ?? '-'
+
+          const materialLabel = gestionarMuestra?.tipoMaterial || gestionarMuestra?.item
+            ? [gestionarMuestra?.tipoMaterial, gestionarMuestra?.item].filter(Boolean).join(' · ')
+            : '-'
+
+          const tarjetaLabel = gestionarMuestra?.numeroTarjeta || row?.numeroTarjeta || '-'
           const otLabel = rcmData?.ordenTrabajo?.correlativo ?? rcmData?.ordenTrabajo?.correlativ ?? row?.otDisplay ?? '-'
 
           const estadoPillSx = (raw?: string) => {
             const k = String(raw ?? '').toUpperCase()
+
             if (k.includes('ENSAYADO')) return { color: '#08794c', borderColor: 'rgba(16,185,129,.55)', bgcolor: 'rgba(16,185,129,.16)' }
             if (k.includes('PROCESO')) return { color: '#2557d6', borderColor: 'rgba(59,130,246,.55)', bgcolor: 'rgba(59,130,246,.14)' }
             if (k.includes('CODIFIC')) return { color: '#4b5563', borderColor: 'rgba(107,114,128,.45)', bgcolor: 'rgba(156,163,175,.16)' }
+
             return { color: '#475569', borderColor: 'rgba(100,116,139,.4)', bgcolor: 'rgba(148,163,184,.14)' }
           }
 
-          const tienesProbetasServicio = (s: any) => {
-            const n = String(s?.nombre ?? '').toLowerCase()
-            return n.includes('probeta') || n.includes('compresión') || n.includes('compresion') || n.includes('cilíndrica') || n.includes('cilindrica')
-          }
+          const totalServicios = gestionarServicios.length
+          const completados = gestionarServicios.filter((s: any) => String(gestionarEstados[s.id] ?? s.estado ?? '').toUpperCase().includes('ENSAYADO')).length
 
           return (
             <>
               {/* Header */}
-              <Box sx={{ px: 3, py: 2, bgcolor: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
+              <Box sx={{ px: 3, py: 2, bgcolor: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexShrink: 0 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexWrap: 'wrap' }}>
-                  <Typography sx={{ fontSize: '1.35rem', fontWeight: 700, color: '#111827' }}>{row?.numeroRcm ?? '-'}</Typography>
+                  <Typography sx={{ fontSize: '1.55rem', fontWeight: 800, color: '#111827', lineHeight: 1 }}>{row?.numeroRcm ?? '-'}</Typography>
                   <Chip label={estadoTipo} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.75rem', ...tipoChipSx }} />
-                  <Chip
-                    label={getOperationalLabel(estadoActual)}
-                    size='small'
-                    variant='outlined'
-                    sx={{ fontWeight: 700, fontSize: '0.75rem', color: estadoColor, borderColor: estadoBorder, bgcolor: estadoBg }}
-                  />
+                  <Chip label={getOperationalLabel(estadoActual)} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.75rem', ...estadoPillSx(estadoActual) }} />
                 </Box>
-                <IconButton size='small' onClick={() => setGestionarOpen(false)} sx={{ color: '#6b7280' }}>
-                  <i className='ri-close-line' style={{ fontSize: 18 }} />
-                </IconButton>
+                <Button size='small' variant='outlined' color='inherit' onClick={() => setGestionarOpen(false)} sx={{ color: '#4b5563', borderColor: '#c8cfda', textTransform: 'none', minWidth: 0, px: 1.4 }}>
+                  <i className='ri-close-line' style={{ marginRight: 4 }} /> Cerrar
+                </Button>
               </Box>
 
               {/* Info bar */}
-              <Box sx={{ px: 3, py: 1.5, bgcolor: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Box sx={{ px: 3, py: 1.4, bgcolor: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Box>
-                  <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', letterSpacing: 0.5, mb: 0.4 }}>ÁREA / TIPO SERVICIO</Typography>
-                  <Chip label={areaLabel} size='small' variant='outlined' sx={{ fontWeight: 600, fontSize: '0.75rem', bgcolor: '#f3f0ff', color: '#6d28d9', borderColor: '#c4b5fd', mr: 0.5 }} />
-                  <Typography component='span' sx={{ fontSize: '0.82rem', color: '#374151' }}>{tipoServicioLabel}</Typography>
+                  <Typography sx={{ fontSize: '0.64rem', fontWeight: 800, color: '#9ca3af', letterSpacing: 0.6, mb: 0.5 }}>ÁREA / TIPO SERVICIO</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+                    <Chip label={areaLabel} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.75rem', bgcolor: '#f3f0ff', color: '#6d28d9', borderColor: '#c4b5fd' }} />
+                    <Typography sx={{ fontSize: '0.82rem', color: '#374151' }}>{tipoServicioLabel}</Typography>
+                  </Box>
                 </Box>
                 <Box>
-                  <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', letterSpacing: 0.5, mb: 0.4 }}>MATERIAL / ÍTEM</Typography>
-                  <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: '#111827' }}>{materialLabel}{itemLabel !== '-' ? ` — ${itemLabel}` : ''}</Typography>
-                </Box>
-                <Box>
-                  <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', letterSpacing: 0.5, mb: 0.4 }}>TARJETA</Typography>
+                  <Typography sx={{ fontSize: '0.64rem', fontWeight: 800, color: '#9ca3af', letterSpacing: 0.6, mb: 0.5 }}>N° TARJETA</Typography>
                   <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#1d4ed8' }}>{tarjetaLabel}</Typography>
                 </Box>
                 <Box>
-                  <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', letterSpacing: 0.5, mb: 0.4 }}>OT</Typography>
+                  <Typography sx={{ fontSize: '0.64rem', fontWeight: 800, color: '#9ca3af', letterSpacing: 0.6, mb: 0.5 }}>OT</Typography>
                   <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: '#111827' }}>{otLabel}</Typography>
+                </Box>
+                <Box>
+                  <Typography sx={{ fontSize: '0.64rem', fontWeight: 800, color: '#9ca3af', letterSpacing: 0.6, mb: 0.5 }}>MATERIAL / ÍTEM</Typography>
+                  <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: '#111827' }}>{materialLabel}</Typography>
                 </Box>
               </Box>
 
-              <DialogContent sx={{ p: 3, bgcolor: '#fff' }}>
+              <DialogContent sx={{ p: 2.5, bgcolor: '#fff', overflowY: 'auto', flex: 1 }}>
                 {gestionarLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
                     <CircularProgress size={36} />
                   </Box>
                 ) : (
                   <>
-                    {/* Asignación de ensayador global */}
-                    <Box sx={{ border: '1px solid #e5e7eb', borderRadius: 1.5, p: 2, mb: 2.5 }}>
-                      <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', letterSpacing: 0.5, mb: 1.2 }}>ASIGNACIÓN DE ENSAYADOR</Typography>
-                      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                        <Select
-                          size='small'
-                          displayEmpty
-                          value={gestionarEnsayadorGlobal}
-                          onChange={e => setGestionarEnsayadorGlobal(String(e.target.value))}
-                          sx={{ flex: 1, fontSize: '0.88rem' }}
-                        >
-                          <MenuItem value=''><em style={{ color: '#9ca3af' }}>Seleccionar ensayador...</em></MenuItem>
-                          {ensayadorOptions.map(name => (
-                            <MenuItem key={name} value={name}>{name}</MenuItem>
-                          ))}
-                        </Select>
+                    {/* COORDINADOR DE SALA */}
+                    <Box sx={{ border: '1.5px solid #bfdbfe', borderRadius: 1.5, p: 2, mb: 2.5, bgcolor: '#f0f7ff' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mb: 1.6 }}>
+                        <i className='ri-add-circle-line' style={{ color: '#1d4ed8', fontSize: 15 }} />
+                        <Typography sx={{ fontSize: '0.78rem', fontWeight: 800, color: '#1d4ed8', letterSpacing: 0.4 }}>COORDINADOR DE SALA</Typography>
+                      </Box>
+
+                      {/* Fila única: Ensayador global + Aplicar + Estado masivo */}
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'nowrap' }}>
+                        <Box sx={{ flex: '1 1 0', minWidth: 0 }}>
+                          <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, color: '#6b7280', letterSpacing: 0.3, mb: 0.4 }}>ASIGNAR ENSAYADOR A TODOS</Typography>
+                          <Select
+                            size='small'
+                            displayEmpty
+                            value={gestionarEnsayadorGlobal}
+                            onChange={e => setGestionarEnsayadorGlobal(String(e.target.value))}
+                            sx={{ width: '100%', fontSize: '0.82rem', bgcolor: '#fff' }}
+                          >
+                            <MenuItem value=''><em style={{ color: '#9ca3af' }}>Seleccionar...</em></MenuItem>
+                            {ensayadorOptions.map(name => (
+                              <MenuItem key={name} value={name}>{name}</MenuItem>
+                            ))}
+                          </Select>
+                        </Box>
                         <Button
                           variant='contained'
                           size='small'
                           disabled={!gestionarEnsayadorGlobal}
                           onClick={() => {
                             const map: Record<number, string> = {}
+
                             gestionarServicios.forEach((s: any) => { map[s.id] = gestionarEnsayadorGlobal })
                             setGestionarEnsayadores(map)
                           }}
-                          sx={{ whiteSpace: 'nowrap', fontWeight: 700, textTransform: 'none', bgcolor: '#1e40af', '&:hover': { bgcolor: '#1d3a9b' } }}
+                          sx={{ whiteSpace: 'nowrap', fontWeight: 700, textTransform: 'none', bgcolor: '#1e40af', '&:hover': { bgcolor: '#1d3a9b' }, height: 36, mt: '20px', flexShrink: 0 }}
                         >
                           Aplicar a todos
                         </Button>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.4, flexShrink: 0, mt: '2px' }}>
+                          <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, color: '#6b7280', letterSpacing: 0.3 }}>ESTADO MASIVO</Typography>
+                          <Box sx={{ display: 'flex', gap: 0.6 }}>
+                            <Button
+                              size='small'
+                              variant='outlined'
+                              startIcon={<i className='ri-play-fill' style={{ fontSize: 11 }} />}
+                              onClick={() => {
+                                const map: Record<number, string> = {}
+
+                                gestionarServicios.forEach((s: any) => { map[s.id] = 'EN_PROCESO' })
+                                setGestionarEstados(map)
+                              }}
+                              sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.75rem', borderColor: '#93c5fd', color: '#1d4ed8', bgcolor: '#eff6ff', '&:hover': { bgcolor: '#dbeafe' }, px: 1 }}
+                            >
+                              En Proceso
+                            </Button>
+                            <Button
+                              size='small'
+                              variant='outlined'
+                              startIcon={<i className='ri-check-line' style={{ fontSize: 11 }} />}
+                              onClick={() => {
+                                const map: Record<number, string> = {}
+
+                                gestionarServicios.forEach((s: any) => { map[s.id] = 'ENSAYADO' })
+                                setGestionarEstados(map)
+                              }}
+                              sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.75rem', borderColor: '#6ee7b7', color: '#065f46', bgcolor: '#ecfdf5', '&:hover': { bgcolor: '#d1fae5' }, px: 1 }}
+                            >
+                              Ensayado
+                            </Button>
+                          </Box>
+                        </Box>
                       </Box>
-                      <Typography sx={{ fontSize: '0.72rem', color: '#9ca3af', mt: 0.8 }}>
-                        También puedes asignar individualmente por ensayo en la tabla inferior.
-                      </Typography>
                     </Box>
 
-                    {/* Tabla de ensayos */}
-                    <Typography sx={{ fontWeight: 800, fontSize: '0.88rem', color: '#374151', mb: 1, letterSpacing: 0.35 }}>
-                      ENSAYOS / SERVICIOS ({gestionarServicios.length})
+                    {/* Tabla ensayos */}
+                    <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: '#374151', mb: 1, letterSpacing: 0.3 }}>
+                      {`ENSAYOS / SERVICIOS — ${completados}/${totalServicios} COMPLETADOS`}
                     </Typography>
-                    <TableContainer component={Paper} variant='outlined' sx={{ borderColor: '#d7dde9', borderRadius: 1.25, mb: 2.5 }}>
+                    <TableContainer component={Paper} variant='outlined' sx={{ borderColor: '#e5e7eb', borderRadius: 1.5, mb: 2.5 }}>
                       <Table size='small'>
                         <TableHead>
                           <TableRow sx={{ bgcolor: '#f9fafb' }}>
-                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', width: 60 }}>SKU</TableCell>
-                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6' }}>Ensayo / Servicio</TableCell>
-                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', width: 170 }}>Ensayador</TableCell>
-                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', width: 110 }}>Estado</TableCell>
-                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', width: 100 }}>Acción</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 56 }}>SKU</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>ENSAYO / SERVICIO</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 160 }}>ENSAYADOR</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 100 }}>ESTADO</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 120 }}>ACCIÓN</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 70 }}>OBS.</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {gestionarServicios.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={5} align='center' sx={{ py: 3, color: '#9ca3af' }}>Sin ensayos registrados</TableCell>
+                              <TableCell colSpan={6} align='center' sx={{ py: 3, color: '#9ca3af' }}>Sin ensayos registrados</TableCell>
                             </TableRow>
                           ) : (
                             gestionarServicios.map((s: any) => {
                               const estadoActualServicio = gestionarEstados[s.id] ?? s.estado ?? 'CODIFICADO'
                               const ensayadorActual = gestionarEnsayadores[s.id] ?? ''
                               const esEnsayado = String(estadoActualServicio).toUpperCase().includes('ENSAYADO')
-                              const esProbeta = tienesProbetasServicio(s)
+                              const esEnProceso = String(estadoActualServicio).toUpperCase().includes('PROCESO')
+                              const esCodificado = !esEnsayado && !esEnProceso
+
+
                               return (
                                 <TableRow key={s.id}>
                                   <TableCell>
-                                    <Box sx={{ display: 'inline-flex', px: 1, py: 0.2, borderRadius: 1, bgcolor: '#eceff3', fontSize: '0.78rem', fontWeight: 700, color: '#374151' }}>
+                                    <Box sx={{ display: 'inline-flex', px: 0.9, py: 0.2, borderRadius: 0.8, bgcolor: '#f1f5f9', fontSize: '0.76rem', fontWeight: 700, color: '#374151' }}>
                                       {s.codigo ?? s.id}
                                     </Box>
                                   </TableCell>
                                   <TableCell>
-                                    <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: '#111827' }}>{s.nombre}</Typography>
-                                    {s.norma && <Typography sx={{ fontSize: '0.72rem', color: '#9ca3af' }}>{s.norma}</Typography>}
+                                    <Typography sx={{ fontSize: '0.86rem', fontWeight: 600, color: '#111827', lineHeight: 1.3 }}>{s.nombre}</Typography>
+                                    {s.norma && <Typography sx={{ fontSize: '0.71rem', color: '#9ca3af' }}>{s.norma}</Typography>}
                                   </TableCell>
                                   <TableCell>
                                     <Select
@@ -3302,71 +3785,46 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                       label={getOperationalLabel(estadoActualServicio)}
                                       size='small'
                                       variant='outlined'
-                                      sx={{ fontWeight: 700, fontSize: '0.75rem', ...estadoPillSx(estadoActualServicio) }}
+                                      sx={{ fontWeight: 700, fontSize: '0.74rem', ...estadoPillSx(estadoActualServicio) }}
                                     />
                                   </TableCell>
                                   <TableCell align='center'>
-                                    {(() => {
-                                      const estadoKey = String(estadoActualServicio).toUpperCase()
-                                      const esCodificado = estadoKey.includes('CODIFIC')
-                                      const esEnProceso = estadoKey.includes('PROCESO')
-
-                                      if (esEnsayado) {
-                                        return (
-                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, justifyContent: 'center', color: '#16a34a', fontWeight: 700, fontSize: '0.82rem' }}>
-                                            <i className='ri-checkbox-circle-fill' style={{ fontSize: 15 }} />
-                                            Listo
-                                          </Box>
-                                        )
-                                      }
-
-                                      if (esProbeta && gestionarProbetas.length > 0) {
-                                        return (
-                                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
-                                            {gestionarProbetas.slice().sort((a: any, b: any) => a.dias - b.dias).map((p: any, i: number) => (
-                                              <Button
-                                                key={p.id ?? i}
-                                                size='small'
-                                                variant='outlined'
-                                                sx={{ fontSize: '0.72rem', fontWeight: 700, py: 0.1, px: 0.8, textTransform: 'none', borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff', minWidth: 0 }}
-                                              >
-                                                Ficha {p.dias}d
-                                              </Button>
-                                            ))}
-                                          </Box>
-                                        )
-                                      }
-
-                                      if (esCodificado) {
-                                        return (
-                                          <Button
-                                            size='small'
-                                            variant='outlined'
-                                            onClick={() => setGestionarEstados(prev => ({ ...prev, [s.id]: 'EN_PROCESO' }))}
-                                            startIcon={<i className='ri-play-fill' style={{ fontSize: 13 }} />}
-                                            sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1.2, textTransform: 'none', borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff', minWidth: 0 }}
-                                          >
-                                            Iniciar
-                                          </Button>
-                                        )
-                                      }
-
-                                      if (esEnProceso) {
-                                        return (
-                                          <Button
-                                            size='small'
-                                            variant='outlined'
-                                            onClick={() => setGestionarEstados(prev => ({ ...prev, [s.id]: 'ENSAYADO' }))}
-                                            startIcon={<i className='ri-check-line' style={{ fontSize: 13 }} />}
-                                            sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1.2, textTransform: 'none', borderColor: '#bbf7d0', color: '#16a34a', bgcolor: '#f0fdf4', minWidth: 0 }}
-                                          >
-                                            Finalizar
-                                          </Button>
-                                        )
-                                      }
-
-                                      return null
-                                    })()}
+                                    {esEnsayado ? (
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, justifyContent: 'center', color: '#16a34a', fontWeight: 700, fontSize: '0.82rem' }}>
+                                        <i className='ri-checkbox-circle-fill' style={{ fontSize: 14 }} />
+                                        Completado
+                                      </Box>
+                                    ) : esCodificado ? (
+                                      <Button
+                                        size='small'
+                                        variant='outlined'
+                                        onClick={() => setGestionarEstados(prev => ({ ...prev, [s.id]: 'EN_PROCESO' }))}
+                                        sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1, textTransform: 'none', borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff', minWidth: 0 }}
+                                      >
+                                        <i className='ri-play-fill' style={{ fontSize: 12, marginRight: 3 }} />Iniciar
+                                      </Button>
+                                    ) : esEnProceso ? (
+                                      <Button
+                                        size='small'
+                                        variant='outlined'
+                                        onClick={() => setGestionarEstados(prev => ({ ...prev, [s.id]: 'ENSAYADO' }))}
+                                        sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1, textTransform: 'none', borderColor: '#bbf7d0', color: '#16a34a', bgcolor: '#f0fdf4', minWidth: 0 }}
+                                      >
+                                        <i className='ri-check-line' style={{ fontSize: 12, marginRight: 3 }} />Finalizar
+                                      </Button>
+                                    ) : (
+                                      <Typography sx={{ fontSize: '0.82rem', color: '#9ca3af' }}>-</Typography>
+                                    )}
+                                  </TableCell>
+                                  <TableCell align='center'>
+                                    <TextField
+                                      size='small'
+                                      placeholder='Obs...'
+                                      value={gestionarObservaciones[s.id] ?? s.observacion ?? ''}
+                                      onChange={e => setGestionarObservaciones(prev => ({ ...prev, [s.id]: e.target.value }))}
+                                      inputProps={{ maxLength: 120 }}
+                                      sx={{ width: 110, '& .MuiInputBase-input': { py: 0.55, fontSize: '0.74rem' } }}
+                                    />
                                   </TableCell>
                                 </TableRow>
                               )
@@ -3376,53 +3834,63 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                       </Table>
                     </TableContainer>
 
-                    {/* Probetas / submuestras */}
+                    {/* Submuestras */}
                     {gestionarProbetas.length > 0 && (
                       <>
-                        <Typography sx={{ fontWeight: 800, fontSize: '0.88rem', color: '#374151', mb: 1, letterSpacing: 0.35 }}>
-                          SUBMUESTRAS / PROBETAS
+                        <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: '#374151', mb: 1, letterSpacing: 0.3 }}>
+                          {`SUBMUESTRAS (${gestionarProbetas.length})`}
                         </Typography>
-                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-                          {gestionarProbetas.slice().sort((a: any, b: any) => Number(a.numero ?? 0) - Number(b.numero ?? 0)).map((p: any, i: number) => {
-                            const meta = getVencimientoMeta(p?.fechaVencimiento, p?.cantidad ?? 0)
-                            const isHoy = String(meta.label).includes('HOY')
-                            const esMañana = String(meta.label).includes('MAÑANA')
-                            const isUrgent = isHoy || esMañana
-                            return (
-                              <Box
-                                key={p.id ?? i}
-                                sx={{
-                                  border: `1px solid ${isUrgent ? '#fca5a5' : '#e5e7eb'}`,
-                                  borderRadius: 1.5,
-                                  p: 1.5,
-                                  minWidth: 160,
-                                  bgcolor: isUrgent ? 'rgba(254,226,226,.45)' : '#fff',
-                                  flex: '1 1 160px',
-                                  maxWidth: 220
-                                }}
-                              >
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                                  <Box sx={{ width: 26, height: 26, borderRadius: '999px', bgcolor: '#0b2acc', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 700 }}>
-                                    #{p.numero ?? i + 1}
-                                  </Box>
-                                  {isUrgent ? (
-                                    <Chip label={meta.label} size='small' sx={{ fontWeight: 700, fontSize: '0.7rem', bgcolor: '#fee2e2', color: '#b91c1c', border: 'none' }} />
-                                  ) : (
-                                    <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>{p.dias}d</Typography>
-                                  )}
-                                </Box>
-                                <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#111827' }}>{p.dias} días · {formatDateDDMMYYYYDateOnlyDash(p.fechaVencimiento)}</Typography>
-                                <Typography sx={{ fontSize: '0.75rem', color: '#6b7280', mb: 0.5 }}>{p.cantidad} probeta{p.cantidad !== 1 ? 's' : ''}</Typography>
-                                <Chip
-                                  label={getOperationalLabel(p.estado ?? 'CODIFICADO')}
-                                  size='small'
-                                  variant='outlined'
-                                  sx={{ fontWeight: 700, fontSize: '0.72rem', ...estadoPillSx(p.estado ?? 'CODIFICADO') }}
-                                />
-                              </Box>
-                            )
-                          })}
-                        </Box>
+                        <TableContainer component={Paper} variant='outlined' sx={{ borderColor: '#e5e7eb', borderRadius: 1.5 }}>
+                          <Table size='small'>
+                            <TableHead>
+                              <TableRow sx={{ bgcolor: '#f9fafb' }}>
+                                <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 40 }}>#</TableCell>
+                                <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>DÍAS</TableCell>
+                                <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>FECHA ENSAYO</TableCell>
+                                <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>CANT.</TableCell>
+                                <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>ESTADO</TableCell>
+                                <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>DÍAS RESTANTES</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {gestionarProbetas.slice().sort((a: any, b: any) => Number(a.numero ?? 0) - Number(b.numero ?? 0)).map((p: any, i: number) => {
+                                const daysToDue = diffDaysFromToday(p?.fechaVencimiento)
+                                const isToday = daysToDue === 0
+                                const isTomorrow = daysToDue === 1
+                                const isUrgent = isToday || isTomorrow || daysToDue < 0
+                                const restantesLabel = isToday ? 'Hoy' : isTomorrow ? 'Mañana' : daysToDue < 0 ? `Vencido ${Math.abs(daysToDue)}d` : `En ${daysToDue} días`
+
+
+                                return (
+                                  <TableRow key={p.id ?? i} sx={{ bgcolor: isUrgent ? 'rgba(254,226,226,.35)' : 'inherit' }}>
+                                    <TableCell>
+                                      <Box sx={{ width: 24, height: 24, borderRadius: '999px', bgcolor: '#0b2acc', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700 }}>
+                                        {p.numero ?? i + 1}
+                                      </Box>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#111827' }}>{p.dias ?? '-'}d</Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography sx={{ fontSize: '0.88rem', color: '#374151' }}>{formatDateDDMMYYYYDateOnlyDash(p.fechaVencimiento)}</Typography>
+                                    </TableCell>
+                                    <TableCell align='center'>
+                                      <Typography sx={{ fontSize: '0.88rem', color: '#374151' }}>{p.cantidad ?? '-'}</Typography>
+                                    </TableCell>
+                                    <TableCell align='center'>
+                                      <Chip label={getOperationalLabel(p.estado ?? 'CODIFICADO')} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.73rem', ...estadoPillSx(p.estado ?? 'CODIFICADO') }} />
+                                    </TableCell>
+                                    <TableCell align='center'>
+                                      <Typography sx={{ fontSize: '0.86rem', fontWeight: 700, color: isUrgent ? '#dc2626' : '#4b5563' }}>
+                                        {restantesLabel}{isUrgent && ' ⚠'}
+                                      </Typography>
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                              })}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
                       </>
                     )}
                   </>
@@ -3430,7 +3898,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               </DialogContent>
 
               {/* Footer */}
-              <Box sx={{ px: 3, py: 2, bgcolor: '#f9fafb', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+              <Box sx={{ px: 3, py: 2, bgcolor: '#f9fafb', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 1.5, flexShrink: 0 }}>
                 <Button variant='outlined' onClick={() => setGestionarOpen(false)} sx={{ textTransform: 'none', fontWeight: 600, color: '#374151', borderColor: '#d1d5db' }}>
                   Cancelar
                 </Button>
@@ -3438,7 +3906,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                   variant='contained'
                   disabled={gestionarSaving}
                   onClick={handleGuardarGestionar}
-                  startIcon={gestionarSaving ? <CircularProgress size={14} color='inherit' /> : <i className='ri-save-line' />}
+                  startIcon={gestionarSaving ? <CircularProgress size={14} color='inherit' /> : <i className='ri-save-3-line' />}
                   sx={{ textTransform: 'none', fontWeight: 700, bgcolor: '#1e40af', '&:hover': { bgcolor: '#1d3a9b' } }}
                 >
                   {gestionarSaving ? 'Guardando...' : 'Guardar Cambios'}
@@ -3449,16 +3917,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         })()}
       </Dialog>
 
+
       {/* Menu cambio de estado - TABLA PRINCIPAL (DISABLED) */}
       <Menu
         anchorEl={markAnchorEl}
-        open={Boolean(markAnchorEl) && !selectedRowId} // ← solo si NO hay muestra abierta
+        open={Boolean(markAnchorEl) && !selectedRowId} // ÔåÉ solo si NO hay muestra abierta
         onClose={handleCloseMarkMenu}
       >
         {getStatesForRow(markRowId).map(state => (
           <MenuItem
             key={state.value}
-            disabled // ← SIEMPRE DESHABILITADO en tabla principal
+            disabled // ÔåÉ SIEMPRE DESHABILITADO en tabla principal
             sx={{
               display: 'flex',
               alignItems: 'center',
@@ -3484,7 +3953,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       {/* Menu cambio de estado - TABLA SERVICIOS (FUNCIONAL) */}
       <Menu
         anchorEl={markAnchorEl}
-        open={Boolean(markAnchorEl) && Boolean(selectedRowId)} // ← solo si HAY muestra abierta
+        open={Boolean(markAnchorEl) && Boolean(selectedRowId)} // ÔåÉ solo si HAY muestra abierta
         onClose={handleCloseMarkMenu}
       >
         {getStatesForServicio(markRowId, serviciosMuestra).map(state => (
@@ -3548,7 +4017,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             </Box>
           )}
 
-          {/* ELIMINADO: condición || markDialogAction === 'CERRADO_OP' */}
+          {/* ELIMINADO: condici├│n || markDialogAction === 'CERRADO_OP' */}
           {markDialogAction === 'EVENTO' && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
@@ -3634,7 +4103,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             </Box>
           )}
 
-          {/* Otros actions pueden añadirse aquí con condiciones similares */}
+          {/* Otros actions pueden a├▒adirse aqu├¡ con condiciones similares */}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCancelMarkDialog}>Cerrar</Button>
@@ -3653,50 +4122,54 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <MenuItem onClick={() => {
-          console.log('📍 Editar clicked - menuRowId:', menuRowId)
-          handleEdit(menuRowId)
+          console.log('­ƒôì Editar clicked - menuRowId:', menuRowId)
+          handleEdit(menuRowId, { newTab: true })
         }}>
-          Editar
+          <i className='ri-pencil-line' style={{ marginRight: 8, fontSize: 16, color: '#7c5c00' }} />
+          Editar (Codificación)
         </MenuItem>
 
-        {/* ✅ CORRECCIÓN COMPLETA: Restaurar TODO el código del historial */}
+        {/* Ô£à CORRECCI├ôN COMPLETA: Restaurar TODO el c├│digo del historial */}
         <MenuItem onClick={async () => {
           handleCloseRowMenu()
 
           const row = data.find(r => r.id === menuRowId) ??
             filteredData.find(r => r.id === menuRowId)
 
-          console.group('📋 Historial desde menú 3 puntos')
+          console.group('Historial desde menú 3 puntos')
           console.log('menuRowId (fila ID):', menuRowId)
           console.log('row encontrado:', row)
 
           if (!row || !row.muestra?.id) {
-            console.warn('❌ No se encontró la muestra')
+            console.warn('No se encontró la muestra')
             console.groupEnd()
             alert('No se encontró la muestra')
+
             return
           }
 
           const muestraId = row.muestra.id
           const cacheKey = `muestra-${muestraId}`
 
-          console.log(`🔑 Cache key:`, cacheKey)
-          console.log(`📦 Muestra ID:`, muestraId)
-          console.log(`📋 Número de muestra:`, row.muestra.numeroMuestra)
+          console.log(`­ƒöæ Cache key:`, cacheKey)
+          console.log(`­ƒôª Muestra ID:`, muestraId)
+          console.log(`­ƒôï N├║mero de muestra:`, row.muestra.numeroMuestra)
 
           try {
-            // ✅ Verificar caché ANTES de hacer fetch
+            // Ô£à Verificar cach├® ANTES de hacer fetch
             const cached = servicioHistoryCache.get(cacheKey)
+
             if (cached) {
-              console.log('✅ Usando historial cacheado para muestra', muestraId)
-              console.log('📊 Registros en caché:', cached.length)
+              console.log('Ô£à Usando historial cacheado para muestra', muestraId)
+              console.log('Registros en caché:', cached.length)
               setHistServicioRows(cached)
               setHistServicioDialogOpen(true)
               console.groupEnd()
+
               return
             }
 
-            console.log(`⏳ Cargando servicios de muestra ${muestraId}...`)
+            console.log(`ÔÅ│ Cargando servicios de muestra ${muestraId}...`)
 
             const response = await fetch(`/api/muestra/${muestraId}/servicios`)
 
@@ -3706,54 +4179,58 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
             const data = await response.json()
 
-            console.log('✅ Servicios cargados:', data)
+            console.log('Ô£à Servicios cargados:', data)
 
             if (!data.servicios || data.servicios.length === 0) {
-              console.warn('❌ No hay servicios')
+              console.warn('ÔØî No hay servicios')
               console.groupEnd()
 
-              // ✅ Guardar array vacío en caché para evitar refetchs
+              // Ô£à Guardar array vac├¡o en cach├® para evitar refetchs
               servicioHistoryCache.set(cacheKey, [])
 
               setHistServicioRows([])
               setHistServicioDialogOpen(true)
+
               return
             }
 
-            // ✅ Extraer IDs de TODOS los servicios
+            // Ô£à Extraer IDs de TODOS los servicios
             const servicioIds = data.servicios
               .map((s: any) => s.id ?? s.servicioMuestraId ?? s.servicioId ?? null)
               .filter(Boolean)
 
-            console.log(`📊 IDs de servicios a consultar:`, servicioIds)
+            console.log(`­ƒôè IDs de servicios a consultar:`, servicioIds)
 
             if (servicioIds.length === 0) {
-              console.warn('❌ No se pudieron extraer IDs')
+              console.warn('ÔØî No se pudieron extraer IDs')
               console.groupEnd()
 
-              // ✅ Guardar array vacío en caché
+              // Ô£à Guardar array vac├¡o en cach├®
               servicioHistoryCache.set(cacheKey, [])
 
               setHistServicioRows([])
               setHistServicioDialogOpen(true)
+
               return
             }
 
-            // ✅ Cargar historial de TODOS los servicios en paralelo
+            // Ô£à Cargar historial de TODOS los servicios en paralelo
             const historialPromises = servicioIds.map(async (servicioId: number) => {
               try {
-                console.log(`📡 Fetching history for servicioId ${servicioId}`)
+                console.log(`­ƒôí Fetching history for servicioId ${servicioId}`)
                 const res = await fetch(`/api/servicioMuestra/${servicioId}/history`)
 
                 if (!res.ok) {
-                  console.warn(`⚠️ Error al cargar historial del servicio ${servicioId}:`, res.status)
+                  console.warn(`ÔÜá´©Å Error al cargar historial del servicio ${servicioId}:`, res.status)
+
                   return []
                 }
 
                 const historial = await res.json()
-                console.log(`✅ Historial cargado para servicio ${servicioId}:`, historial.length, 'registros')
 
-                // Agregar información del servicio a cada registro
+                console.log(`Ô£à Historial cargado para servicio ${servicioId}:`, historial.length, 'registros')
+
+                // Agregar informaci├│n del servicio a cada registro
                 const servicio = data.servicios.find((s: any) =>
                   (s.id ?? s.servicioMuestraId ?? s.servicioId) === servicioId
                 )
@@ -3766,49 +4243,55 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                   servicioEstado: servicio?.estado ?? servicio?.estadoServicio ?? null
                 }))
               } catch (err) {
-                console.error(`❌ Error loading historial for servicio ${servicioId}:`, err)
+                console.error(`ÔØî Error loading historial for servicio ${servicioId}:`, err)
+
                 return []
               }
             })
 
-            // ✅ Esperar a que se carguen todos los historiales
+            // Ô£à Esperar a que se carguen todos los historiales
             const historialArrays = await Promise.all(historialPromises)
 
-            // ✅ Combinar todos los historiales en un solo array
+            // Ô£à Combinar todos los historiales en un solo array
             const historialCombinado = historialArrays.flat()
 
-            // ✅ Ordenar por fecha descendente
+            // Ô£à Ordenar por fecha descendente
             historialCombinado.sort((a, b) => {
               const dateA = new Date(a.registro || a.fechaAccion).getTime()
               const dateB = new Date(b.registro || b.fechaAccion).getTime()
+
+
               return dateB - dateA
             })
 
-            console.log(`📊 Total registros de historial combinado:`, historialCombinado.length)
-            console.log(`📋 Desglose por servicio:`)
+            console.log(`­ƒôè Total registros de historial combinado:`, historialCombinado.length)
+            console.log(`­ƒôï Desglose por servicio:`)
             servicioIds.forEach(id => {
               const count = historialCombinado.filter(h => h.servicioMuestraId === id).length
+
               const nombre = data.servicios.find((s: any) =>
                 (s.id ?? s.servicioMuestraId ?? s.servicioId) === id
               )?.nombre
+
               console.log(`  - Servicio ${id} (${nombre}): ${count} registros`)
             })
 
-            // ✅ Guardar en caché usando clave única por muestra
+            // Ô£à Guardar en cach├® usando clave ├║nica por muestra
             servicioHistoryCache.set(cacheKey, historialCombinado)
 
-            // ✅ Abrir diálogo con el historial combinado
+            // Ô£à Abrir di├ílogo con el historial combinado
             setHistServicioRows(historialCombinado)
             setHistServicioDialogOpen(true)
 
           } catch (err) {
-            console.error('❌ Error loading historial:', err)
+            console.error('ÔØî Error loading historial:', err)
             alert('Error al cargar el historial')
           } finally {
             console.groupEnd()
           }
         }}>
-          Historial
+          <i className='ri-file-history-line' style={{ marginRight: 8, fontSize: 16, color: '#6b7280' }} />
+          Historial de cambios
         </MenuItem>
       </Menu>
 
@@ -3874,6 +4357,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                           {h.estAnterior ? (
                             (() => {
                               const info = getOperationalInfo(h.estAnterior)
+
+
                               return (
                                 <Chip
                                   label={h.estAnterior}
@@ -3898,6 +4383,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                           {h.estNuevo ? (
                             (() => {
                               const info = getOperationalInfo(h.estNuevo)
+
+
                               return (
                                 <Chip
                                   label={h.estNuevo}
@@ -3967,7 +4454,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'action.hover' }}>
                     <TableCell sx={{ fontWeight: 600 }}>REGISTRO</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>SERVICIO</TableCell> {/* ← NUEVA COLUMNA */}
+                    <TableCell sx={{ fontWeight: 600 }}>SERVICIO</TableCell> {/* ÔåÉ NUEVA COLUMNA */}
                     <TableCell sx={{ fontWeight: 600 }}>FUNCIONARIO</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>APLICADO A</TableCell>
                     <TableCell align='center' sx={{ fontWeight: 600 }}>TIPO</TableCell>
@@ -3995,7 +4482,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                           </Typography>
                         </TableCell>
 
-                        {/* ✅ NUEVA CELDA: Mostrar nombre del servicio */}
+                        {/* Ô£à NUEVA CELDA: Mostrar nombre del servicio */}
                         <TableCell>
                           <Typography variant='body2' sx={{ fontWeight: 600, color: 'primary.main' }}>
                             {h.servicioNombre ?? '-'}
@@ -4019,6 +4506,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                           {h.estAnterior ? (
                             (() => {
                               const info = getOperationalInfo(h.estAnterior)
+
+
                               return (
                                 <Chip
                                   label={h.estAnterior}
@@ -4043,6 +4532,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                           {h.estNuevo ? (
                             (() => {
                               const info = getOperationalInfo(h.estNuevo)
+
+
                               return (
                                 <Chip
                                   label={h.estNuevo}

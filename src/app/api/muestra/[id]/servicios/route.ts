@@ -39,7 +39,7 @@ export async function GET(
                 history: {
                     orderBy: { registro: 'desc' },
                     take: 1,
-                    select: { aplicadoA: true }
+                    select: { aplicadoA: true, observacion: true }
                 }
             }
         })
@@ -53,6 +53,7 @@ export async function GET(
             cantidad: s.cantidad ?? 1,
             estado: s.estado ?? 'CODIFICADO',
             ensayador: s.history?.[0]?.aplicadoA ?? null,
+            observacion: s.history?.[0]?.observacion ?? null,
             area: s.producto?.area,
             familia: s.producto?.familia
         }))

@@ -17,6 +17,15 @@ import {
   Typography
 } from '@mui/material'
 
+interface Familia {
+  id: number
+  nombre: string
+  area: {
+    id: number
+    nombre: string
+  }
+}
+
 import PickersRange from './date'
 
 interface Area {
@@ -33,6 +42,8 @@ interface HeaderProps {
     areaId?: number | null
     areaName?: string | null
     ensayador?: string | null
+    familia?: string
+    sede?: string
   }) => void
 }
 
@@ -48,6 +59,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
   const getDefaultRange = () => {
     const end = new Date()
     const start = new Date()
+
     start.setMonth(end.getMonth() - 1)
 
     return {
@@ -63,6 +75,10 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
   const [selectedEnsayador, setSelectedEnsayador] = useState<string>('')
   const [ensayadorOptions, setEnsayadorOptions] = useState<string[]>([])
   const [areaOptions, setAreaOptions] = useState<Area[]>([])
+  const [selectedFamilia, setSelectedFamilia] = useState<string>('')
+  const [familiaOptions, setFamiliaOptions] = useState<Familia[]>([])
+  const [selectedSede, setSelectedSede] = useState<string>('')
+  const [sedeOptions, setSedeOptions] = useState<string[]>([])
   const [fechaTipo, setFechaTipo] = useState<'fecha_codificacion' | 'fecha_muestreo' | 'fecha_ingreso' | 'fecha_vencimiento'>('fecha_codificacion')
   const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>(defaultRange)
   const [rangePickerKey, setRangePickerKey] = useState(0)
@@ -113,18 +129,49 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
       })
   }, [])
 
+  useEffect(() => {
+    fetch('/api/sedes')
+      .then(res => res.json())
+      .then(data => {
+        setSedeOptions(Array.isArray(data) ? data : [])
+      })
+      .catch(error => {
+        console.error('Error al cargar sedes:', error)
+        setSedeOptions([])
+      })
+  }, [])
+
+  useEffect(() => {
+    if (selectedAreaId) {
+      fetch(`/api/familias?areaId=${selectedAreaId}`)
+        .then(res => res.json())
+        .then(data => {
+          setFamiliaOptions(Array.isArray(data) ? data : [])
+        })
+        .catch(error => {
+          console.error('Error al cargar familias:', error)
+          setFamiliaOptions([])
+        })
+    } else {
+      setFamiliaOptions([])
+      setSelectedFamilia('')
+    }
+  }, [selectedAreaId])
+
   const emitFilters = (
     df = fechaTipo,
     dr = dateRange,
     estOp = selectedEstadoOp,
     areaId = selectedAreaId,
     areaName = selectedAreaName,
-    ensayador = selectedEnsayador
+    ensayador = selectedEnsayador,
+    familia = selectedFamilia,
+    sede = selectedSede
   ) => {
     const start = dr.start ?? ''
     const end = dr.end ?? ''
 
-    if (!start && !end && !estOp && !areaId && !areaName && !ensayador) {
+    if (!start && !end && !estOp && !areaId && !areaName && !ensayador && !familia && !sede) {
       onFiltersChange?.(undefined)
 
       return
@@ -138,6 +185,8 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
       areaId?: number | null
       areaName?: string | null
       ensayador?: string | null
+      familia?: string
+      sede?: string
     } = {}
 
     payload.dateField = df
@@ -148,6 +197,8 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     if (typeof areaId !== 'undefined' && areaId !== null) payload.areaId = areaId
     if (areaName) payload.areaName = areaName
     if (ensayador) payload.ensayador = ensayador
+    if (familia) payload.familia = familia
+    if (sede) payload.sede = sede
 
     onFiltersChange?.(payload)
   }
@@ -156,7 +207,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     const next = value as 'fecha_codificacion' | 'fecha_muestreo' | 'fecha_ingreso' | 'fecha_vencimiento'
 
     setFechaTipo(next)
-    emitFilters(next, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador)
+    emitFilters(next, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador, selectedFamilia, selectedSede)
   }
 
   const handleAreaChange = (value: string) => {
@@ -166,19 +217,30 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
 
     setSelectedAreaId(areaId)
     setSelectedAreaName(areaName)
-    emitFilters(fechaTipo, dateRange, selectedEstadoOp, areaId, areaName, selectedEnsayador)
+    setSelectedFamilia('')
+    emitFilters(fechaTipo, dateRange, selectedEstadoOp, areaId, areaName, selectedEnsayador, '', selectedSede)
   }
 
   const handleEstadoToggle = (_event: React.MouseEvent<HTMLElement>, value: string | null) => {
     const next = value ?? ''
 
     setSelectedEstadoOp(next)
-    emitFilters(fechaTipo, dateRange, next, selectedAreaId, selectedAreaName, selectedEnsayador)
+    emitFilters(fechaTipo, dateRange, next, selectedAreaId, selectedAreaName, selectedEnsayador, selectedFamilia, selectedSede)
   }
 
   const handleEnsayadorChange = (value: string) => {
     setSelectedEnsayador(value)
-    emitFilters(fechaTipo, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, value)
+    emitFilters(fechaTipo, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, value, selectedFamilia, selectedSede)
+  }
+
+  const handleFamiliaChange = (value: string) => {
+    setSelectedFamilia(value)
+    emitFilters(fechaTipo, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador, value, selectedSede)
+  }
+
+  const handleSedeChange = (value: string) => {
+    setSelectedSede(value)
+    emitFilters(fechaTipo, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador, selectedFamilia, value)
   }
 
   const handleRangeChangeFlexible = (range: any) => {
@@ -199,7 +261,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     const nextRange = { start, end }
 
     setDateRange(nextRange)
-    emitFilters(fechaTipo, nextRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador)
+    emitFilters(fechaTipo, nextRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador, selectedFamilia, selectedSede)
   }
 
   const handleClearFilters = () => {
@@ -212,8 +274,10 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     setSelectedAreaName('')
     setSelectedEnsayador('')
     setSelectedEstadoOp('')
+    setSelectedFamilia('')
+    setSelectedSede('')
 
-    emitFilters('fecha_codificacion', nextRange, '', null, '', '')
+    emitFilters('fecha_codificacion', nextRange, '', null, '', '', '', '')
   }
 
   useEffect(() => {
@@ -275,7 +339,8 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
         </Grid>
       </Grid>
 
-      <Grid container alignItems='center' spacing={2}>
+      {/* Fila 1 */}
+      <Grid container alignItems='center' spacing={2} sx={{ mb: 2 }}>
         <Grid item xs={12} md={2}>
           <TextField
             label='Tipo de Fecha'
@@ -323,6 +388,47 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
 
         <Grid item xs={12} md={2}>
           <FormControl fullWidth size='small'>
+            <InputLabel id='tipo-servicio-select'>Tipo de Servicio</InputLabel>
+            <Select
+              labelId='tipo-servicio-select'
+              label='Tipo de Servicio'
+              value={selectedFamilia}
+              onChange={e => handleFamiliaChange(e.target.value)}
+            >
+              <MenuItem value=''>Todos los servicios</MenuItem>
+              {familiaOptions.map(f => (
+                <MenuItem key={f.id} value={f.nombre}>
+                  {f.nombre}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+
+        <Grid item xs={12} md={2}>
+          <FormControl fullWidth size='small'>
+            <InputLabel id='sede-select'>Sede</InputLabel>
+            <Select
+              labelId='sede-select'
+              label='Sede'
+              value={selectedSede}
+              onChange={e => handleSedeChange(e.target.value)}
+            >
+              <MenuItem value=''>Todas las sedes</MenuItem>
+              {sedeOptions.map(s => (
+                <MenuItem key={s} value={s}>
+                  {s}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+      </Grid>
+
+      {/* Fila 2 */}
+      <Grid container alignItems='center' spacing={2}>
+        <Grid item xs={12} md={2}>
+          <FormControl fullWidth size='small'>
             <InputLabel id='ensayador-select'>Ensayador</InputLabel>
             <Select
               labelId='ensayador-select'
@@ -339,10 +445,8 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
             </Select>
           </FormControl>
         </Grid>
-      </Grid>
 
-      <Grid container alignItems='center' spacing={2} sx={{ mt: 0.5 }}>
-        <Grid item xs={12}>
+        <Grid item xs={12} md={6}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.75 }}>
             <Typography variant='body2' sx={{ fontWeight: 700, color: 'text.secondary' }}>
               ESTADO OPERATIVO
