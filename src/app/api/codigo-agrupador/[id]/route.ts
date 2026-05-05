@@ -23,6 +23,7 @@ export async function GET(request: Request, { params }: Params) {
                 id: true,
                 codigoNombre: true,
                 descripcionServicio: true,
+                notasInternas: true,
                 ordenTrabajo: { select: { clave: true, correlativ: true } },
                 ensayos: {
                     select: {
@@ -37,6 +38,7 @@ export async function GET(request: Request, { params }: Params) {
                     id: true,
                     codigoNombre: true,
                     descripcionServicio: true,
+                    notasInternas: true,
                     ordenTrabajo: { select: { clave: true, correlativ: true } },
                     ensayos: {
                         select: {
@@ -69,6 +71,7 @@ export async function GET(request: Request, { params }: Params) {
                     id: true,
                     codigoNombre: true,
                     descripcionServicio: true,
+                    notasInternas: true,
                     ordenTrabajo: {
                         select: {
                             clave: true,
@@ -150,7 +153,7 @@ export async function PUT(request: Request, { params }: Params) {
 
     try {
         const body = await request.json()
-        const { codigoNombre, descripcionServicio, cantidad, unidad, facturacion, ensayos, rcmIds } = body
+        const { codigoNombre, descripcionServicio, notasInternas, cantidad, unidad, facturacion, ensayos, rcmIds } = body
 
         // Recreate ensayos if provided
         if (ensayos !== undefined) {
@@ -172,6 +175,7 @@ export async function PUT(request: Request, { params }: Params) {
             data: {
                 ...(codigoNombre !== undefined && { codigoNombre }),
                 ...(descripcionServicio !== undefined && { descripcionServicio }),
+                ...(notasInternas !== undefined && { notasInternas }),
                 ...(cantidad !== undefined && { cantidad }),
                 ...(unidad !== undefined && { unidad }),
                 ...(facturacion !== undefined && { facturacion }),

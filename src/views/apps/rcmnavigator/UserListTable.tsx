@@ -835,6 +835,7 @@ const UserListTable2 = ({
       if (!json) return
       setEditCpCodigoNombre(String(json?.codigoNombre ?? codigoNombre ?? '').trim())
       setEditCpDescripcion(String(json?.descripcionServicio ?? '').trim())
+      setEditCpNotasInternas(String(json?.notasInternas ?? '').trim())
     } catch (e) {
       console.error('openEditCpDialog error', e)
     } finally {
@@ -852,7 +853,8 @@ const UserListTable2 = ({
       setEditCpError(null)
 
       const payload = {
-        descripcionServicio: editCpDescripcion
+        descripcionServicio: editCpDescripcion,
+        notasInternas: editCpNotasInternas
       }
 
       const res = await fetch(`/api/codigo-agrupador/${codigoId}`, {

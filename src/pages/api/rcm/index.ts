@@ -226,6 +226,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } else if (req.method === 'GET') {
     try {
+      res.setHeader('Cache-Control', 'no-store, max-age=0')
+
       const { ordenTrabajoId } = req.query
 
       const whereClause = ordenTrabajoId ? { ordenTrabajoId: ordenTrabajoId as string } : {}
@@ -238,7 +240,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
           muestras: {
             include: {
-              servicios: { include: { producto: true } },
+              servicios: {
+                include: {
+                  producto: true,
+                  history: {
+                    orderBy: { registro: 'desc' },
+                    take: 1,
+                    select: { aplicadoA: true }
+                  }
+                }
+              },
               probetas: true,
             },
           },
@@ -247,6 +258,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           codigoAgrupador: true,
         },
         orderBy: { createdAt: 'desc' },
+      })
+
+      const totalMuestras = rcms.reduce((acc, rcm) => acc + (Array.isArray(rcm.muestras) ? rcm.muestras.length : 0), 0)
+      const totalServicios = rcms.reduce((acc, rcm) => acc + (Array.isArray(rcm.servicios) ? rcm.servicios.length : 0), 0)
+      const totalProbetas = rcms.reduce(
+        (acc, rcm) =>
+          acc +
+          (Array.isArray(rcm.muestras)
+            ? rcm.muestras.reduce((sub, muestra) => sub + (Array.isArray((muestra as any).probetas) ? (muestra as any).probetas.length : 0), 0)
+            : 0),
+        0
+      )
+
+      console.log('[GET /api/rcm] resumen', {
+        timestamp: new Date().toISOString(),
+        ordenTrabajoId: ordenTrabajoId ?? null,
+        totalRcMs: rcms.length,
+        totalMuestras,
+        totalServicios,
+        totalProbetas,
+        sampleIds: rcms.slice(0, 5).map(item => item.id)
       })
 
       res.status(200).json(rcms)

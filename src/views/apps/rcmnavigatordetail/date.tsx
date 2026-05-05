@@ -7,7 +7,7 @@ import TextField from '@mui/material/TextField'
 import type { TextFieldProps } from '@mui/material/TextField'
 
 // Third-party Imports
-import { format, addDays } from 'date-fns'
+import { format } from 'date-fns'
 
 // Component Imports
 import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
@@ -25,7 +25,7 @@ interface PickersRangeProps {
   maxWidth?: number | string
 }
 
-const PickersRange = ({ onChange, initialStart = new Date(), initialEnd = addDays(new Date(), 15), maxWidth = '250px' }: PickersRangeProps) => {
+const PickersRange = ({ onChange, initialStart = null, initialEnd = null, maxWidth = '250px' }: PickersRangeProps) => {
   const [startDate, setStartDate] = useState<Date | null | undefined>(initialStart)
   const [endDate, setEndDate] = useState<Date | null | undefined>(initialEnd)
 

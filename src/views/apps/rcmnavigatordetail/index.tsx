@@ -9,7 +9,7 @@ import UserListTable2 from './UserListTable'
 
 export default function RcmNavigatorPage() {
   const [filters, setFilters] = useState<{
-    dateField?: 'fecha_codificacion' | 'fecha_muestreo'
+    dateField?: 'fecha_codificacion' | 'fecha_muestreo' | 'fecha_ingreso' | 'fecha_vencimiento'
     start?: string
     end?: string
     estadoOperativo?: string
@@ -17,6 +17,7 @@ export default function RcmNavigatorPage() {
     areaId?: number | null
     areaName?: string | null
     familia?: string
+    ensayador?: string | null
   } | undefined>()
 
   return (

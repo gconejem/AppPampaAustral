@@ -42,11 +42,16 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import CircularProgress from '@mui/material/CircularProgress'
 import { styled } from '@mui/material/styles'
+import Tooltip from '@mui/material/Tooltip'
 
 // Icons
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import CheckBoxOutlinedIcon from '@mui/icons-material/CheckBoxOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined'
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline'
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -168,13 +173,41 @@ interface RCM {
   id: number
   numeroRcm: string
   ot?: string
+  otDisplay?: string | null
+  ss?: string | null
+  numeroTarjeta?: string | null
   fechaCodificacion: string
   fechaMuestreo: string
+  fechaIngreso?: string | null
+  estadoMuestra?: string
   estadoOperativo?: string
   estadoAdministrativo?: string
+  tipoServicio?: string | null
+  proximoVencimiento?: string | null
+  diasVencimiento?: number | null
+  cantidadProbetas?: number
+  ensayador?: string | null
+  ensayos?: {
+    total: number
+    ensayados: number
+    pendientes: number
+  } | null
+  ordenTrabajo?: {
+    id?: string | number
+    correlativ?: string | number | null
+    correlativo?: string | number | null
+    clave?: string | null
+    user?: {
+      id?: string | number
+      name?: string | null
+      email?: string | null
+    } | null
+  } | null
+  ordenTrabajoId?: string | number | null
   cliente?: {
     nombreCliente?: string
     comuna?: string
+    raw?: any
   }
   area?: string
   familia?: string
@@ -186,6 +219,7 @@ interface RCM {
     numeroMuestra: string
     cantidad: number
     estado?: string
+    numeroTarjeta?: string | null
     servicioRCM?: {
       id?: number
       estado?: string
@@ -198,13 +232,13 @@ interface RCM {
           familia?: string
         }
       }
-    }
+    } | null
   }
   rcmOriginalId?: number
 }
 
 interface Filters {
-  dateField?: 'fecha_codificacion' | 'fecha_muestreo'
+  dateField?: 'fecha_codificacion' | 'fecha_muestreo' | 'fecha_ingreso' | 'fecha_vencimiento'
   start?: string
   end?: string
   estadoOperativo?: string
@@ -212,6 +246,7 @@ interface Filters {
   areaId?: number | null
   areaName?: string | null
   familia?: string | null
+  ensayador?: string | null
 }
 
 // Component
@@ -281,6 +316,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
   const [serviciosMuestra, setServiciosMuestra] = useState<any[]>([])
   const [muestraDetalle, setMuestraDetalle] = useState<any>(null)
+  const [rcmDetalleModal, setRcmDetalleModal] = useState<any>(null)
   const [loadingServicios, setLoadingServicios] = useState(false)
 
   // ✅ AGREGAR: Estados para historial de servicioMuestra
@@ -369,7 +405,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (rowId == null) return ''
     const r = data.find(d => d.id === rowId)
     if (!r) return ''
-    const s = r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '')
+    const s = r.estadoMuestra ?? r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '')
     return normalizeState(s)
   }
 
@@ -417,6 +453,146 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   // simple cache en memoria para historial por RCM (evita refetchs)
   const historyCache: Map<number, any> = (global as any).__RCM_HISTORY_CACHE__ || new Map()
     ; (global as any).__RCM_HISTORY_CACHE__ = historyCache
+
+  // ── Gestionar Ensayos dialog ──────────────────────────────────────────────
+  const [gestionarOpen, setGestionarOpen] = useState(false)
+  const [gestionarRow, setGestionarRow] = useState<RCM | null>(null)
+  const [gestionarLoading, setGestionarLoading] = useState(false)
+  const [gestionarServicios, setGestionarServicios] = useState<any[]>([])
+  const [gestionarProbetas, setGestionarProbetas] = useState<any[]>([])
+  const [gestionarMuestra, setGestionarMuestra] = useState<any>(null)
+  const [gestionarRcmData, setGestionarRcmData] = useState<any>(null)
+  const [gestionarEnsayadorGlobal, setGestionarEnsayadorGlobal] = useState('')
+  const [gestionarEnsayadores, setGestionarEnsayadores] = useState<Record<number, string>>({})
+  const [gestionarEstados, setGestionarEstados] = useState<Record<number, string>>({})
+  const [gestionarSaving, setGestionarSaving] = useState(false)
+  const [ensayadorOptions, setEnsayadorOptions] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch('/api/users/laboratoristas')
+      .then(r => r.json())
+      .then((d: any[]) => {
+        const names = Array.isArray(d)
+          ? Array.from(new Set(d.map((u: any) => String(u?.name ?? '').trim()).filter(Boolean)))
+          : []
+        setEnsayadorOptions(names)
+      })
+      .catch(() => setEnsayadorOptions([]))
+  }, [])
+
+  const handleOpenGestionarEnsayos = async (row: RCM) => {
+    if (!row.muestra?.id) return
+    setGestionarRow(row)
+    setGestionarServicios([])
+    setGestionarProbetas([])
+    setGestionarMuestra(null)
+    setGestionarRcmData(null)
+    setGestionarEnsayadorGlobal('')
+    setGestionarEnsayadores({})
+    setGestionarEstados({})
+    setGestionarOpen(true)
+    setGestionarLoading(true)
+    try {
+      const muestraId = row.muestra.id
+      const rcmId = row.rcmOriginalId ?? null
+      const [resServicios, resRcm] = await Promise.all([
+        fetch(`/api/muestra/${muestraId}/servicios?ts=${Date.now()}`, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }),
+        rcmId ? fetch(`/api/rcm/${rcmId}?ts=${Date.now()}`, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }) : Promise.resolve(null)
+      ])
+      const dataServ = resServicios.ok ? await resServicios.json() : { servicios: [], muestra: {} }
+      const detalleRcm = resRcm?.ok ? await resRcm.json() : null
+      const muestraFromRcm = Array.isArray(detalleRcm?.muestras)
+        ? detalleRcm.muestras.find((m: any) => Number(m?.id) === Number(muestraId))
+        : null
+      const serviciosDetalle = Array.isArray(muestraFromRcm?.servicios) ? muestraFromRcm.servicios : []
+      const combined = (Array.isArray(dataServ.servicios) ? dataServ.servicios : []).map((s: any) => {
+        const match = serviciosDetalle.find((sd: any) => Number(sd?.id) === Number(s?.id))
+        return {
+          ...s,
+          norma: s?.norma ?? match?.produto?.norma ?? match?.producto?.norma ?? null,
+          estado: s?.estado ?? match?.estado ?? 'CODIFICADO'
+        }
+      })
+      const probetas = Array.isArray(muestraFromRcm?.probetas) ? muestraFromRcm.probetas : []
+      setGestionarServicios(combined)
+      setGestionarProbetas(probetas)
+      setGestionarMuestra({ ...(dataServ.muestra ?? {}), probetas })
+      setGestionarRcmData(detalleRcm)
+      // inicializar estado y ensayador local con los valores actuales de cada servicio
+      const estadosInit: Record<number, string> = {}
+      const ensayadoresInit: Record<number, string> = {}
+      combined.forEach((s: any) => {
+        estadosInit[s.id] = s.estado ?? 'CODIFICADO'
+        if (s.ensayador) ensayadoresInit[s.id] = s.ensayador
+      })
+      setGestionarEstados(estadosInit)
+      setGestionarEnsayadores(ensayadoresInit)
+    } catch (e) {
+      console.error('Error loading gestionar ensayos:', e)
+    } finally {
+      setGestionarLoading(false)
+    }
+  }
+
+  const handleGuardarGestionar = async () => {
+    if (!gestionarRow) return
+    setGestionarSaving(true)
+    try {
+      const user = getCurrentUserName() ?? 'Usuario'
+      await Promise.all(
+        gestionarServicios.map(async (s: any) => {
+          const estadoNuevo = gestionarEstados[s.id] ?? s.estado ?? 'CODIFICADO'
+          const estadoPrev = s.estado ?? 'CODIFICADO'
+          const ensayadorNuevo = gestionarEnsayadores[s.id] ?? ''
+          const ensayadorPrev = s.ensayador ?? ''
+
+          // Guardar si cambió estado o cambió ensayador
+          if (estadoNuevo === estadoPrev && ensayadorNuevo === ensayadorPrev) return
+
+          await fetch(`/api/servicioMuestra/${s.id}/history`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tipo: 'Ens',
+              estAnterior: estadoPrev,
+              estNuevo: estadoNuevo,
+              funcionario: user,
+              aplicadoA: ensayadorNuevo || null,
+              ensayoServicio: s.nombre
+            })
+          })
+        })
+      )
+
+      // Actualizar tabla principal: recalcular estado operativo del RCM
+      const todosEstados = gestionarServicios.map((s: any) => gestionarEstados[s.id] ?? s.estado ?? 'CODIFICADO')
+      const estadoFinal = todosEstados.every(e => String(e).toUpperCase().includes('ENSAYADO'))
+        ? 'ENSAYADO'
+        : todosEstados.some(e => String(e).toUpperCase().includes('PROCESO'))
+          ? 'EN_PROCESO'
+          : 'CODIFICADO'
+
+      // Ensayador predominante (del primer servicio con ensayador asignado)
+      const ensayadorFinal =
+        gestionarServicios
+          .map((s: any) => gestionarEnsayadores[s.id] ?? s.ensayador ?? '')
+          .find((e: string) => Boolean(e.trim())) ?? (gestionarRow?.ensayador ?? '')
+
+      setData(prev => prev.map(row => {
+        if (row.id === gestionarRow?.id) {
+          return { ...row, estadoMuestra: estadoFinal, estadoOperativo: estadoFinal, ensayador: ensayadorFinal || row.ensayador }
+        }
+        return row
+      }))
+
+      setGestionarOpen(false)
+    } catch (e) {
+      console.error('Error guardando gestionar ensayos:', e)
+    } finally {
+      setGestionarSaving(false)
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   const handleOpenMarkMenu = (e: React.MouseEvent<HTMLElement>, rowId: number) => {
     setMarkAnchorEl(e.currentTarget)
@@ -478,7 +654,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
     try {
       // optimista: actualizar UI localmente
-      setData(prev => prev.map(d => (d.id === rowId ? { ...d, estadoOperativo: action } : d)))
+      setData(prev => prev.map(d => (d.id === rowId ? { ...d, estadoMuestra: action, estadoOperativo: action } : d)))
 
       const res = await fetch(`/api/rcm/${rowId}/history`, {
         method: 'POST',
@@ -510,7 +686,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     } catch (err) {
       // revertir optimista en caso de error
       console.error('Error marcar (inmediato):', err)
-      setData(prev => prev.map(d => (d.id === rowId ? { ...d, estadoOperativo: prevState } : d)))
+      setData(prev => prev.map(d => (d.id === rowId ? { ...d, estadoMuestra: prevState, estadoOperativo: prevState } : d)))
       // opcional: mostrar aviso al usuario
       alert('No se pudo actualizar el estado. Ver consola para detalles.')
     } finally {
@@ -585,8 +761,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       const created = await res.json().catch(() => null)
 
       // actualizar sólo el registro afectado en el estado local (optimista / definitivo)
-      setData(prev => prev.map(d => (d.id === rcmId ? { ...d, estadoOperativo: payload.estNuevo ?? d.estadoOperativo } : d)))
-      setFilteredData(prev => prev.map(d => (d.id === rcmId ? { ...d, estadoOperativo: payload.estNuevo ?? d.estadoOperativo } : d)))
+      setData(prev => prev.map(d => (d.id === rcmId ? { ...d, estadoMuestra: payload.estNuevo ?? d.estadoMuestra, estadoOperativo: payload.estNuevo ?? d.estadoOperativo } : d)))
+      setFilteredData(prev => prev.map(d => (d.id === rcmId ? { ...d, estadoMuestra: payload.estNuevo ?? d.estadoMuestra, estadoOperativo: payload.estNuevo ?? d.estadoOperativo } : d)))
 
       // actualizar caché de historial y vistas abiertas
       const newHistEntry = created ?? {
@@ -747,6 +923,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       setSelectedRowId(null)
       setServiciosMuestra([])
       setMuestraDetalle(null)
+      setRcmDetalleModal(null)
       console.groupEnd()
       return
     }
@@ -756,21 +933,50 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setSelectedRowId(row.id)
     setServiciosMuestra([])
     setMuestraDetalle(null)
+    setRcmDetalleModal(null)
     setLoadingServicios(true)
 
     try {
       const muestraId = row.muestra.id
-      const url = `/api/muestra/${muestraId}/servicios`
+      const rcmId = row.rcmOriginalId ?? null
+      const urlServicios = `/api/muestra/${muestraId}/servicios`
 
-      console.log('📡 Fetching:', url)
+      console.log('📡 Fetching servicios:', urlServicios)
 
-      const response = await fetch(url)
+      const [responseServicios, responseRcm] = await Promise.all([
+        fetch(urlServicios, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' }
+        }),
+        rcmId
+          ? fetch(`/api/rcm/${rcmId}?ts=${Date.now()}`, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+          })
+          : Promise.resolve(null)
+      ])
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
+      if (!responseServicios.ok) {
+        throw new Error(`HTTP ${responseServicios.status}`)
       }
 
-      const data = await response.json()
+      const data = await responseServicios.json()
+      const detalleRcm = responseRcm && responseRcm.ok ? await responseRcm.json() : null
+      const muestraRcm = Array.isArray(detalleRcm?.muestras)
+        ? detalleRcm.muestras.find((m: any) => Number(m?.id) === Number(muestraId))
+        : null
+
+      const serviciosDetalle = Array.isArray(muestraRcm?.servicios) ? muestraRcm.servicios : []
+      const serviciosCombinados = (Array.isArray(data.servicios) ? data.servicios : []).map((servicio: any) => {
+        const match = serviciosDetalle.find((sd: any) => Number(sd?.id) === Number(servicio?.id))
+        return {
+          ...servicio,
+          norma: servicio?.norma ?? match?.producto?.norma ?? match?.norma ?? null,
+          codigo: servicio?.codigo ?? match?.producto?.sku ?? match?.codigo ?? null,
+          cantidad: servicio?.cantidad ?? match?.cantidad ?? 1,
+          estado: servicio?.estado ?? match?.estado ?? 'CODIFICADO'
+        }
+      })
 
       console.log('✅ Datos cargados:', data)
 
@@ -790,12 +996,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       }
       console.groupEnd()
 
-      setMuestraDetalle(data.muestra)
-      setServiciosMuestra(data.servicios || [])
+      setMuestraDetalle({
+        ...(data.muestra ?? {}),
+        probetas: Array.isArray(muestraRcm?.probetas) ? muestraRcm.probetas : []
+      })
+      setServiciosMuestra(serviciosCombinados)
+      setRcmDetalleModal(detalleRcm)
     } catch (err) {
       console.error('❌ Error loading servicios:', err)
       setServiciosMuestra([])
       setMuestraDetalle(null)
+      setRcmDetalleModal(null)
     } finally {
       setLoadingServicios(false)
       console.groupEnd()
@@ -1033,8 +1244,18 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   useEffect(() => {
     const fetchRCMs = async () => {
       try {
-        const res = await fetch('/api/rcm')
-        const result = await res.json()
+        const res = await fetch(`/api/rcm?ts=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        })
+
+        if (!res.ok) {
+          throw new Error(`GET /api/rcm failed: ${res.status}`)
+        }
+
+        const result = await res.json().catch(() => [])
         const raw = Array.isArray(result) ? result : []
 
         // --- fetch obras (igual que ya tienes) ---
@@ -1366,6 +1587,48 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             // Fallbacks finales desde RCM raíz
             const areaFinal = areaProducto ?? r.area ?? null
             const familiaFinal = familiaProducto ?? r.familia ?? null
+            const serviciosMuestra = Array.isArray(muestra.servicios) ? muestra.servicios : []
+            const totalEnsayos = serviciosMuestra.reduce((acc: number, servicioItem: any) => acc + Number(servicioItem?.cantidad ?? 1), 0)
+            const ensayados = serviciosMuestra.reduce((acc: number, servicioItem: any) => {
+              const estadoServicio = String(servicioItem?.estado ?? '').toUpperCase().trim()
+              return acc + (estadoServicio === 'ENSAYADO' ? Number(servicioItem?.cantidad ?? 1) : 0)
+            }, 0)
+            const estadosServicios = serviciosMuestra
+              .map((servicioItem: any) => String(servicioItem?.estado ?? '').toUpperCase().trim())
+              .filter((estado: string) => Boolean(estado))
+            const estadoDesdeEnsayo = estadosServicios.includes('EN_PROCESO')
+              ? 'EN_PROCESO'
+              : estadosServicios.includes('CODIFICADO')
+                ? 'CODIFICADO'
+                : estadosServicios.includes('ENSAYADO')
+                  ? 'ENSAYADO'
+                  : (estadosServicios[0] ?? '')
+            const probetas = Array.isArray(muestra.probetas) ? muestra.probetas : []
+            const nextProbeta = probetas
+              .map((probeta: any) => ({
+                ...probeta,
+                fechaVencimiento: probeta?.fechaVencimiento ?? null
+              }))
+              .filter((probeta: any) => probeta.fechaVencimiento)
+              .sort((left: any, right: any) => compareDateOnly(left.fechaVencimiento, right.fechaVencimiento))[0] ?? null
+            const tipoServicio =
+              servicio?.nombre ??
+              servicioRCM?.nombre ??
+              serviciosMuestra[0]?.nombre ??
+              r.tipoServicio ??
+              null
+            const ss = r.ss ?? orderObj?.clave ?? r.ordenTrabajo?.clave ?? null
+            // Ensayador de laboratorio: viene del historial de servicios (aplicadoA), fallback al usuario de OT
+            const ensayadorDesdeServicio = serviciosMuestra
+              .map((sm: any) => sm?.history?.[0]?.aplicadoA ?? sm?.aplicadoA ?? null)
+              .find((e: string | null) => Boolean(e)) ?? null
+            const ensayador = ensayadorDesdeServicio ?? null
+            const estadoMuestraResuelto =
+              String(muestra.estado ?? '').trim() ||
+              String(servicioRCM?.estado ?? '').trim() ||
+              estadoDesdeEnsayo ||
+              String(r.estadoOperativo ?? '').trim() ||
+              ''
 
             // LOG (mantener solo para debug)
             console.group(`🔍 DEBUG Muestra ${r.id}-${idx}`)
@@ -1395,26 +1658,42 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
               ot: otDisplay,
               otDisplay: otDisplay,
+              ss,
               ordenTrabajo: ordenTrabajoNormalized,
               ordenTrabajoId: ordenTrabajoNormalized.id,
 
               fechaCodificacion: r.fechaCodificacion,
               fechaMuestreo: r.fechaMuestreo,
-              estadoOperativo: muestra.estado ?? servicioRCM?.estado ?? r.estadoOperativo ?? '',
+              fechaIngreso: r.fechaIngreso ?? null,
+              estadoMuestra: estadoMuestraResuelto,
+              estadoOperativo: estadoMuestraResuelto,
               estadoAdministrativo: r.estadoAdministrativo ?? r.estado_administrativo ?? '',
+              tipoServicio,
+              proximoVencimiento: nextProbeta?.fechaVencimiento ?? null,
+              diasVencimiento: nextProbeta?.fechaVencimiento ? diffDaysFromToday(nextProbeta.fechaVencimiento) : null,
+              cantidadProbetas: probetas.length,
+              ensayador,
+              ensayos: {
+                total: totalEnsayos,
+                ensayados,
+                pendientes: Math.max(0, totalEnsayos - ensayados)
+              },
               cliente: {
                 nombreCliente: clienteNombre ?? null,
                 comuna: clienteComuna ?? null,
                 raw: rawCliente ?? null
+              },
+              obra: {
+                numeroObra: numeroObra ?? undefined
               },
               area: areaFinal,
               familia: familiaFinal,
               muestra: {
                 id: muestra.id,
                 numeroMuestra: muestra.numeroMuestra || '-',
-                cantidad: muestra.cantidad ?? 1,
+                cantidad: muestra.cantidad ?? muestra.cantidadMuestras ?? 1,
                 estado: muestra.estado,
-                numeroTarjeta: muestra.numeroTarjeta ?? muestra.numero_tarjeta ?? null, // ← agregar aquí también
+                numeroTarjeta: muestra.numeroTarjeta ?? muestra.numero_tarjeta ?? null,
                 servicioRCM: servicioRCM ? {
                   id: servicioRCM.id,
                   estado: servicioRCM.estado,
@@ -1430,7 +1709,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         // LOG ADICIONAL: Verificar estructura final
         console.group('📊 VERIFICACIÓN FINAL DE DATOS')
         console.log('Total registros normalizados:', normalized.length)
-        console.log('Primeros 3 registros completos:', JSON.stringify(normalized.slice(0, 3), null, 2))
+        console.log('Primeros 3 registros completos:', normalized.slice(0, 3))
         console.log('---')
         console.log('Áreas encontradas:', normalized.slice(0, 10).map((n, i) => ({
           index: i,
@@ -1484,6 +1763,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate())
   }
 
+  const compareDateOnly = (a: any, b: any): number => {
+    const da = toDateOnly(a)
+    const db = toDateOnly(b)
+
+    if (!da && !db) return 0
+    if (!da) return 1
+    if (!db) return -1
+
+    return da.getTime() - db.getTime()
+  }
+
   // helper: formatear fecha a DD/MM/AAAA (ahora incluye HH:MM:SS)
   const formatDateDDMMYYYY = (v: any) => {
     if (!v) return '-'
@@ -1509,6 +1799,88 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return `${dd}/${mm}/${yyyy}`
   }
 
+  const formatDateDDMMYYYYDateOnlyDash = (v: any) => {
+    if (!v) return '-'
+    const d = v instanceof Date ? v : new Date(v)
+    if (isNaN(d.getTime())) return '-'
+    const dd = String(d.getDate()).padStart(2, '0')
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const yyyy = d.getFullYear()
+    return `${dd}-${mm}-${yyyy}`
+  }
+
+  const formatDateLikeDDMMYYYYDash = (raw: string | null | undefined) => {
+    const s = String(raw ?? '').trim()
+    if (!s) return null
+    const t = s.replace(/\//g, '-').trim()
+
+    if (/^\d{2}-\d{2}-\d{4}$/.test(t)) return t
+    if (/^\d{2}-\d{2}-\d{2}$/.test(t)) return t
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return formatDateDDMMYYYYDateOnlyDash(new Date(t))
+
+    const d = new Date(t)
+    if (isNaN(d.getTime())) return null
+    return formatDateDDMMYYYYDateOnlyDash(d)
+  }
+
+  const getOperationalLabel = (raw?: string | null) => {
+    if (!raw) return '-'
+    const key = String(raw).toUpperCase().trim()
+    const match = OPERATIONAL_STATES.find(item => item.value === key || item.label.toUpperCase() === key)
+    return match?.label ?? raw
+  }
+
+  const diffDaysFromToday = (raw?: string | null) => {
+    if (!raw) return null
+    const date = toDateOnly(raw)
+    const today = toDateOnly(new Date())
+    if (!date || !today) return null
+    const diff = date.getTime() - today.getTime()
+    return Math.round(diff / (1000 * 60 * 60 * 24))
+  }
+
+  const getVencimientoMeta = (raw?: string | null, cantidadProbetas = 0) => {
+    const formatted = formatDateLikeDDMMYYYYDash(raw)
+    const days = diffDaysFromToday(raw)
+    const unit = cantidadProbetas === 1 ? 'probeta' : 'probetas'
+
+    let suffix = ''
+    let colors = {
+      color: '#b26a00',
+      borderColor: 'rgba(237, 168, 32, 0.65)',
+      backgroundColor: 'rgba(255, 196, 84, 0.14)'
+    }
+
+    if (days !== null) {
+      if (days <= 0) {
+        suffix = '(HOY)'
+        colors = {
+          color: '#d84f2a',
+          borderColor: 'rgba(255, 112, 67, 0.7)',
+          backgroundColor: 'rgba(255, 138, 101, 0.12)'
+        }
+      } else if (days === 1) {
+        suffix = '(MAÑANA)'
+      } else {
+        suffix = `(${days}d)`
+      }
+    }
+
+    return {
+      label: formatted ? `${formatted} ${suffix}`.trim() : '-',
+      helper: cantidadProbetas > 0 ? `${cantidadProbetas} ${unit}` : 'Sin probetas',
+      colors
+    }
+  }
+
+  const getEnsayosMeta = (ensayos?: RCM['ensayos']) => {
+    const total = Number(ensayos?.total ?? 0)
+    const ensayados = Number(ensayos?.ensayados ?? 0)
+    const pendientes = Math.max(0, Number(ensayos?.pendientes ?? total - ensayados))
+
+    return { total, ensayados, pendientes }
+  }
+
   const applyDateFilter = (rows: RCM[], filters?: Filters) => {
     console.log('applyDateFilter called, rows:', rows.length, 'filters:', filters)
 
@@ -1517,25 +1889,31 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
     // determine which property to use for date filtering
     const dfRaw = filters?.dateField ? String(filters.dateField).toLowerCase() : ''
-    let fieldName: 'fechaCodificacion' | 'fechaMuestreo' | null = null
+    let fieldName: 'fechaCodificacion' | 'fechaMuestreo' | 'fechaIngreso' | 'proximoVencimiento' | null = null
     if (dfRaw === 'fecha_codificacion' || dfRaw === 'fechacodificacion' || dfRaw === 'fecha-codificacion') {
       fieldName = 'fechaCodificacion'
     } else if (dfRaw === 'fecha_muestreo' || dfRaw === 'fechamuestreo' || dfRaw === 'fecha-muestreo') {
       fieldName = 'fechaMuestreo'
+    } else if (dfRaw === 'fecha_ingreso' || dfRaw === 'fechaingreso' || dfRaw === 'fecha-ingreso' || dfRaw === 'ingreso') {
+      fieldName = 'fechaIngreso'
+    } else if (dfRaw === 'fecha_vencimiento' || dfRaw === 'fechavencimiento' || dfRaw === 'fecha-vencimiento' || dfRaw === 'vencimiento') {
+      fieldName = 'proximoVencimiento'
     }
 
     console.log('applyDateFilter -> using date field:', fieldName)
 
-    // Date filtering (only if fieldName + start+end provided)
-    if (fieldName && filters && filters.start && filters.end) {
-      const start = toDateOnly(filters.start)
-      const end = toDateOnly(filters.end)
-      if (start && end) {
+    // Date filtering (permite DESDE y/o HASTA)
+    if (fieldName && filters && (filters.start || filters.end)) {
+      const start = filters.start ? toDateOnly(filters.start) : null
+      const end = filters.end ? toDateOnly(filters.end) : null
+      if (start || end) {
         result = result.filter(r => {
           const raw = (r as any)[fieldName]
           const dOnly = toDateOnly(raw)
           if (!dOnly) return false
-          return dOnly.getTime() >= start.getTime() && dOnly.getTime() <= end.getTime()
+          if (start && dOnly.getTime() < start.getTime()) return false
+          if (end && dOnly.getTime() > end.getTime()) return false
+          return true
         })
       }
     }
@@ -1544,9 +1922,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (filters && filters.estadoOperativo) {
       const q = String(filters.estadoOperativo).toLowerCase()
       result = result.filter(r => {
-        const op = (r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '') ?? '')
+        const op = (r.estadoMuestra ?? r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '') ?? '')
         return String(op).toLowerCase().includes(q)
       })
+    }
+
+    if (filters && filters.ensayador) {
+      const qEns = normalizeText(filters.ensayador)
+      result = result.filter(r => normalizeText(r.ensayador ?? '').includes(qEns))
     }
 
     // Estado Administrativo filtering (if provided) — case-insensitive contains
@@ -1733,27 +2116,42 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         cell: ({ row }) => <Checkbox size='small' checked={Boolean((rowSelection as any)[row.id])} onChange={e => setRowSelection(prev => ({ ...prev, [row.id]: e.target.checked }))} />
       },
       {
-        id: 'muestra',
-        header: 'MUESTRA',
-        accessorFn: (r: any) => r.muestra?.numeroMuestra || '-',
+        id: 'rcm',
+        header: 'RCM',
+        accessorFn: row => [
+          row.numeroRcm,
+          row.ss,
+          row.ot,
+          row.obra?.numeroObra,
+          row.area,
+          row.tipoServicio,
+          row.ensayador
+        ].filter(Boolean).join(' '),
         cell: ({ row }: any) => {
-          const numeroMuestra = row.original.muestra?.numeroMuestra || '-'
+          const numeroRcm = row.original.numeroRcm || '-'
+          const ss = String(row.original.ss ?? '').trim()
+
           return (
-            <Typography variant='body2' sx={{ fontSize: '0.875rem' }}>
-              {numeroMuestra}
-            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.25 }}>
+              <Typography variant='body2' sx={{ fontSize: '0.95rem', fontWeight: 800, color: 'primary.main' }}>
+                {numeroRcm}
+              </Typography>
+              <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 500 }}>
+                {ss ? `SS: ${ss}` : '-'}
+              </Typography>
+            </Box>
           )
         }
       },
       {
-        id: 'rcm',
-        header: 'RCM',
-        accessorKey: 'numeroRcm',
+        id: 'numeroTarjeta',
+        header: 'Tarjeta',
+        accessorKey: 'numeroTarjeta',
         cell: ({ row }) => {
-          const numeroRcm = row.original.numeroRcm || '-'
+          const numeroTarjeta = row.original.numeroTarjeta || '-'
           return (
-            <Typography variant='body2' sx={{ fontSize: '0.875rem' }}>
-              {numeroRcm}
+            <Typography variant='body2' sx={{ fontSize: '0.95rem', fontWeight: 800, color: 'primary.main' }}>
+              {numeroTarjeta}
             </Typography>
           )
         }
@@ -1761,13 +2159,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       {
         id: 'ot',
         header: 'OT',
-        accessorKey: 'ot', // ✅ ahora usa 'ot' directamente (que es otDisplay)
+        accessorKey: 'ot',
         cell: ({ row }: any) => {
           const ot = row.original.ot
           if (ot) {
             return <Typography variant='body2'>{ot}</Typography>
           }
-          // Fallback: mostrar ID si existe pero sin correlativo
           const ordenId = row.original.ordenTrabajoId
           if (ordenId) {
             return (
@@ -1780,68 +2177,122 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
       },
       {
+        id: 'areaTipoServicio',
+        header: 'Área / Tipo Servicio',
+        accessorFn: row => `${row.area ?? ''} ${row.tipoServicio ?? ''}`.trim(),
+        cell: ({ row }) => {
+          const area = row.original.area
+          const tipoServicio = row.original.tipoServicio
+
+          return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.4 }}>
+              {area ? (
+                <Chip
+                  size='small'
+                  label={area}
+                  variant='outlined'
+                  sx={{
+                    fontWeight: 800,
+                    color: area === 'Suelo' ? '#b26a00' : '#7c4dff',
+                    borderColor: area === 'Suelo' ? 'rgba(237, 168, 32, 0.55)' : 'rgba(124, 77, 255, 0.38)',
+                    bgcolor: area === 'Suelo' ? 'rgba(255, 196, 84, 0.14)' : 'rgba(124, 77, 255, 0.08)'
+                  }}
+                />
+              ) : (
+                <Typography variant='body2'>-</Typography>
+              )}
+              <Typography
+                variant='caption'
+                color='text.secondary'
+                title={tipoServicio ?? '-'}
+                sx={{
+                  textAlign: 'left',
+                  maxWidth: 220,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {tipoServicio ?? '-'}
+              </Typography>
+            </Box>
+          )
+        }
+      },
+      {
         id: 'fechaCod',
-        header: 'Fecha Cod.',
+        header: 'F. Codificación',
         accessorKey: 'fechaCodificacion',
-        cell: ({ row }) => <span>{row.original.fechaCodificacion ? new Date(row.original.fechaCodificacion).toLocaleDateString() : '-'}</span>
+        cell: ({ row }) => <span>{row.original.fechaCodificacion ? formatDateDDMMYYYYDateOnlyDash(row.original.fechaCodificacion) : '-'}</span>
       },
       {
-        id: 'fechaMues',
-        header: 'Fecha Mues.',
-        accessorKey: 'fechaMuestreo',
+        id: 'proximoVencimiento',
+        header: 'Próx. Vencimiento',
+        accessorKey: 'proximoVencimiento',
         cell: ({ row }) => {
-          const val = row.original.fechaMuestreo ?? row.original.fecha_muestreo
-          return <span>{val ? new Date(val).toLocaleDateString('es-CL') : '-'}</span>
+          if (!row.original.proximoVencimiento) {
+            return (
+              <Typography variant='body2' color='text.disabled' sx={{ fontWeight: 500, textAlign: 'center', width: '100%' }}>
+                FIFO
+              </Typography>
+            )
+          }
+
+          const meta = getVencimientoMeta(row.original.proximoVencimiento, row.original.cantidadProbetas ?? 0)
+
+          return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.35, width: '100%' }}>
+              <Chip
+                size='small'
+                label={meta.label}
+                variant='outlined'
+                sx={{
+                  fontWeight: 800,
+                  color: meta.colors.color,
+                  borderColor: meta.colors.borderColor,
+                  bgcolor: meta.colors.backgroundColor
+                }}
+              />
+              <Typography variant='caption' color='text.secondary' sx={{ textAlign: 'center' }}>
+                {meta.helper}
+              </Typography>
+            </Box>
+          )
         }
       },
       {
-        id: 'numeroTarjeta',
-        header: 'N° TAR',
-        accessorKey: 'numeroTarjeta', // ✅ cambiar a accessorKey simple
+        id: 'ensayos',
+        header: 'Ensayos',
+        accessorFn: row => row.ensayos?.total ?? 0,
         cell: ({ row }) => {
-          const val = row.original.numeroTarjeta
-          return <span>{val ?? '-'}</span>
-        }
-      },
-      {
-        id: 'area',
-        header: 'ÁREA',
-        accessorKey: 'area',
-        cell: ({ row }) => {
-          const val = row.original.area
-          return <span>{val ?? '-'}</span>
-        }
-      },
-      {
-        id: 'familia',
-        header: 'FAMILIA',
-        accessorKey: 'familia',
-        cell: ({ row }) => {
-          const val = row.original.familia
-          return <span>{val ?? '-'}</span>
-        }
-      },
-      {
-        id: 'cantidadMuestras',
-        header: '# MUES.',
-        accessorFn: r => r.muestra?.cantidad ?? 1,
-        cell: ({ row }) => {
-          const val = row.original.muestra?.cantidad ?? 1
-          return <span>{val}</span>
+          const ensayos = getEnsayosMeta(row.original.ensayos)
+
+          return (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.75 }}>
+              <Typography variant='body2' sx={{ fontWeight: 800 }}>
+                {ensayos.total}
+              </Typography>
+              {ensayos.total > 0 && (ensayos.ensayados > 0 || ensayos.pendientes > 0) ? (
+                <Typography variant='caption' sx={{ color: 'primary.main', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  ✓{ensayos.ensayados} • {ensayos.pendientes}
+                </Typography>
+              ) : null}
+            </Box>
+          )
         }
       },
       {
         id: 'estOp',
-        header: 'EST. OPERATIVO',
+        header: 'Estado',
         accessorKey: 'estadoOperativo',
         cell: ({ row }) => {
-          const op = row.original.estadoOperativo ?? row.original.muestra?.estado ?? row.original.muestra?.servicio?.estado
+          const op = row.original.estadoMuestra ?? ''
           const info = getOperationalInfo(op)
+          const label = getOperationalLabel(op)
           return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
               <Chip
-
-                label={op ?? '-'}
+                label={label}
                 title={info.hex ?? ''}
                 size='small'
                 variant='filled'
@@ -1849,16 +2300,31 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                   bgcolor: info.bgcolor,
                   color: info.colorText,
                   border: `1px solid ${info.border}`,
-                  textTransform: 'uppercase',
                   fontWeight: 700,
-                  fontSize: '0.72rem',
-                  borderRadius: 2,
+                  fontSize: '0.78rem',
+                  borderRadius: 999,
                   px: 1,
-                  py: 0.4,
-                  minWidth: 84,
-                  justifyContent: 'center'
+                  py: 0.4
                 }}
               />
+            </Box>
+          )
+        }
+      },
+      {
+        id: 'ensayador',
+        header: 'Ensayador',
+        accessorFn: row => row.ensayador ?? '',
+        cell: ({ row }) => {
+          const ensayador = String(row.original.ensayador ?? '').trim()
+          return (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.75 }}>
+              <i className='ri-user-3-line' style={{ fontSize: 16, color: ensayador ? '#424242' : '#ef6c00' }} />
+              {ensayador ? (
+                <Typography variant='body2'>{ensayador}</Typography>
+              ) : (
+                <Typography variant='body2' sx={{ color: '#ef6c00' }}>Sin asignar</Typography>
+              )}
             </Box>
           )
         }
@@ -1867,43 +2333,57 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         id: 'acciones',
         header: 'ACCIONES',
         cell: ({ row }) => (
-          <Stack direction='row' spacing={1}>
-            <IconButton
-              size='small'
-              title='Ver'
-              onClick={(e) => {
-                e.stopPropagation()
-                console.log('👁️ Ver clicked - row.original:', row.original)
+          <Stack direction='row' spacing={0.5}>
+            <Tooltip title='Ver RCM' placement='top'>
+              <IconButton
+                size='small'
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleView(row.original)
+                }}
+                sx={{
+                  color: 'primary.main',
+                  bgcolor: 'rgba(105, 108, 255, 0.08)',
+                  '&:hover': { bgcolor: 'rgba(105, 108, 255, 0.18)' }
+                }}
+              >
+                <VisibilityIcon fontSize='small' />
+              </IconButton>
+            </Tooltip>
 
-                // ✅ CORRECCIÓN: pasar row.original directamente (no el ID)
-                handleView(row.original)
-              }}
-            >
-              <VisibilityIcon fontSize='small' />
-            </IconButton>
+            <Tooltip title='Gestionar Ensayos' placement='top'>
+              <IconButton
+                size='small'
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleOpenGestionarEnsayos(row.original)
+                }}
+                sx={{
+                  color: 'success.main',
+                  bgcolor: 'rgba(113, 221, 55, 0.08)',
+                  '&:hover': { bgcolor: 'rgba(113, 221, 55, 0.18)' }
+                }}
+              >
+                <AssignmentOutlinedIcon fontSize='small' />
+              </IconButton>
+            </Tooltip>
 
-            <IconButton
-              size='small'
-              title='Marcar'
-              onClick={(e) => {
-                e.stopPropagation()
-                handleOpenMarkMenu(e, row.original.id)
-              }}
-            >
-              <CheckBoxOutlinedIcon fontSize='small' />
-            </IconButton>
-
-            <IconButton
-              size='small'
-              title='Más'
-              onClick={e => {
-                e.stopPropagation()
-                // ✅ CORRECCIÓN: Pasar row.id (no rcmOriginalId)
-                handleOpenRowMenu(e, row.original.id)
-              }}
-            >
-              <MoreVertIcon fontSize='small' />
-            </IconButton>
+            <Tooltip title='Más opciones' placement='top'>
+              <IconButton
+                size='small'
+                onClick={e => {
+                  e.stopPropagation()
+                  handleOpenRowMenu(e, row.original.id)
+                }}
+                sx={{
+                  color: 'text.secondary',
+                  bgcolor: 'rgba(75, 70, 92, 0.08)',
+                  '&:hover': { bgcolor: 'rgba(75, 70, 92, 0.18)' }
+                }}
+              >
+                <MoreVertIcon fontSize='small' />
+              </IconButton>
+            </Tooltip>
           </Stack>
         )
       }
@@ -1947,31 +2427,29 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       }
 
       const headers = [
-        'MUESTRA',
         'RCM',
+        'TARJETA',
         'OT',
-        'Fecha Cod.',
-        'Fecha Mues.',
-        'N° TAR',
         'ÁREA',
-        'FAMILIA',
-        '# MUES.',
-        'EST. OPERATIVO'
-        // ELIMINADO: 'EST. ADM'
+        'TIPO SERVICIO',
+        'F. CODIFICACIÓN',
+        'PRÓX. VENCIMIENTO',
+        'ENSAYOS',
+        'ESTADO',
+        'ENSAYADOR'
       ]
 
       const rows = selectedRows.map((row: any) => [
-        row.muestra?.numeroMuestra ?? '-',
         row.numeroRcm ?? '-',
-        row.ot ?? '-',
-        row.fechaCodificacion ? new Date(row.fechaCodificacion).toLocaleDateString('es-CL') : '-',
-        row.fechaMuestreo ? new Date(row.fechaMuestreo).toLocaleDateString('es-CL') : '-',
         row.numeroTarjeta ?? '-',
+        row.ot ?? '-',
         row.area ?? '-',
-        row.familia ?? '-',
-        row.muestra?.cantidad ?? 1,
-        row.estadoOperativo ?? '-'
-        // ELIMINADO: row.estadoAdministrativo ?? '-'
+        row.tipoServicio ?? '-',
+        row.fechaCodificacion ? formatDateDDMMYYYYDateOnlyDash(row.fechaCodificacion) : '-',
+        row.proximoVencimiento ? formatDateDDMMYYYYDateOnlyDash(row.proximoVencimiento) : '-',
+        getEnsayosMeta(row.ensayos).total,
+        getOperationalLabel(row.estadoOperativo),
+        row.ensayador ?? 'Sin asignar'
       ].map(v => '"' + String(v).replace(/"/g, '""') + ''))
 
       const headerRow = headers.map(h => '"' + String(h).replace(/"/g, '""') + '"').join(',')
@@ -1981,7 +2459,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'rcms_selected_export.csv'
+      a.download = 'rcm-detalle-export.csv'
       a.click()
       URL.revokeObjectURL(url)
     } catch (err) {
@@ -1993,9 +2471,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   /*
   const indicators = useMemo(() => {
     const total = filteredData.length
-  
+
     // helper: normalizar estado operativo a valor comparable (por ejemplo "CODIFICADO" / "EN_PROCESO")
-  
+
     }
       CODIFICADO: 'CODIFICADO',
       EN_PROCESO: 'EN_PROCESO',
@@ -2008,7 +2486,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       EVENTO: 'EVENTO',
       CERRADO_OP: 'CERRADO_OP'
     } as const
-  
+
     const countIf = (pred: (opVal: string, adm: string) => boolean) =>
       filteredData.reduce((acc, d) => {
         const opRaw = d.estadoOperativo ?? (Array.isArray(d.servicios) && d.servicios.length ? (d.servicios[0] as any).estado : '') ?? ''
@@ -2017,13 +2495,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         const adm = normAdmText(admRaw)
         return acc + (pred(opVal, adm) ? 1 : 0)
       }, 0)
-  
+
     // Por Ensayar: estados CODIFICADO o EN_PROCESO (o admin menciona 'ensayar'/'codificado'/'en proceso')
     const porEnsayar = countIf((op, adm) => {
       if ([S.CODIFICADO, S.EN_PROCESO].includes(op as any)) return true
       return adm.includes('ensayar') || adm.includes('codificad') || adm.includes('en proceso')
     })
-  
+
     // Por Digitar: estado ENSAYADO o ENVIADO_DIGITACION (pendiente digitación) y NO estar ya DIGITADO
     const porDigitar = countIf((op, adm) => {
       if (op === S.ENSAYADO || op === S.ENVIADO_DIGITACION) return true
@@ -2031,33 +2509,33 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       if (adm.includes('digit') && !adm.includes('digitad')) return true
       return false
     })
-  
+
     // Por Revisar: REVISADO o admin menciona revisar/revisado
     const porRevisar = countIf((op, adm) => op === S.DIGITADO)
-  
-    // Por Corregir: estado EVENTO 
+
+    // Por Corregir: estado EVENTO
     const porCorregir = countIf((op, adm) => op === S.EVENTO)
-  
+
     // Por Firmar: estado FIRMADO (o admin menciona 'firmado' pero no enviado)
     const porFirmar = countIf((op, adm) => op === S.REVISADO)
-  
+
     // Por Enviar (Firmados): estado ENVIADO o admin contiene 'enviar' + 'firmad'
     const porEnviarFirmados = countIf((op, adm) => op === S.FIRMADO)
-  
+
     // Firmados Pagados: operativo FIRMADO y administrativo PAGADO (usando ADMINISTRATIVE_STATES)
     const firmadosPagados = countIf((op, adm) => {
       // requiere operativo exactamente FIRMADO (valor de OPERATIONAL_STATES)
       if (op !== S.FIRMADO) return false
-  
+
       // adm viene normalizado (lowercase, sin tildes) por normalizeText
       // 1) comprobar por label mapeando ADMINISTRATIVE_STATES
       const admMatch = ADMINISTRATIVE_STATES.find(a => normalizeText(a.label) === adm)
       if (admMatch) return admMatch.value === 'PAGADO'
-  
+
       // 2) fallback textual (acepta 'pag', 'pagad', 'pagado')
       return adm.includes('pag') || adm.includes('pagad') || adm.includes('pagado')
     })
-  
+
     return {
       total,
       porEnsayar,
@@ -2071,6 +2549,37 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   }, [filteredData])
   */
 
+  const dashboardStats = useMemo(() => {
+    const totalActivos = filteredData.length
+
+    const vencenHoy = filteredData.reduce((acc, row) => {
+      if (!row.proximoVencimiento) return acc
+      return acc + (diffDaysFromToday(row.proximoVencimiento) === 0 ? 1 : 0)
+    }, 0)
+
+    const vencenManana = filteredData.reduce((acc, row) => {
+      if (!row.proximoVencimiento) return acc
+      return acc + (diffDaysFromToday(row.proximoVencimiento) === 1 ? 1 : 0)
+    }, 0)
+
+    const enProceso = filteredData.reduce((acc, row) => {
+      const op = String(row.estadoMuestra ?? row.estadoOperativo ?? '').toUpperCase().trim().replace(/\s+/g, '_')
+      return acc + (op === 'EN_PROCESO' ? 1 : 0)
+    }, 0)
+
+    const sinEnsayador = filteredData.reduce((acc, row) => {
+      return acc + (!String(row.ensayador ?? '').trim() ? 1 : 0)
+    }, 0)
+
+    return {
+      vencenHoy,
+      vencenManana,
+      enProceso,
+      sinEnsayador,
+      totalActivos
+    }
+  }, [filteredData])
+
   if (loading) return <div>Cargando...</div>
 
   return (
@@ -2079,8 +2588,50 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       <Divider />
 
+      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', px: 2, py: 1.25, justifyContent: 'flex-start' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 148, px: 1.5, py: 0.75, borderRadius: 1, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+          <FiberManualRecordIcon sx={{ color: 'error.main', fontSize: 18 }} />
+          <Box>
+            <Typography sx={{ fontSize: '1rem', lineHeight: 1.1, fontWeight: 700, color: 'text.primary' }}>{dashboardStats.vencenHoy}</Typography>
+            <Typography sx={{ fontSize: '0.76rem', lineHeight: 1.1, fontWeight: 500, color: 'text.secondary' }}>Vencen hoy</Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 158, px: 1.5, py: 0.75, borderRadius: 1, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+          <FiberManualRecordIcon sx={{ color: 'warning.main', fontSize: 18 }} />
+          <Box>
+            <Typography sx={{ fontSize: '1rem', lineHeight: 1.1, fontWeight: 700, color: 'text.primary' }}>{dashboardStats.vencenManana}</Typography>
+            <Typography sx={{ fontSize: '0.76rem', lineHeight: 1.1, fontWeight: 500, color: 'text.secondary' }}>Vencen mañana</Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 148, px: 1.5, py: 0.75, borderRadius: 1, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+          <SettingsOutlinedIcon sx={{ color: 'primary.main', fontSize: 18 }} />
+          <Box>
+            <Typography sx={{ fontSize: '1rem', lineHeight: 1.1, fontWeight: 700, color: 'text.primary' }}>{dashboardStats.enProceso}</Typography>
+            <Typography sx={{ fontSize: '0.76rem', lineHeight: 1.1, fontWeight: 500, color: 'text.secondary' }}>En proceso</Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 158, px: 1.5, py: 0.75, borderRadius: 1, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+          <PersonOutlineIcon sx={{ color: 'secondary.main', fontSize: 18 }} />
+          <Box>
+            <Typography sx={{ fontSize: '1rem', lineHeight: 1.1, fontWeight: 700, color: 'text.primary' }}>{dashboardStats.sinEnsayador}</Typography>
+            <Typography sx={{ fontSize: '0.76rem', lineHeight: 1.1, fontWeight: 500, color: 'text.secondary' }}>Sin ensayador</Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 148, px: 1.5, py: 0.75, borderRadius: 1, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+          <AssignmentOutlinedIcon sx={{ color: 'text.secondary', fontSize: 18 }} />
+          <Box>
+            <Typography sx={{ fontSize: '1rem', lineHeight: 1.1, fontWeight: 700, color: 'text.primary' }}>{dashboardStats.totalActivos}</Typography>
+            <Typography sx={{ fontSize: '0.76rem', lineHeight: 1.1, fontWeight: 500, color: 'text.secondary' }}>Total activos</Typography>
+          </Box>
+        </Box>
+      </Box>
+
       {/* ELIMINADO: ROW de Dashboard indicadores */}
-      {/* 
+      {/*
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', p: 2 }}>
         <Card sx={{ flex: 1, minWidth: 120 }}>
           <CardContent>
@@ -2094,22 +2645,28 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       */}
 
       {/* New toolbar row: Exportar + contador + Buscar */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, gap: 2, flexWrap: 'wrap' }}>
         <Button
-          variant='contained'
+          variant='outlined'
           startIcon={<i className='ri-download-line' />}
           onClick={handleExport}
           disabled={selectedCount === 0}
         >
-          Exportar ({selectedCount})
+          Exportar CSV
         </Button>
 
-        <DebouncedInput
-          value={globalFilter ?? ''}
-          onChange={value => setGlobalFilter(String(value))}
-          placeholder='Buscar Muestras...'
-          sx={{ width: 300 }}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 'auto', flexWrap: 'wrap' }}>
+          <Typography variant='body2' color='text.secondary' sx={{ whiteSpace: 'nowrap' }}>
+            {filteredData.length} registros mostrados
+          </Typography>
+
+          <DebouncedInput
+            value={globalFilter ?? ''}
+            onChange={value => setGlobalFilter(String(value))}
+            placeholder='Buscar RCM, OT, obra, material...'
+            sx={{ width: 320 }}
+          />
+        </Box>
       </Box>
 
       <Divider />
@@ -2131,7 +2688,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             {table.getRowModel().rows.map(row => (
               <tr key={row.id}>
                 {row.getVisibleCells().map(cell => (
-                  <td key={cell.id} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
+                  <td key={cell.id} style={{ verticalAlign: 'middle', textAlign: cell.column.id === 'acciones' || cell.column.id === 'select' || cell.column.id === 'proximoVencimiento' ? 'center' : 'left' }}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -2151,247 +2708,746 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
       />
 
-      {/* Tabla de Servicios - Mostrar debajo de la tabla principal */}
-      {selectedRowId && (
-        <>
-          <Divider sx={{ my: 2 }} />
-          <Box sx={{ px: 3, pb: 3 }}>
-            {/* Header con título, número de tarjeta y botón cerrar */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Typography variant='h6'>
-                  Muestra #{findRowById(selectedRowId)?.muestra?.numeroMuestra ?? selectedRowId}
-                </Typography>
-                {(() => {
-                  const row = findRowById(selectedRowId)
-                  const numeroTarjeta = row?.numeroTarjeta ?? row?.muestra?.numeroTarjeta
+      <Dialog
+        open={Boolean(selectedRowId)}
+        onClose={() => {
+          setSelectedRowId(null)
+          setServiciosMuestra([])
+          setMuestraDetalle(null)
+          setRcmDetalleModal(null)
+        }}
+        maxWidth='md'
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            overflow: 'hidden',
+            maxWidth: 720
+          }
+        }}
+      >
+        <DialogContent sx={{ p: 0, bgcolor: '#f4f5f7' }}>
+          {(() => {
+            const row = findRowById(selectedRowId)
+            const rcmData = rcmDetalleModal ?? null
+            const muestraFromRcm = Array.isArray(rcmData?.muestras)
+              ? rcmData.muestras.find((m: any) => Number(m?.id) === Number(muestraDetalle?.id ?? row?.muestra?.id))
+              : null
+            const muestra = muestraDetalle ?? muestraFromRcm ?? row?.muestra ?? {}
+            const probetas = Array.isArray(muestra?.probetas)
+              ? muestra.probetas
+              : (Array.isArray(muestraFromRcm?.probetas) ? muestraFromRcm.probetas : [])
 
-                  if (numeroTarjeta) {
-                    return (
-                      <Chip
-                        label={`N° Tarjeta: ${numeroTarjeta}`}
-                        size='small'
-                        variant='outlined'
-                        color='primary'
-                        sx={{
-                          fontWeight: 600,
-                          fontSize: '0.875rem',
-                          px: 1
-                        }}
-                      />
-                    )
-                  }
-                  return null
-                })()}
-              </Box>
-              <IconButton
-                size='small'
-                onClick={() => {
-                  setSelectedRowId(null)
-                  setServiciosMuestra([])
-                  setMuestraDetalle(null)
-                }}
-                title='Cerrar'
-              >
-                <i className='ri-close-line' />
-              </IconButton>
-            </Box>
+            const estadoTipo = String(rcmData?.rcmType ?? 'MUESTRA').toUpperCase()
+            const estadoActual = row?.estadoMuestra ?? row?.estadoOperativo ?? 'CODIFICADO'
 
-            {/* Formulario de información de la muestra - USAR muestraDetalle */}
-            {(() => {
-              const row = findRowById(selectedRowId)
-              const muestra = muestraDetalle ?? row?.muestra ?? {}
+            const estadoPillSx = (raw?: string) => {
+              const key = String(raw ?? '').toUpperCase().trim()
+              if (key.includes('ENSAYADO')) {
+                return {
+                  color: '#08794c',
+                  borderColor: 'rgba(16, 185, 129, 0.55)',
+                  bgcolor: 'rgba(16, 185, 129, 0.16)'
+                }
+              }
+              if (key.includes('PROCESO')) {
+                return {
+                  color: '#2557d6',
+                  borderColor: 'rgba(59, 130, 246, 0.55)',
+                  bgcolor: 'rgba(59, 130, 246, 0.14)'
+                }
+              }
+              if (key.includes('CODIFIC')) {
+                return {
+                  color: '#4b5563',
+                  borderColor: 'rgba(107, 114, 128, 0.45)',
+                  bgcolor: 'rgba(156, 163, 175, 0.16)'
+                }
+              }
+              return {
+                color: '#334155',
+                borderColor: 'rgba(148, 163, 184, 0.5)',
+                bgcolor: 'rgba(148, 163, 184, 0.18)'
+              }
+            }
 
-              const [cota1, cota2] = (muestra.cotas ?? '').split('-').map(c => c.trim())
+            const belongsTag = rcmData?.codigoAgrupador?.codigo ?? row?.ss ?? '---'
+            const belongsParts = [
+              rcmData?.obra?.numeroObra ?? row?.obra?.numeroObra ?? row?.otDisplay ?? '-',
+              rcmData?.cliente?.nombreCliente ?? row?.cliente?.nombreCliente ?? '-',
+              rcmData?.obra?.nombreObra ?? rcmData?.obra?.nombre ?? ''
+            ].filter(Boolean)
+            const belongsText = belongsParts.join(' · ')
 
-              return (
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, mb: 3 }}>
-                  {/* Fila 1 */}
-                  <TextField
-                    label='Tipo Material'
-                    value={muestra.tipoMaterial ?? muestra.tipo_material ?? ''}
-                    size='small'
-                    disabled
-                    fullWidth
-                  />
-                  <TextField
-                    label='Elemento'
-                    value={muestra.elemento ?? ''}
-                    size='small'
-                    disabled
-                    fullWidth
-                  />
-                  <TextField
-                    label='Item'
-                    value={muestra.item ?? ''}
-                    size='small'
-                    disabled
-                    fullWidth
-                  />
+            const ensayador = row?.ensayador ?? rcmData?.ordenTrabajo?.user?.name ?? '-'
+            const ensayosCount = serviciosMuestra.length
+            const submuestrasCount = probetas.length
 
-                  {/* Fila 2 */}
-                  <TextField
-                    label='Grado'
-                    value={muestra.grado ?? ''}
-                    size='small'
-                    disabled
-                    fullWidth
-                  />
-                  <TextField
-                    label='Procedencia'
-                    value={muestra.procedencia ?? ''}
-                    size='small'
-                    disabled
-                    fullWidth
-                  />
-                  <TextField
-                    label='Cota 1'
-                    value={cota1 ?? ''}
-                    size='small'
-                    disabled
-                    fullWidth
-                  />
+            const detailLeft = [
+              { label: 'ÁREA', value: rcmData?.area?.nombre ?? row?.area ?? '-' },
+              { label: 'TIPO SERVICIO', value: row?.tipoServicio ?? serviciosMuestra?.[0]?.nombre ?? '-' },
+              { label: 'SEDE', value: rcmData?.sede ?? '-' },
+              { label: 'F. MUESTREO', value: formatDateDDMMYYYYDateOnlyDash(rcmData?.fechaMuestreo ?? row?.fechaMuestreo) },
+              { label: 'F. INGRESO', value: formatDateDDMMYYYYDateOnlyDash(rcmData?.fechaIngreso ?? row?.fechaIngreso) },
+              { label: 'MATERIAL', value: muestra?.tipoMaterial ?? rcmData?.tipoMaterial ?? '-' }
+            ]
 
-                  {/* Fila 3 - Cotas y ubicación */}
-                  <TextField
-                    label='Cota 2'
-                    value={cota2 ?? ''}
+            const detailRight = [
+              { label: 'ÍTEM', value: muestra?.item ?? rcmData?.item ?? '-' },
+              { label: 'ELEMENTO', value: muestra?.elemento ?? rcmData?.elemento ?? '-' },
+              { label: 'GRADO', value: muestra?.grado ?? rcmData?.grado ?? '-' },
+              { label: 'TARJETA', value: muestra?.numeroTarjeta ?? row?.numeroTarjeta ?? rcmData?.numeroTarjeta ?? '-' },
+              { label: '# TOMA', value: rcmData?.tomaMuestra ?? '-' },
+              { label: 'PROCEDENCIA', value: muestra?.procedencia ?? rcmData?.procedencia ?? '-' }
+            ]
+
+            return (
+              <Box sx={{ p: { xs: 2.5, md: 3.5 } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexWrap: 'wrap' }}>
+                    <Typography sx={{ fontSize: '2rem', fontWeight: 700, color: '#111827', lineHeight: 1.05 }}>
+                      {row?.numeroRcm ?? '-'}
+                    </Typography>
+                    <Chip
+                      label={estadoTipo}
+                      size='small'
+                      sx={{
+                        height: 24,
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        color: '#1f3fb8',
+                        borderColor: 'rgba(77, 121, 255, 0.45)',
+                        bgcolor: 'rgba(77, 121, 255, 0.16)'
+                      }}
+                      variant='outlined'
+                    />
+                    <Chip
+                      label={getOperationalLabel(estadoActual)}
+                      size='small'
+                      sx={{
+                        height: 24,
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        ...estadoPillSx(String(estadoActual))
+                      }}
+                      variant='outlined'
+                    />
+                  </Box>
+
+                  <Button
                     size='small'
-                    disabled
-                    fullWidth
-                  />
-                  <TextField
-                    label='Ubicación / Sector'
-                    value={muestra.ubicacionSector ?? muestra.ubicacion_sector ?? muestra.ubicacion ?? ''}
-                    size='small'
-                    disabled
-                    fullWidth
-                    sx={{ gridColumn: 'span 2' }}
-                  />
+                    variant='outlined'
+                    color='inherit'
+                    onClick={() => {
+                      setSelectedRowId(null)
+                      setServiciosMuestra([])
+                      setMuestraDetalle(null)
+                      setRcmDetalleModal(null)
+                    }}
+                    sx={{ minWidth: 0, px: 1.25 }}
+                  >
+                    <i className='ri-close-line' style={{ marginRight: 4 }} /> Cerrar
+                  </Button>
                 </Box>
-              )
-            })()}
 
-            {/* ELIMINADO: Botón Agregar muestra */}
+                <Box
+                  sx={{
+                    mb: 2.1,
+                    p: 1.35,
+                    borderRadius: 1,
+                    border: '1px solid #d7dcee',
+                    bgcolor: '#eceffd',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.25,
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  <Typography sx={{ fontSize: '0.83rem', fontWeight: 700, color: '#7a8498', letterSpacing: 0.5 }}>
+                    PERTENECE A
+                  </Typography>
+                  <Chip
+                    label={belongsTag}
+                    size='small'
+                    sx={{
+                      height: 24,
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      color: '#1f3fb8',
+                      borderColor: 'rgba(77, 121, 255, 0.5)',
+                      bgcolor: 'rgba(77, 121, 255, 0.14)'
+                    }}
+                    variant='outlined'
+                  />
+                  <Typography sx={{ fontSize: '0.95rem', color: '#374151' }}>
+                    {belongsText}
+                  </Typography>
+                </Box>
 
-            {/* Tabla de servicios - CON columna ACCIONES */}
-            {loadingServicios ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
-                <CircularProgress />
-              </Box>
-            ) : (
-              <TableContainer component={Paper} variant='outlined'>
-                <Table size='small'>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: 'action.hover' }}>
-                      <TableCell sx={{ fontWeight: 600 }}>CÓD. INT.</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>ENSAYO / ANÁLISIS</TableCell>
-                      <TableCell align='center' sx={{ fontWeight: 600 }}>CANTIDAD</TableCell>
-                      <TableCell align='center' sx={{ fontWeight: 600 }}>ESTADO</TableCell>
-                      <TableCell align='center' sx={{ fontWeight: 600 }}>ACCIONES</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {serviciosMuestra.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} align='center' sx={{ py: 4 }}>
-                          <Typography color='text.secondary'>
-                            No hay servicios agregados
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 2.5 }}>
+                  {[detailLeft, detailRight].map((list, colIndex) => (
+                    <Box key={colIndex}>
+                      {list.map(item => (
+                        <Box
+                          key={item.label}
+                          sx={{
+                            display: 'grid',
+                            gridTemplateColumns: '136px minmax(0, 1fr)',
+                            alignItems: 'center',
+                            py: 0.95,
+                            borderBottom: '1px solid #d7dde9',
+                            columnGap: 1.5
+                          }}
+                        >
+                          <Typography sx={{ fontSize: '0.84rem', fontWeight: 700, color: '#6b7280', letterSpacing: 0.35 }}>
+                            {item.label}
                           </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      serviciosMuestra.map((servicio, idx) => {
-                        const servicioId = servicio.id ??
-                          servicio.servicioMuestraId ??
-                          servicio.servicioId ??
-                          servicio._id ??
-                          null
 
-                        return (
-                          <TableRow
-                            key={servicioId ?? idx}
-                            sx={{ '&:hover': { bgcolor: 'action.hover' } }}
-                          >
-                            <TableCell>
-                              {servicio.codigo ?? servicio.codigoInterno ?? servicio.servicio?.codigo ?? servicioId ?? '-'}
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant='body2'>
-                                {servicio.tipo === 'Ensayo' ? 'Ensayo - ' : 'Análisis - '}
-                                {servicio.nombre ?? servicio.servicio?.nombre ?? servicio.descripcion ?? '-'}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align='center'>
-                              {servicio.cantidad ?? 1}
-                            </TableCell>
-                            <TableCell align='center'>
-                              {(() => {
-                                const estado = servicio.estado ?? servicio.estadoServicio ?? 'Codificado'
-                                const info = getOperationalInfo(estado)
-                                return (
-                                  <Chip
-                                    label={estado}
-                                    size='small'
-                                    variant='filled'
-                                    sx={{
-                                      bgcolor: info.bgcolor,
-                                      color: info.colorText,
-                                      border: `1px solid ${info.border}`,
-                                      textTransform: 'capitalize',
-                                      fontWeight: 600,
-                                      fontSize: '0.72rem',
-                                      borderRadius: 2,
-                                      px: 1,
-                                      py: 0.4
-                                    }}
-                                  />
-                                )
-                              })()}
-                            </TableCell>
-                            <TableCell align='center'>
-                              <IconButton
-                                size='small'
-                                title='Cambiar Estado'
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  if (servicioId) {
-                                    // Abrir menú para cambiar estado del servicio
-                                    handleOpenMarkMenu(e, servicioId)
-                                  }
-                                }}
-                              >
-                                <CheckBoxOutlinedIcon fontSize='small' />
-                              </IconButton>
+                          {item.label === 'ÁREA' ? (
+                            <Chip
+                              label={item.value}
+                              size='small'
+                              sx={{
+                                height: 24,
+                                width: 'fit-content',
+                                fontSize: '0.8rem',
+                                fontWeight: 700,
+                                color: '#6f39cf',
+                                borderColor: 'rgba(140, 94, 255, 0.45)',
+                                bgcolor: 'rgba(140, 94, 255, 0.14)'
+                              }}
+                              variant='outlined'
+                            />
+                          ) : item.label === 'TARJETA' ? (
+                            <Typography sx={{ fontSize: '1.05rem', fontWeight: 700, color: '#1d4ed8' }}>
+                              {item.value || '-'}
+                            </Typography>
+                          ) : (
+                            <Typography sx={{ fontSize: '1.05rem', fontWeight: 600, color: '#111827' }}>
+                              {item.value || '-'}
+                            </Typography>
+                          )}
+                        </Box>
+                      ))}
+                    </Box>
+                  ))}
+                </Box>
+
+                <Typography sx={{ mb: 1.05, fontSize: '1rem', fontWeight: 800, color: '#374151', letterSpacing: 0.35 }}>
+                  ENSAYOS ({ensayosCount})
+                </Typography>
+
+                {loadingServicios ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : (
+                  <TableContainer component={Paper} variant='outlined' sx={{ mb: 2.5, borderColor: '#d7dde9', borderRadius: 1.25 }}>
+                    <Table size='small'>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: '#eef1f6' }}>
+                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.78rem' }}>SKU</TableCell>
+                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.78rem' }}>Ensayo / Servicio</TableCell>
+                          <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.78rem' }}>Cant.</TableCell>
+                          <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.78rem' }}>Ensayador</TableCell>
+                          <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.78rem' }}>Estado</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {serviciosMuestra.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} align='center' sx={{ py: 3 }}>
+                              <Typography color='text.secondary'>No hay ensayos cargados</Typography>
                             </TableCell>
                           </TableRow>
-                        )
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
+                        ) : (
+                          serviciosMuestra.map((servicio: any, idx: number) => {
+                            const servicioId = servicio.id ?? servicio.servicioMuestraId ?? servicio.servicioId ?? servicio._id ?? null
+                            const estadoRaw = servicio.estado ?? servicio.estadoServicio ?? 'CODIFICADO'
 
-            {/* Campo de observaciones */}
-            <Box sx={{ mt: 3 }}>
-              <TextField
-                label='Observaciones Muestra'
-                value={(() => {
-                  const row = findRowById(selectedRowId)
-                  const muestra = muestraDetalle ?? row?.muestra ?? {}
-                  return muestra.observaciones ?? muestra.observacion ?? ''
-                })()}
-                multiline
-                minRows={3}
-                fullWidth
-                size='small'
-                disabled
-              />
-            </Box>
-          </Box>
-        </>
-      )}
+                            return (
+                              <TableRow key={servicioId ?? idx}>
+                                <TableCell>
+                                  <Typography
+                                    sx={{
+                                      display: 'inline-flex',
+                                      px: 1,
+                                      py: 0.2,
+                                      borderRadius: 1,
+                                      bgcolor: '#eceff3',
+                                      border: '1px solid #d0d7e2',
+                                      fontSize: '0.86rem',
+                                      fontWeight: 700,
+                                      color: '#313845'
+                                    }}
+                                  >
+                                    {servicio.codigo ?? '-'}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: '#111827', lineHeight: 1.15 }}>
+                                    {servicio.nombre ?? servicio.servicio?.nombre ?? '-'}
+                                  </Typography>
+                                  <Typography sx={{ fontSize: '0.82rem', color: '#818b9a' }}>
+                                    {servicio.norma ?? '-'}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align='center'>
+                                  <Typography sx={{ fontSize: '1rem', color: '#111827' }}>{servicio.cantidad ?? 1}</Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography sx={{ fontSize: '1rem', color: '#374151' }}>{ensayador}</Typography>
+                                </TableCell>
+                                <TableCell align='center'>
+                                  <Chip
+                                    label={getOperationalLabel(estadoRaw)}
+                                    size='small'
+                                    variant='outlined'
+                                    sx={{
+                                      fontWeight: 700,
+                                      fontSize: '0.78rem',
+                                      ...estadoPillSx(String(estadoRaw))
+                                    }}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+
+                {submuestrasCount > 0 && (
+                  <>
+                    <Typography sx={{ mb: 1.05, fontSize: '1rem', fontWeight: 800, color: '#374151', letterSpacing: 0.35 }}>
+                      SUBMUESTRAS / PROBETAS ({submuestrasCount})
+                    </Typography>
+
+                    <TableContainer component={Paper} variant='outlined' sx={{ borderColor: '#d7dde9', borderRadius: 1.25 }}>
+                      <Table size='small'>
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: '#eef1f6' }}>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6' }}>#</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6' }}>Días</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6' }}>Fecha Ensayo</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6' }}>Cant.</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6' }}>Estado</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6' }}>Vencimiento</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {probetas.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={6} align='center' sx={{ py: 3 }}>
+                                <Typography color='text.secondary'>No hay submuestras disponibles</Typography>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            probetas
+                              .slice()
+                              .sort((a: any, b: any) => Number(a?.numero ?? 0) - Number(b?.numero ?? 0))
+                              .map((probeta: any, idx: number) => {
+                                const meta = getVencimientoMeta(probeta?.fechaVencimiento, probeta?.cantidad ?? 0)
+                                const estadoRaw = probeta?.estado ?? 'CODIFICADO'
+                                const isUrgent = String(meta.label).includes('(HOY)') || String(meta.label).includes('(MAÑANA)')
+
+                                return (
+                                  <TableRow key={probeta?.id ?? idx} sx={{ bgcolor: isUrgent ? 'rgba(245, 158, 11, 0.08)' : 'inherit' }}>
+                                    <TableCell>
+                                      <Box
+                                        sx={{
+                                          width: 24,
+                                          height: 24,
+                                          borderRadius: '999px',
+                                          bgcolor: '#0b2acc',
+                                          color: '#fff',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          fontSize: '0.78rem',
+                                          fontWeight: 700
+                                        }}
+                                      >
+                                        {probeta?.numero ?? idx + 1}
+                                      </Box>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography sx={{ fontSize: '1rem', color: '#111827' }}>{probeta?.dias ?? '-'}d</Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography sx={{ fontSize: '1rem', color: '#111827' }}>
+                                        {formatDateDDMMYYYYDateOnlyDash(probeta?.fechaVencimiento)}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell align='center'>
+                                      <Typography sx={{ fontSize: '1rem', color: '#111827' }}>{probeta?.cantidad ?? '-'}</Typography>
+                                    </TableCell>
+                                    <TableCell align='center'>
+                                      <Chip
+                                        label={getOperationalLabel(estadoRaw)}
+                                        size='small'
+                                        variant='outlined'
+                                        sx={{
+                                          fontWeight: 700,
+                                          fontSize: '0.78rem',
+                                          ...estadoPillSx(String(estadoRaw))
+                                        }}
+                                      />
+                                    </TableCell>
+                                    <TableCell align='center'>
+                                      <Chip
+                                        label={meta.label}
+                                        size='small'
+                                        variant='outlined'
+                                        sx={{
+                                          fontWeight: 700,
+                                          color: meta.colors.color,
+                                          borderColor: meta.colors.borderColor,
+                                          bgcolor: meta.colors.backgroundColor
+                                        }}
+                                      />
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                              })
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </>
+                )}
+              </Box>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Gestionar Ensayos ──────────────────────────────────────── */}
+      <Dialog
+        open={gestionarOpen}
+        onClose={() => setGestionarOpen(false)}
+        maxWidth='md'
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2, overflow: 'hidden', maxWidth: 720 } }}
+      >
+        {(() => {
+          const row = gestionarRow
+          const rcmData = gestionarRcmData
+          const estadoTipo = String(rcmData?.rcmType ?? 'MUESTRA').toUpperCase()
+          const estadoActual = row?.estadoMuestra ?? row?.estadoOperativo ?? 'CODIFICADO'
+          const { bgcolor: estadoBg, colorText: estadoColor, border: estadoBorder } = getOperationalInfo(estadoActual)
+          const tipoChipSx = estadoTipo === 'MUESTRA'
+            ? { bgcolor: '#ede9fe', color: '#5b21b6', borderColor: '#c4b5fd' }
+            : estadoTipo === 'CONTROL'
+              ? { bgcolor: '#fef9c3', color: '#92400e', borderColor: '#fde68a' }
+              : { bgcolor: '#dcfce7', color: '#166534', borderColor: '#bbf7d0' }
+
+          const areaLabel = rcmData?.area?.nombre ?? row?.area ?? '-'
+          const tipoServicioLabel = row?.tipoServicio ?? gestionarServicios?.[0]?.nombre ?? '-'
+          const materialLabel = gestionarMuestra?.tipoMaterial ?? '-'
+          const itemLabel = gestionarMuestra?.item ?? '-'
+          const tarjetaLabel = gestionarMuestra?.numeroTarjeta ?? row?.numeroTarjeta ?? '-'
+          const otLabel = rcmData?.ordenTrabajo?.correlativo ?? rcmData?.ordenTrabajo?.correlativ ?? row?.otDisplay ?? '-'
+
+          const estadoPillSx = (raw?: string) => {
+            const k = String(raw ?? '').toUpperCase()
+            if (k.includes('ENSAYADO')) return { color: '#08794c', borderColor: 'rgba(16,185,129,.55)', bgcolor: 'rgba(16,185,129,.16)' }
+            if (k.includes('PROCESO')) return { color: '#2557d6', borderColor: 'rgba(59,130,246,.55)', bgcolor: 'rgba(59,130,246,.14)' }
+            if (k.includes('CODIFIC')) return { color: '#4b5563', borderColor: 'rgba(107,114,128,.45)', bgcolor: 'rgba(156,163,175,.16)' }
+            return { color: '#475569', borderColor: 'rgba(100,116,139,.4)', bgcolor: 'rgba(148,163,184,.14)' }
+          }
+
+          const tienesProbetasServicio = (s: any) => {
+            const n = String(s?.nombre ?? '').toLowerCase()
+            return n.includes('probeta') || n.includes('compresión') || n.includes('compresion') || n.includes('cilíndrica') || n.includes('cilindrica')
+          }
+
+          return (
+            <>
+              {/* Header */}
+              <Box sx={{ px: 3, py: 2, bgcolor: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexWrap: 'wrap' }}>
+                  <Typography sx={{ fontSize: '1.35rem', fontWeight: 700, color: '#111827' }}>{row?.numeroRcm ?? '-'}</Typography>
+                  <Chip label={estadoTipo} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.75rem', ...tipoChipSx }} />
+                  <Chip
+                    label={getOperationalLabel(estadoActual)}
+                    size='small'
+                    variant='outlined'
+                    sx={{ fontWeight: 700, fontSize: '0.75rem', color: estadoColor, borderColor: estadoBorder, bgcolor: estadoBg }}
+                  />
+                </Box>
+                <IconButton size='small' onClick={() => setGestionarOpen(false)} sx={{ color: '#6b7280' }}>
+                  <i className='ri-close-line' style={{ fontSize: 18 }} />
+                </IconButton>
+              </Box>
+
+              {/* Info bar */}
+              <Box sx={{ px: 3, py: 1.5, bgcolor: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Box>
+                  <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', letterSpacing: 0.5, mb: 0.4 }}>ÁREA / TIPO SERVICIO</Typography>
+                  <Chip label={areaLabel} size='small' variant='outlined' sx={{ fontWeight: 600, fontSize: '0.75rem', bgcolor: '#f3f0ff', color: '#6d28d9', borderColor: '#c4b5fd', mr: 0.5 }} />
+                  <Typography component='span' sx={{ fontSize: '0.82rem', color: '#374151' }}>{tipoServicioLabel}</Typography>
+                </Box>
+                <Box>
+                  <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', letterSpacing: 0.5, mb: 0.4 }}>MATERIAL / ÍTEM</Typography>
+                  <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: '#111827' }}>{materialLabel}{itemLabel !== '-' ? ` — ${itemLabel}` : ''}</Typography>
+                </Box>
+                <Box>
+                  <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', letterSpacing: 0.5, mb: 0.4 }}>TARJETA</Typography>
+                  <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#1d4ed8' }}>{tarjetaLabel}</Typography>
+                </Box>
+                <Box>
+                  <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', letterSpacing: 0.5, mb: 0.4 }}>OT</Typography>
+                  <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: '#111827' }}>{otLabel}</Typography>
+                </Box>
+              </Box>
+
+              <DialogContent sx={{ p: 3, bgcolor: '#fff' }}>
+                {gestionarLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
+                    <CircularProgress size={36} />
+                  </Box>
+                ) : (
+                  <>
+                    {/* Asignación de ensayador global */}
+                    <Box sx={{ border: '1px solid #e5e7eb', borderRadius: 1.5, p: 2, mb: 2.5 }}>
+                      <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', letterSpacing: 0.5, mb: 1.2 }}>ASIGNACIÓN DE ENSAYADOR</Typography>
+                      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                        <Select
+                          size='small'
+                          displayEmpty
+                          value={gestionarEnsayadorGlobal}
+                          onChange={e => setGestionarEnsayadorGlobal(String(e.target.value))}
+                          sx={{ flex: 1, fontSize: '0.88rem' }}
+                        >
+                          <MenuItem value=''><em style={{ color: '#9ca3af' }}>Seleccionar ensayador...</em></MenuItem>
+                          {ensayadorOptions.map(name => (
+                            <MenuItem key={name} value={name}>{name}</MenuItem>
+                          ))}
+                        </Select>
+                        <Button
+                          variant='contained'
+                          size='small'
+                          disabled={!gestionarEnsayadorGlobal}
+                          onClick={() => {
+                            const map: Record<number, string> = {}
+                            gestionarServicios.forEach((s: any) => { map[s.id] = gestionarEnsayadorGlobal })
+                            setGestionarEnsayadores(map)
+                          }}
+                          sx={{ whiteSpace: 'nowrap', fontWeight: 700, textTransform: 'none', bgcolor: '#1e40af', '&:hover': { bgcolor: '#1d3a9b' } }}
+                        >
+                          Aplicar a todos
+                        </Button>
+                      </Box>
+                      <Typography sx={{ fontSize: '0.72rem', color: '#9ca3af', mt: 0.8 }}>
+                        También puedes asignar individualmente por ensayo en la tabla inferior.
+                      </Typography>
+                    </Box>
+
+                    {/* Tabla de ensayos */}
+                    <Typography sx={{ fontWeight: 800, fontSize: '0.88rem', color: '#374151', mb: 1, letterSpacing: 0.35 }}>
+                      ENSAYOS / SERVICIOS ({gestionarServicios.length})
+                    </Typography>
+                    <TableContainer component={Paper} variant='outlined' sx={{ borderColor: '#d7dde9', borderRadius: 1.25, mb: 2.5 }}>
+                      <Table size='small'>
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: '#f9fafb' }}>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', width: 60 }}>SKU</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6' }}>Ensayo / Servicio</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', width: 170 }}>Ensayador</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', width: 110 }}>Estado</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', width: 100 }}>Acción</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {gestionarServicios.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={5} align='center' sx={{ py: 3, color: '#9ca3af' }}>Sin ensayos registrados</TableCell>
+                            </TableRow>
+                          ) : (
+                            gestionarServicios.map((s: any) => {
+                              const estadoActualServicio = gestionarEstados[s.id] ?? s.estado ?? 'CODIFICADO'
+                              const ensayadorActual = gestionarEnsayadores[s.id] ?? ''
+                              const esEnsayado = String(estadoActualServicio).toUpperCase().includes('ENSAYADO')
+                              const esProbeta = tienesProbetasServicio(s)
+                              return (
+                                <TableRow key={s.id}>
+                                  <TableCell>
+                                    <Box sx={{ display: 'inline-flex', px: 1, py: 0.2, borderRadius: 1, bgcolor: '#eceff3', fontSize: '0.78rem', fontWeight: 700, color: '#374151' }}>
+                                      {s.codigo ?? s.id}
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: '#111827' }}>{s.nombre}</Typography>
+                                    {s.norma && <Typography sx={{ fontSize: '0.72rem', color: '#9ca3af' }}>{s.norma}</Typography>}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Select
+                                      size='small'
+                                      displayEmpty
+                                      value={ensayadorActual}
+                                      onChange={e => setGestionarEnsayadores(prev => ({ ...prev, [s.id]: String(e.target.value) }))}
+                                      sx={{ width: '100%', fontSize: '0.82rem' }}
+                                    >
+                                      <MenuItem value=''><em style={{ color: '#9ca3af' }}>—</em></MenuItem>
+                                      {ensayadorOptions.map(name => (
+                                        <MenuItem key={name} value={name}>{name}</MenuItem>
+                                      ))}
+                                    </Select>
+                                  </TableCell>
+                                  <TableCell align='center'>
+                                    <Chip
+                                      label={getOperationalLabel(estadoActualServicio)}
+                                      size='small'
+                                      variant='outlined'
+                                      sx={{ fontWeight: 700, fontSize: '0.75rem', ...estadoPillSx(estadoActualServicio) }}
+                                    />
+                                  </TableCell>
+                                  <TableCell align='center'>
+                                    {(() => {
+                                      const estadoKey = String(estadoActualServicio).toUpperCase()
+                                      const esCodificado = estadoKey.includes('CODIFIC')
+                                      const esEnProceso = estadoKey.includes('PROCESO')
+
+                                      if (esEnsayado) {
+                                        return (
+                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, justifyContent: 'center', color: '#16a34a', fontWeight: 700, fontSize: '0.82rem' }}>
+                                            <i className='ri-checkbox-circle-fill' style={{ fontSize: 15 }} />
+                                            Listo
+                                          </Box>
+                                        )
+                                      }
+
+                                      if (esProbeta && gestionarProbetas.length > 0) {
+                                        return (
+                                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
+                                            {gestionarProbetas.slice().sort((a: any, b: any) => a.dias - b.dias).map((p: any, i: number) => (
+                                              <Button
+                                                key={p.id ?? i}
+                                                size='small'
+                                                variant='outlined'
+                                                sx={{ fontSize: '0.72rem', fontWeight: 700, py: 0.1, px: 0.8, textTransform: 'none', borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff', minWidth: 0 }}
+                                              >
+                                                Ficha {p.dias}d
+                                              </Button>
+                                            ))}
+                                          </Box>
+                                        )
+                                      }
+
+                                      if (esCodificado) {
+                                        return (
+                                          <Button
+                                            size='small'
+                                            variant='outlined'
+                                            onClick={() => setGestionarEstados(prev => ({ ...prev, [s.id]: 'EN_PROCESO' }))}
+                                            startIcon={<i className='ri-play-fill' style={{ fontSize: 13 }} />}
+                                            sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1.2, textTransform: 'none', borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff', minWidth: 0 }}
+                                          >
+                                            Iniciar
+                                          </Button>
+                                        )
+                                      }
+
+                                      if (esEnProceso) {
+                                        return (
+                                          <Button
+                                            size='small'
+                                            variant='outlined'
+                                            onClick={() => setGestionarEstados(prev => ({ ...prev, [s.id]: 'ENSAYADO' }))}
+                                            startIcon={<i className='ri-check-line' style={{ fontSize: 13 }} />}
+                                            sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1.2, textTransform: 'none', borderColor: '#bbf7d0', color: '#16a34a', bgcolor: '#f0fdf4', minWidth: 0 }}
+                                          >
+                                            Finalizar
+                                          </Button>
+                                        )
+                                      }
+
+                                      return null
+                                    })()}
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+
+                    {/* Probetas / submuestras */}
+                    {gestionarProbetas.length > 0 && (
+                      <>
+                        <Typography sx={{ fontWeight: 800, fontSize: '0.88rem', color: '#374151', mb: 1, letterSpacing: 0.35 }}>
+                          SUBMUESTRAS / PROBETAS
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                          {gestionarProbetas.slice().sort((a: any, b: any) => Number(a.numero ?? 0) - Number(b.numero ?? 0)).map((p: any, i: number) => {
+                            const meta = getVencimientoMeta(p?.fechaVencimiento, p?.cantidad ?? 0)
+                            const isHoy = String(meta.label).includes('HOY')
+                            const esMañana = String(meta.label).includes('MAÑANA')
+                            const isUrgent = isHoy || esMañana
+                            return (
+                              <Box
+                                key={p.id ?? i}
+                                sx={{
+                                  border: `1px solid ${isUrgent ? '#fca5a5' : '#e5e7eb'}`,
+                                  borderRadius: 1.5,
+                                  p: 1.5,
+                                  minWidth: 160,
+                                  bgcolor: isUrgent ? 'rgba(254,226,226,.45)' : '#fff',
+                                  flex: '1 1 160px',
+                                  maxWidth: 220
+                                }}
+                              >
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                  <Box sx={{ width: 26, height: 26, borderRadius: '999px', bgcolor: '#0b2acc', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 700 }}>
+                                    #{p.numero ?? i + 1}
+                                  </Box>
+                                  {isUrgent ? (
+                                    <Chip label={meta.label} size='small' sx={{ fontWeight: 700, fontSize: '0.7rem', bgcolor: '#fee2e2', color: '#b91c1c', border: 'none' }} />
+                                  ) : (
+                                    <Typography sx={{ fontSize: '0.75rem', color: '#6b7280' }}>{p.dias}d</Typography>
+                                  )}
+                                </Box>
+                                <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#111827' }}>{p.dias} días · {formatDateDDMMYYYYDateOnlyDash(p.fechaVencimiento)}</Typography>
+                                <Typography sx={{ fontSize: '0.75rem', color: '#6b7280', mb: 0.5 }}>{p.cantidad} probeta{p.cantidad !== 1 ? 's' : ''}</Typography>
+                                <Chip
+                                  label={getOperationalLabel(p.estado ?? 'CODIFICADO')}
+                                  size='small'
+                                  variant='outlined'
+                                  sx={{ fontWeight: 700, fontSize: '0.72rem', ...estadoPillSx(p.estado ?? 'CODIFICADO') }}
+                                />
+                              </Box>
+                            )
+                          })}
+                        </Box>
+                      </>
+                    )}
+                  </>
+                )}
+              </DialogContent>
+
+              {/* Footer */}
+              <Box sx={{ px: 3, py: 2, bgcolor: '#f9fafb', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+                <Button variant='outlined' onClick={() => setGestionarOpen(false)} sx={{ textTransform: 'none', fontWeight: 600, color: '#374151', borderColor: '#d1d5db' }}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant='contained'
+                  disabled={gestionarSaving}
+                  onClick={handleGuardarGestionar}
+                  startIcon={gestionarSaving ? <CircularProgress size={14} color='inherit' /> : <i className='ri-save-line' />}
+                  sx={{ textTransform: 'none', fontWeight: 700, bgcolor: '#1e40af', '&:hover': { bgcolor: '#1d3a9b' } }}
+                >
+                  {gestionarSaving ? 'Guardando...' : 'Guardar Cambios'}
+                </Button>
+              </Box>
+            </>
+          )
+        })()}
+      </Dialog>
 
       {/* Menu cambio de estado - TABLA PRINCIPAL (DISABLED) */}
       <Menu

@@ -1026,6 +1026,7 @@ model CodigoAgrupador {
   codigoId            String                  @unique
   codigoNombre        String
   descripcionServicio String?
+  notasInternas       String?
   cantidad            Int                     @default(1)
   unidad              String                  @default("unid")
   facturacion         String                  @default("Unitario")

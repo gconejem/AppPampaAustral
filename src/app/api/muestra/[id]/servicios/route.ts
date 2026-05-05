@@ -29,24 +29,30 @@ export async function GET(
             return NextResponse.json({ error: 'Muestra no encontrada' }, { status: 404 })
         }
 
-        // ✅ 2. Cargar servicioMuestra relacionados con esta muestra
+        // ✅ 2. Cargar servicioMuestra relacionados con esta muestra (incluye último historial para obtener ensayador)
         const servicios = await prisma.servicioMuestra.findMany({
             where: {
                 muestraId: muestraId
             },
             include: {
-                producto: true
+                producto: true,
+                history: {
+                    orderBy: { registro: 'desc' },
+                    take: 1,
+                    select: { aplicadoA: true }
+                }
             }
         })
 
-        // ✅ 3. Mapear servicios - SKU como código
+        // ✅ 3. Mapear servicios - SKU como código + ensayador desde historial (aplicadoA)
         const serviciosEnriquecidos = servicios.map(s => ({
             id: s.id,
-            codigo: s.producto?.sku ?? s.producto?.SKU ?? s.producto?.codigo ?? s.productoId?.toString() ?? s.id.toString(),
+            codigo: s.producto?.sku ?? (s.producto as any)?.SKU ?? (s.producto as any)?.codigo ?? s.productoId?.toString() ?? s.id.toString(),
             nombre: s.producto?.nombre ?? 'Sin nombre',
             tipo: s.producto?.familia?.includes('Ensayo') ? 'Ensayo' : 'Análisis',
             cantidad: s.cantidad ?? 1,
             estado: s.estado ?? 'CODIFICADO',
+            ensayador: s.history?.[0]?.aplicadoA ?? null,
             area: s.producto?.area,
             familia: s.producto?.familia
         }))

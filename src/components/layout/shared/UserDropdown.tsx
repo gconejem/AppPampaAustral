@@ -62,9 +62,11 @@ const UserDropdown = () => {
 
   const handleUserLogout = async () => {
     try {
-      await signOut({ 
-        callbackUrl: '/login',
-        redirect: true 
+      const loginUrl = `${window.location.origin}/login`
+
+      await signOut({
+        callbackUrl: loginUrl,
+        redirect: true
       })
     } catch (error) {
       console.error('Error al cerrar sesión:', error)
@@ -117,7 +119,7 @@ const UserDropdown = () => {
                     </div>
                   </div>
                   <Divider className='mlb-1' />
-                  
+
                   {/* BOTÓN DE LOGOUT */}
                   <div className='flex items-center plb-2 pli-4'>
                     <Button

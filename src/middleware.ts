@@ -14,6 +14,12 @@ function getAllowedOrigin(request) {
 
 export function middleware(request) {
     const pathname = request.nextUrl?.pathname || ''
+
+    // Normaliza el login localizado (ej: /en/login) hacia la ruta real /login.
+    if (/^\/(en|fr|ar)\/login\/?$/i.test(pathname)) {
+        return NextResponse.redirect(new URL('/login', request.url))
+    }
+
     if (pathname.startsWith('/api')) {
         return NextResponse.next()
     }
