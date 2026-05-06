@@ -27,6 +27,7 @@ interface JsonEditorModalProps {
     onClose: () => void
     ot: {
         id: string
+        numeroCorrelativo?: number | null
         jsonOT?: any
         tipoOT?: {
             codigo?: string | null
@@ -58,6 +59,7 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
     const [snackbarOpen, setSnackbarOpen] = useState(false)
     const [snackbarMessage, setSnackbarMessage] = useState('')
     const [generatingPDF, setGeneratingPDF] = useState(false)
+    const numeroOT = ot?.numeroCorrelativo != null ? String(ot.numeroCorrelativo).padStart(6, '0') : ot?.id
 
     // Load JSON data when modal opens
     useEffect(() => {
@@ -259,7 +261,7 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
                 <Box display="flex" justifyContent="space-between" alignItems="flex-start">
                     <Box>
                         <Typography variant="h6" sx={{ mb: 0.5 }}>
-                            Numero de ot: {ot?.id} - {ot?.tipoOT?.codigo || 'Sin código'} - {ot?.tipoOT?.descripcion || 'Sin descripción'}
+                            Numero de ot: {numeroOT} - {ot?.tipoOT?.codigo || 'Sin código'} - {ot?.tipoOT?.descripcion || 'Sin descripción'}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                             {ot?.agenda?.cliente?.nombreCliente || 'Sin cliente'} - N° de Obra: {ot?.agenda?.obra?.numeroObra || 'Sin número de obra'}
