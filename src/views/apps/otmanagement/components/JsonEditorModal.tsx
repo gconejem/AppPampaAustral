@@ -20,7 +20,6 @@ import {
 import CloseIcon from '@mui/icons-material/Close'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import JsonView from 'react18-json-view'
-import 'react18-json-view/src/style.css'
 
 interface JsonEditorModalProps {
     open: boolean

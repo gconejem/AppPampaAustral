@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @import 'react-datepicker/dist/react-datepicker.css';
+@import 'react18-json-view/src/style.css';
 
 :root {
   --border-radius: var(--mui-shape-borderRadius);
