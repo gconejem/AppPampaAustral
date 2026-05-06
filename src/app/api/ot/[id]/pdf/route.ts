@@ -7,6 +7,14 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 import { parseDateFromBackend } from '@/utils/dateUtils'
 
+const getOTNumber = (ot: any) => {
+  if (ot.numeroCorrelativo != null) {
+    return String(ot.numeroCorrelativo).padStart(6, '0')
+  }
+
+  return ot.tipoOT?.codigo || ot.clave || ot.correlativ || ot.id
+}
+
 // Función para renderizar el HTML del PDF para Control de Compactación (R-12-03)
 function renderControlCompactacionHTML(ot: any, logoBase64: string) {
   const jsonData = ot.jsonOT || {}
@@ -2560,7 +2568,7 @@ function renderGenericOTHTML(ot: any, logoBase64: string) {
       <div class="info-grid">
         <div class="info-item">
           <div class="label">OT N°:</div>
-          <div>${ot.id}</div>
+          <div>${getOTNumber(ot)}</div>
         </div>
         <div class="info-item">
           <div class="label">Fecha:</div>
@@ -2937,7 +2945,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     // Generar nombre del archivo
     const tipoCode = ot.tipoOT?.codigo || 'OT'
-    const fileName = `${tipoCode}_${ot.id}.pdf`
+    const fileName = `${tipoCode}_${getOTNumber(ot)}.pdf`
 
     return new NextResponse(Buffer.from(pdfBuffer), {
       headers: {

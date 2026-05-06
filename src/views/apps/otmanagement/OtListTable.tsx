@@ -109,6 +109,14 @@ const getOTCode = (tipoOT: any) => {
   return 'Sin código'
 }
 
+const getOTNumber = (ot: OrdenTrabajo) => {
+  if (ot.numeroCorrelativo != null) {
+    return String(ot.numeroCorrelativo).padStart(6, '0')
+  }
+
+  return getOTCode(ot.tipoOT)
+}
+
 const OtListTable = ({
   selectedVisit,
   selectedVisits,
@@ -466,7 +474,7 @@ const OtListTable = ({
 
       // Generar nombre del archivo
       const tipoCode = ot.tipoOT?.codigo || 'OT'
-      const fileName = `${tipoCode}_${ot.id}.pdf`
+      const fileName = `${tipoCode}_${getOTNumber(ot)}.pdf`
       link.download = fileName
 
       // Simular click para iniciar descarga
@@ -561,7 +569,7 @@ const OtListTable = ({
       })
 
       const tipoCode = ot.tipoOT?.codigo || 'OT'
-      const fileName = `${tipoCode}_${ot.id}.pdf`
+      const fileName = `${tipoCode}_${getOTNumber(ot)}.pdf`
 
       // 3. Obtener información
       const clienteObraInfo = getClienteObraFromOT(ot)

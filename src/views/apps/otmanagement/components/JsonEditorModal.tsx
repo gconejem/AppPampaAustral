@@ -58,7 +58,9 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
     const [snackbarOpen, setSnackbarOpen] = useState(false)
     const [snackbarMessage, setSnackbarMessage] = useState('')
     const [generatingPDF, setGeneratingPDF] = useState(false)
-    const numeroOT = ot?.numeroCorrelativo != null ? String(ot.numeroCorrelativo).padStart(6, '0') : ot?.id
+    const numeroOT = ot?.numeroCorrelativo != null
+        ? String(ot.numeroCorrelativo).padStart(6, '0')
+        : ot?.tipoOT?.codigo || ot?.id
 
     // Load JSON data when modal opens
     useEffect(() => {
@@ -224,7 +226,7 @@ const JsonEditorModal = ({ open, onClose, ot, onSave }: JsonEditorModalProps) =>
 
             // Generar nombre del archivo
             const tipoCode = ot.tipoOT?.codigo || 'OT'
-            const fileName = `${tipoCode}_${ot.id}.pdf`
+            const fileName = `${tipoCode}_${numeroOT}.pdf`
             link.download = fileName
 
             // Simular click para iniciar descarga
