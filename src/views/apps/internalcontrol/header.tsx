@@ -110,6 +110,11 @@ const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, sel
     return codigo && descripcion ? `${codigo} ${descripcion}` : codigo || descripcion
   }
 
+  const formatNumeroOT = () => {
+    if (otData.numeroCorrelativo != null) return String(otData.numeroCorrelativo).padStart(6, '0')
+    return otData.numeroOT || otData.clave || otData.correlativ || otData.id || ''
+  }
+
   // Formatear obra: "numero — nombre"
   const formatObra = () => {
     const numeroObra = otData.agenda?.obra?.numeroObra || ''
@@ -290,7 +295,7 @@ const Header = ({ otData, loading, hasSavedRcms = false, selectedAreaNombre, sel
                   N° OT
                 </Typography>
                 <Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-                  {otData.numeroOT || ''}
+                  {formatNumeroOT()}
                 </Typography>
               </Box>
             </Grid>
