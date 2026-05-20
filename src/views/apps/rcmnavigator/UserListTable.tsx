@@ -5,10 +5,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRef } from 'react'
 
 // NextAuth
+import { usePathname } from 'next/navigation'
+
 import { useSession } from 'next-auth/react'
 
 // Next Imports
-import { usePathname } from 'next/navigation'
 
 // TanStack React Table
 import {
@@ -54,6 +55,7 @@ import TableContainer from '@mui/material/TableContainer'
 import Paper from '@mui/material/Paper'
 import CloseIcon from '@mui/icons-material/Close'
 import CheckBoxOutlinedIcon from '@mui/icons-material/CheckBoxOutlined'
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
@@ -73,6 +75,7 @@ import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItemMUI from '@mui/material/MenuItem' // avoid name clash if MenuItem used above
 import FormHelperText from '@mui/material/FormHelperText'
+
 import { OPERATIONAL_STATES } from '@/constants/operationalStates'
 import ADMINISTRATIVE_STATES from '../../../constants/administrativeStates'
 
@@ -82,6 +85,7 @@ import tableStyles from '@core/styles/table.module.css'
 // normalizar texto: quitar diacríticos, pasar a minúsculas y trim
 function normalizeText(v: any) {
   if (v === null || v === undefined) return ''
+
   try {
     let s = String(v)
 
@@ -113,9 +117,11 @@ const toSortableText = (v: any) => normalizeText(v).toLowerCase()
 const compareText = (a: any, b: any) => {
   const aa = toSortableText(a)
   const bb = toSortableText(b)
+
   if (!aa && !bb) return 0
   if (!aa) return 1
   if (!bb) return -1
+
   return esCollator.compare(aa, bb)
 }
 
@@ -123,17 +129,22 @@ const toSortableNumber = (v: any): number | null => {
   if (v === null || typeof v === 'undefined') return null
   if (typeof v === 'number') return Number.isFinite(v) ? v : null
   const s = String(v).trim()
+
   if (!s || s === '-') return null
   const n = Number(s)
+
+
   return Number.isFinite(n) ? n : null
 }
 
 const compareNumber = (a: any, b: any) => {
   const na = toSortableNumber(a)
   const nb = toSortableNumber(b)
+
   if (na == null && nb == null) return 0
   if (na == null) return 1
   if (nb == null) return -1
+
   return na === nb ? 0 : na > nb ? 1 : -1
 }
 
@@ -175,20 +186,27 @@ const DebouncedInput = ({
 const getAdministrativeStateColor = (raw?: string) => {
   if (!raw) return '#cccccc'
   const s = normalizeText(raw)
+
   // buscar por value exacto (value es mayúsculas)
   const byValue = ADMINISTRATIVE_STATES.find(a => String(a.value).toLowerCase() === String(raw).toLowerCase())
+
   if (byValue) return byValue.color ?? '#cccccc'
+
   // buscar por label normalizado
   const byLabel = ADMINISTRATIVE_STATES.find(a => normalizeText(a.label) === s)
+
   if (byLabel) return byLabel.color ?? '#cccccc'
+
   // fallback: si raw contiene 'pag' devolver verde
   if (s.includes('pag')) return '#2E7D32ff'
+
   return '#cccccc'
 }
 
 // RCM type (kept)
 interface RCM {
   id: number
+
   // Tabla principal ahora muestra Códigos Producto (agrupadores)
   codigoNombre?: string | null
   descripcionServicio?: string | null
@@ -250,7 +268,9 @@ const fuzzyFilter: FilterFn<RCM> = (row, columnId, value) => {
   const raw = row.getValue(columnId)
   const haystack = normalizeText(raw).toLowerCase()
   const needle = normalizeText(value).toLowerCase()
+
   if (!needle) return true
+
   return haystack.includes(needle)
 }
 
@@ -270,9 +290,11 @@ const UserListTable2 = ({
 
   const getCurrentUserName = () => {
     const name = session?.user?.name
+
     if (typeof name === 'string' && name.trim()) return name.trim()
 
     const email = session?.user?.email
+
     if (typeof email === 'string' && email.trim()) return email.trim()
 
     return null
@@ -285,6 +307,7 @@ const UserListTable2 = ({
   const [selectedCodigoId, setSelectedCodigoId] = useState<number | null>(null)
   const tableKeyboardRef = useRef<HTMLDivElement | null>(null)
   const [savingHistory, setSavingHistory] = useState(false)
+
   const [formErrors, setFormErrors] = useState<{
     eventType?: string
     motivo?: string
@@ -301,6 +324,8 @@ const UserListTable2 = ({
     const r = parseInt(h.substring(0, 2), 16)
     const g = parseInt(h.substring(2, 4), 16)
     const b = parseInt(h.substring(4, 6), 16)
+
+
     return `rgba(${r}, ${g}, ${b}, ${alpha})`
   }
 
@@ -313,6 +338,8 @@ const UserListTable2 = ({
     const bgcolor = hexToRgba(hex, 0.32) // fondo con más presencia
     const border = hexToRgba(hex, 0.42) // borde sutil más visible
     const colorText = '#7c7778' // texto siempre negro para mayor nitidez
+
+
     return { hex, bgcolor, colorText, border }
   }
 
@@ -320,6 +347,7 @@ const UserListTable2 = ({
   const getAdministrativeInfo = (raw?: string) => {
     if (!raw) return { hex: undefined as string | undefined, bgcolor: 'rgba(0,0,0,0.06)', colorText: '#000', border: 'transparent' }
     const sVal = String(raw).trim()
+
     // intentar mapear por value o por label
     const byValue = ADMINISTRATIVE_STATES.find(a => String(a.value).toLowerCase() === sVal.toLowerCase())
     const byLabel = ADMINISTRATIVE_STATES.find(a => normalizeText(a.label) === normalizeText(sVal))
@@ -328,8 +356,11 @@ const UserListTable2 = ({
     const bgcolor = hexToRgba(hex, 0.32)
     const border = hexToRgba(hex, 0.42)
     const colorText = '#7c7778'
+
+
     return { hex, bgcolor, colorText, border }
   }
+
   // ...existing code...
 
 
@@ -340,6 +371,8 @@ const UserListTable2 = ({
     const st = OPERATIONAL_STATES.find(item => item.value === key || item.label.toUpperCase() === key)
     const color = st?.color ?? '#9E9E9E'
     const bg = hexToRgba(color, 0.12)
+
+
     return { bgcolor: bg, color }
   }
 
@@ -349,27 +382,36 @@ const UserListTable2 = ({
 
   const normalizeStateKey = (raw?: string | null) => {
     const s = String(raw ?? '').trim()
+
     if (!s) return null
     if (s.includes('_')) return s.toUpperCase()
+
     return s.toUpperCase().replace(/\s+/g, '_')
   }
 
   const pickStateFromCounts = (counts: Record<string, number> | undefined, priority: string[]) => {
     if (!counts) return null
+
     for (const p of priority) {
       if ((counts[p] ?? 0) > 0) return p
     }
+
     const keys = Object.keys(counts)
+
     if (!keys.length) return null
     let best: string | null = null
     let bestN = -1
+
     for (const k of keys) {
       const n = Number(counts[k] ?? 0)
+
       if (n > bestN) {
         bestN = n
         best = k
       }
     }
+
+
     return best
   }
 
@@ -382,25 +424,28 @@ const UserListTable2 = ({
   const [markDialogAction, setMarkDialogAction] = useState<string | null>(null)
   const [markDialogRowId, setMarkDialogRowId] = useState<number | null>(null)
   const [informeNumber, setInformeNumber] = useState<string>('')
+
   // campos para "En Corrección" / EVENTO
   const [correctionMotivo, setCorrectionMotivo] = useState<string>('')
   const [correctionObservaciones, setCorrectionObservaciones] = useState<string>('')
+
   // Tipo de Evento: 'INFO_PENDIENTE' | 'ERROR_INTERNO' | 'CORRECCION'
   const [eventType, setEventType] = useState<string>('')
   const [eventReturnState, setEventReturnState] = useState<string>('')
 
   // Meta para el popup de cierre de evento (se obtiene desde historial)
   const [closeEventoLoading, setCloseEventoLoading] = useState(false)
+
   const [closeEventoMeta, setCloseEventoMeta] = useState<
     | null
     | {
-        tipoLabel: string
-        motivoTitulo: string
-        descripcion: string | null
-        registradoTxt: string | null
-        venceTxt: string | null
-        tone: 'warning' | 'error' | 'secondary'
-      }
+      tipoLabel: string
+      motivoTitulo: string
+      descripcion: string | null
+      registradoTxt: string | null
+      venceTxt: string | null
+      tone: 'warning' | 'error' | 'secondary'
+    }
   >(null)
 
   // ---- Helpers que dependen de `data` (dentro del componente) ----
@@ -408,33 +453,43 @@ const UserListTable2 = ({
 
   const normalizeStateForCompare = (raw?: any) => {
     const key = normalizeStateKey(raw)
+
+
     return key ?? normalizeState(raw)
   }
 
   const formatStateForChip = (raw?: any) => {
     const key = normalizeStateForCompare(raw)
+
     if (!key) return '-'
+
     return String(key).replace(/_/g, ' ')
   }
 
   const getCurrentStateForRow = (rowId?: number | null) => {
     if (rowId == null) return ''
     const target = Number(rowId)
+
     const r = data.find(d => {
       const dId = Number((d as any).id)
       const rep = (d as any).representativeRcmId
       const repId = rep == null ? null : Number(rep)
+
+
       return dId === target || (repId != null && repId === target)
     })
+
     if (!r) return ''
 
     // 1) prefer explicit estadoOperativo
     const s1 = r.estadoOperativo ?? (Array.isArray(r.servicios) && r.servicios.length ? (r.servicios[0] as any).estado : '')
     const key1 = normalizeStateKey(s1) ?? normalizeState(s1)
+
     if (key1) return key1
 
     // 2) fallback: infer from aggregated counts (if available)
     const counts = (r as any).estadoOperativoCounts as Record<string, number> | undefined
+
     if (counts && typeof counts === 'object') {
       const inferred = pickStateFromCounts(counts, [
         'EVENTO',
@@ -447,7 +502,9 @@ const UserListTable2 = ({
         'FIRMADO',
         'ENVIADO'
       ])
+
       const key2 = normalizeStateKey(inferred) ?? normalizeState(inferred ?? '')
+
       if (key2) return key2
     }
 
@@ -494,6 +551,7 @@ const UserListTable2 = ({
 
     return items
   }
+
   // ---------------------------------------------------
 
   // Historial dialog
@@ -528,6 +586,7 @@ const UserListTable2 = ({
 
   const getApplicableAutoTemplateKeys = (meta: any): AutoTemplateKey[] => {
     const flags = meta?.autoTemplates
+
     if (flags && typeof flags === 'object') {
       return AUTO_TEMPLATES.filter(t => flags?.[t.key] === true).map(t => t.key)
     }
@@ -536,8 +595,10 @@ const UserListTable2 = ({
     const bag = `${meta?.area ?? ''} ${meta?.familia ?? ''} ${meta?.codigoNombre ?? ''}`
     const norm = normalizeText(bag).toLowerCase()
     const out: AutoTemplateKey[] = []
+
     if (norm.includes('densidad')) out.push('DENSIDAD')
     if (norm.includes('hormigon') || norm.includes('compresion')) out.push('HORMIGON')
+
     return out
   }
 
@@ -550,19 +611,23 @@ const UserListTable2 = ({
     DENSIDAD: { ...emptyDraft },
     HORMIGON: { ...emptyDraft }
   })
+
   const [informeDrafts, setInformeDrafts] = useState<
     Array<{
       id: string
       numero: string
       tipoInforme: string
+      fechaEmision: string
       refCliente: string
       observaciones: string
       anexoPrev: string
       rcms: string[]
     }>
   >([])
+
   const [informeDialogErrors, setInformeDialogErrors] = useState<{ general?: string; numero?: string }>({})
   const [savingInformeDialog, setSavingInformeDialog] = useState(false)
+  const [savingDraftId, setSavingDraftId] = useState<string | null>(null)
 
   // Dialog: Ficha Código Producto (nuevo)
   const [codigoDialogOpen, setCodigoDialogOpen] = useState(false)
@@ -586,16 +651,19 @@ const UserListTable2 = ({
 
   // simple cache en memoria para historial por RCM (evita refetchs)
   const historyCache: Map<number, any[]> = (global as any).__RCM_HISTORY_CACHE__ || new Map()
+
     ; (global as any).__RCM_HISTORY_CACHE__ = historyCache
 
   // cache liviana para título de Historial (codigoAgrupadorId -> {codigoNombre, descripcionServicio})
   const codigoLiteCache: Map<number, any> = (global as any).__RCM_CODIGO_LITE_CACHE__ || new Map()
+
     ; (global as any).__RCM_CODIGO_LITE_CACHE__ = codigoLiteCache
 
   const handleOpenMarkMenu = (e: React.MouseEvent<HTMLElement>, rowId: number) => {
     setMarkAnchorEl(e.currentTarget)
     setMarkRowId(rowId)
   }
+
   const handleCloseMarkMenu = () => {
     setMarkAnchorEl(null)
     setMarkRowId(null)
@@ -611,7 +679,7 @@ const UserListTable2 = ({
     setAutoInformeExisting({ DENSIDAD: null, HORMIGON: null })
     setAutoInformeDrafts({ DENSIDAD: { ...emptyDraft }, HORMIGON: { ...emptyDraft } })
     setInformeDialogErrors({})
-    setHideEnsayosByRcm(false)
+    setHideEnsayosByRcm(true)
     setInformeDialogOpen(true)
 
     if (!codigoAgrupadorId) return
@@ -621,45 +689,120 @@ const UserListTable2 = ({
 
       const detailPromise = codigoAgrupadorId
         ? fetch(`/api/codigo-agrupador/${codigoAgrupadorId}`, { cache: 'no-store' }).then(async res => {
-            if (!res.ok) {
-              const txt = await res.text().catch(() => '')
-              throw new Error(txt || 'No se pudo cargar el detalle del código')
-            }
-            return await res.json().catch(() => null)
-          })
+          if (!res.ok) {
+            const txt = await res.text().catch(() => '')
+
+            throw new Error(txt || 'No se pudo cargar el detalle del código')
+          }
+
+
+          return await res.json().catch(() => null)
+        })
         : Promise.resolve(null)
 
       const historyPromise = (async () => {
         const cached = historyCache.get(representativeRcmId)
+
         if (cached) return cached
         const res = await fetch(`/api/rcm/${representativeRcmId}/history?take=200`)
+
         if (!res.ok) return []
         const json = await res.json().catch(() => [])
         const arr = Array.isArray(json) ? json : []
+
         historyCache.set(representativeRcmId, arr)
+
         return arr
       })()
 
       const [detail, rows] = await Promise.all([detailPromise, historyPromise])
+
       if (detail) setInformeDialogData(detail)
       setInformeDialogHistory(Array.isArray(rows) ? rows : [])
 
       // detectar informes automáticos existentes (guardados en historial)
       const norm = (v: any) => String(v ?? '').trim().toLowerCase()
       const existing: Record<AutoTemplateKey, number | null> = { DENSIDAD: null, HORMIGON: null }
+
       for (const t of AUTO_TEMPLATES) {
         const hits = (rows ?? []).filter((h: any) => {
           const tipoEstado = String(h?.tipoEstado ?? '').trim().toUpperCase()
+
           if (tipoEstado !== 'INFORME_AUTO') return false
+
           return norm(h?.motivo).includes(norm(t.label))
         })
+
         const max = hits
           .map((h: any) => Number(h?.informe))
           .filter((n: any) => Number.isFinite(n) && n > 0)
           .reduce((acc: number | null, n: number) => (acc === null || n > acc ? n : acc), null)
+
         existing[t.key] = max
       }
+
       setAutoInformeExisting(existing)
+
+      // Reconstruir informes manuales guardados desde el historial
+      const manualEntries = (rows ?? []).filter((h: any) =>
+        String(h?.tipoEstado ?? '').trim().toUpperCase() === 'INFORME_MANUAL' &&
+        h?.informe != null
+      )
+
+      // Deduplicar por número de informe (si se guardó más de una vez, tomar el más reciente)
+      const byNumero = new Map<number, any>()
+
+      for (const h of [...manualEntries].reverse()) {
+        const n = Number(h.informe)
+
+        if (Number.isFinite(n) && n > 0 && !byNumero.has(n)) {
+          byNumero.set(n, h)
+        }
+      }
+
+      const parseObservacion = (obs: string | null) => {
+        const result: { tipoInforme: string; fechaEmision: string; refCliente: string; observaciones: string; anexoPrev: string; rcms: string[] } = {
+          tipoInforme: '', fechaEmision: '', refCliente: '', observaciones: '', anexoPrev: '', rcms: []
+        }
+
+        if (!obs) return result
+        const parts = obs.split(' | ')
+
+        for (const part of parts) {
+          if (part.startsWith('Tipo: ')) result.tipoInforme = part.slice(6).trim()
+          else if (part.startsWith('Fecha: ')) result.fechaEmision = part.slice(7).trim()
+          else if (part.startsWith('Ref. Cliente: ')) result.refCliente = part.slice(14).trim()
+          else if (part.startsWith('Obs: ')) result.observaciones = part.slice(5).trim()
+          else if (part.startsWith('Anexo Prev: ')) result.anexoPrev = part.slice(12).trim()
+          else if (part.startsWith('RCMs: ')) result.rcms = part.slice(6).split(',').map((s: string) => s.trim()).filter(Boolean)
+        }
+
+
+        return result
+      }
+
+      const reconstructed = Array.from(byNumero.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([numero, h], i) => {
+          const parsed = parseObservacion(h?.observacion ?? null)
+
+
+          return {
+            id: `saved-${numero}-${i}`,
+            numero: String(h.informe),
+            tipoInforme: parsed.tipoInforme,
+            fechaEmision: parsed.fechaEmision,
+            refCliente: parsed.refCliente,
+            observaciones: parsed.observaciones,
+            anexoPrev: parsed.anexoPrev,
+            rcms: parsed.rcms,
+            saved: true
+          }
+        })
+
+      if (reconstructed.length > 0) {
+        setInformeDrafts(reconstructed)
+      }
     } catch (e) {
       console.error('openInformeDialog error', e)
       setInformeDialogErrors(prev => ({ ...prev, general: 'No se pudo cargar la información del código.' }))
@@ -681,30 +824,40 @@ const UserListTable2 = ({
     setAutoInformeExisting({ DENSIDAD: null, HORMIGON: null })
     setAutoInformeDrafts({ DENSIDAD: { ...emptyDraft }, HORMIGON: { ...emptyDraft } })
     setInformeDialogErrors({})
-    setHideEnsayosByRcm(false)
+    setHideEnsayosByRcm(true)
   }
 
   const parseInformeNumber = (raw: any) => {
     const s = String(raw ?? '').trim()
+
     if (!s) return null
     const direct = Number(s)
+
     if (Number.isFinite(direct) && direct > 0) return direct
     const m = s.match(/(\d+)\s*$/)
+
     if (m) {
       const n = Number(m[1])
+
       if (Number.isFinite(n) && n > 0) return n
     }
+
+
     return null
   }
 
   const computeEnsayosFromServicios = (servicios?: Array<{ cantidad?: number | null; estadoOperativo?: string | null }>) => {
     let total = 0
     let ensayados = 0
+
     for (const s of servicios ?? []) {
       const qty = Number(s?.cantidad ?? 0)
+
       total += qty
       if (String(s?.estadoOperativo ?? '').trim().toUpperCase() === 'ENSAYADO') ensayados += qty
     }
+
+
     return { total, ensayados }
   }
 
@@ -725,29 +878,35 @@ const UserListTable2 = ({
       const detailPromise =
         Number.isFinite(codigoId) && codigoId > 0
           ? fetch(`/api/codigo-agrupador/${codigoId}?view=dialog`)
-              .then(async res => {
-                if (!res.ok) return null
-                return (await res.json().catch(() => null)) as any
-              })
+            .then(async res => {
+              if (!res.ok) return null
+
+              return (await res.json().catch(() => null)) as any
+            })
           : Promise.resolve(null)
 
       const historyPromise =
         Number.isFinite(repRcmId) && repRcmId > 0
           ? (async () => {
-              const cached = historyCache.get(repRcmId)
-              if (cached) return cached
+            const cached = historyCache.get(repRcmId)
 
-              // Sólo necesitamos entradas recientes para fechas (DIGITADO / estado actual)
-              const res = await fetch(`/api/rcm/${repRcmId}/history?take=300`)
-              if (!res.ok) return []
-              const json = await res.json().catch(() => [])
-              const arr = Array.isArray(json) ? json : []
-              historyCache.set(repRcmId, arr)
-              return arr
-            })()
+            if (cached) return cached
+
+            // Sólo necesitamos entradas recientes para fechas (DIGITADO / estado actual)
+            const res = await fetch(`/api/rcm/${repRcmId}/history?take=300`)
+
+            if (!res.ok) return []
+            const json = await res.json().catch(() => [])
+            const arr = Array.isArray(json) ? json : []
+
+            historyCache.set(repRcmId, arr)
+
+            return arr
+          })()
           : Promise.resolve([])
 
       const [detail, rows] = await Promise.all([detailPromise, historyPromise])
+
       if (detail) setCodigoDialogData(detail)
       setCodigoDialogHistory(Array.isArray(rows) ? rows : [])
 
@@ -755,18 +914,27 @@ const UserListTable2 = ({
       if (rows && Array.isArray(rows) && rows.length) {
         const hit = (rows ?? []).find((h: any) => {
           const est = String(h?.estNuevo ?? h?.tipoEstado ?? '').trim().toUpperCase()
+
+
           return est === 'DIGITADO'
         })
+
         const when = hit?.fechaAccion ?? hit?.createdAt ?? null
+
         if (when) setCodigoDialogDigitadoAt(String(when))
 
         const currentOpKey = normalizeStateForCompare(row?.estadoOperativo)
+
         if (currentOpKey) {
           const opHit = (rows ?? []).find((h: any) => {
             const est = normalizeStateForCompare(h?.estNuevo ?? h?.tipoEstado)
+
+
             return est === currentOpKey
           })
+
           const opWhen = opHit?.fechaAccion ?? opHit?.createdAt ?? null
+
           if (opWhen) setCodigoDialogOpAt(String(opWhen))
         }
       }
@@ -807,15 +975,19 @@ const UserListTable2 = ({
     if (!representativeRcmId) return
     const agg = findAggregatedRowByRepresentativeRcmId(representativeRcmId)
     const codigoAgrupadorId = Number((agg as any)?.id)
+
     if (!Number.isFinite(codigoAgrupadorId) || codigoAgrupadorId <= 0) {
       console.warn('Editar CP: codigoAgrupadorId inválido', codigoAgrupadorId, agg)
+
       return
     }
 
     const codigoNombre = String((agg as any)?.codigoNombre ?? '').trim()
+
     const clienteName =
       String((agg as any)?.cliente?.razonSocial ?? (agg as any)?.cliente?.nombreCliente ?? '').trim() ||
       String((agg as any)?.clienteNombre ?? '').trim()
+
     const obraNum = String((agg as any)?.obra?.numeroObra ?? '').trim()
     const obraTxt = obraNum ? `Obra ${obraNum}` : ''
     const subtitle = [clienteName, obraTxt].filter(Boolean).join(' - ')
@@ -830,8 +1002,10 @@ const UserListTable2 = ({
     try {
       setEditCpLoading(true)
       const res = await fetch(`/api/codigo-agrupador/${codigoAgrupadorId}?view=dialog`, { cache: 'no-store' })
+
       if (!res.ok) return
       const json = await res.json().catch(() => null)
+
       if (!json) return
       setEditCpCodigoNombre(String(json?.codigoNombre ?? codigoNombre ?? '').trim())
       setEditCpDescripcion(String(json?.descripcionServicio ?? '').trim())
@@ -846,6 +1020,7 @@ const UserListTable2 = ({
   const saveEditCpDialog = async () => {
     if (editCpSaving) return
     const codigoId = editCpCodigoId
+
     if (!codigoId) return
 
     try {
@@ -865,6 +1040,7 @@ const UserListTable2 = ({
 
       if (!res.ok) {
         const txt = await res.text().catch(() => '')
+
         throw new Error(txt || 'No se pudo guardar el CP')
       }
 
@@ -913,12 +1089,15 @@ const UserListTable2 = ({
 
     const autoCreates = AUTO_TEMPLATES.flatMap(t => {
       const applies = applicableAutoKeys.includes(t.key)
+
       if (!applies) return []
 
       const existing = autoInformeExisting?.[t.key]
+
       if (existing != null) return []
 
       const n = parseInformeNumber(autoInformeDrafts?.[t.key]?.numero)
+
       if (n == null) return []
 
       // sólo se puede subir automático si ya finalizaron todos los ensayos
@@ -941,6 +1120,7 @@ const UserListTable2 = ({
         id: d.id,
         numero: parseInformeNumber(d.numero),
         tipoInforme: String((d as any).tipoInforme ?? '').trim(),
+        fechaEmision: String((d as any).fechaEmision ?? '').trim(),
         refCliente: String(d.refCliente ?? '').trim(),
         observaciones: String(d.observaciones ?? '').trim(),
         anexoPrev: String(d.anexoPrev ?? '').trim(),
@@ -949,19 +1129,22 @@ const UserListTable2 = ({
           : []
       }))
       .filter(d => d.numero != null) as Array<{
-      id: string
-      numero: number
-      tipoInforme: string
-      refCliente: string
-      observaciones: string
-      anexoPrev: string
-      rcms: string[]
-    }>
+        id: string
+        numero: number
+        tipoInforme: string
+        fechaEmision: string
+        refCliente: string
+        observaciones: string
+        anexoPrev: string
+        rcms: string[]
+      }>
 
     // Si un informe manual tiene N°, debe seleccionar al menos 1 RCM.
     const manualMissingRcms = manualCreates.filter(m => (m.rcms ?? []).length === 0)
+
     if (manualMissingRcms.length) {
       const msg = 'Selecciona al menos 1 RCM para cada informe manual con N°.'
+
       errors.general = [errors.general, msg].filter(Boolean).join(' · ')
     }
 
@@ -978,9 +1161,11 @@ const UserListTable2 = ({
     if (requiresAutos) {
       const missingAutos = applicableAutoKeys.filter(k => {
         const existing = autoInformeExisting?.[k]
+
         if (existing != null) return false
 
         const n = parseInformeNumber(autoInformeDrafts?.[k]?.numero)
+
         if (n == null) return true
 
         // aunque esté el número, no se considera completo si aún hay ensayos pendientes (no se puede subir)
@@ -989,6 +1174,7 @@ const UserListTable2 = ({
 
       if (missingAutos.length) {
         const labels = AUTO_TEMPLATES.filter(t => missingAutos.includes(t.key)).map(t => t.label).join(', ')
+
         errors.numero = `Complete informes automáticos requeridos: ${labels}`
         if (pendientes > 0) errors.general = `Pendiente: ${pendientes} ensayo${pendientes === 1 ? '' : 's'} sin finalizar.`
       }
@@ -999,6 +1185,7 @@ const UserListTable2 = ({
     if (primaryCandidate == null && !errors.numero) errors.numero = 'Ingrese al menos un N° de informe'
 
     setInformeDialogErrors(errors)
+
     return {
       ok: Object.keys(errors).length === 0,
       pendientes,
@@ -1010,14 +1197,139 @@ const UserListTable2 = ({
     }
   }
 
+  const handleSaveInformeDraft = async (draftId: string) => {
+    const draft = informeDrafts.find(d => d.id === draftId)
+
+    if (!draft) return
+
+    const numero = parseInformeNumber(draft.numero)
+
+    if (numero == null) return
+
+    const rcmId = informeDialogRcmId
+
+    if (!rcmId) return
+
+    const selectedRcms: string[] = Array.isArray((draft as any).rcms)
+      ? (draft as any).rcms.map((x: any) => String(x ?? '').trim()).filter(Boolean)
+      : []
+
+    if (selectedRcms.length === 0) {
+      setInformeDialogErrors(prev => ({ ...prev, general: 'Selecciona al menos 1 RCM antes de guardar.' }))
+
+      return
+    }
+
+    try {
+      setSavingDraftId(draftId)
+      setInformeDialogErrors(prev => ({ ...prev, general: undefined }))
+
+      const funcionario = getCurrentUserName() ?? 'Usuario'
+      const aplicadoA = getAppliedAForRow(rcmId)
+
+      const parts = [
+        (draft as any).tipoInforme ? `Tipo: ${(draft as any).tipoInforme}` : '',
+        (draft as any).fechaEmision ? `Fecha: ${(draft as any).fechaEmision}` : '',
+        draft.refCliente ? `Ref. Cliente: ${draft.refCliente}` : '',
+        draft.observaciones ? `Obs: ${draft.observaciones}` : '',
+        draft.anexoPrev ? `Anexo Prev: ${draft.anexoPrev}` : '',
+        selectedRcms.length ? `RCMs: ${selectedRcms.join(', ')}` : ''
+      ].filter(Boolean)
+
+      const observacion = parts.length ? parts.join(' | ') : null
+
+      const payload: any = {
+        tipo: 'Ope',
+        tipoEstado: 'INFORME_MANUAL',
+        motivo: null,
+        observacion,
+        funcionario,
+        estPrev: null,
+        estNuevo: null,
+        aplicadoA,
+        informe: numero
+      }
+
+      const res = await fetch(`/api/rcm/${rcmId}/history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+
+        console.error('Failed to save informe draft:', res.status, txt)
+        setInformeDialogErrors(prev => ({ ...prev, general: 'No se pudo guardar el informe.' }))
+
+        return
+      }
+
+      const created = await res.json().catch(() => null)
+
+      // Marcar draft como guardado
+      setInformeDrafts(prev => prev.map(d => d.id === draftId ? { ...d, saved: true } : d))
+
+      // Actualizar caché de historial
+      const entry = created ?? {
+        tipo: payload.tipo,
+        funcionario,
+        estAnterior: null,
+        estNuevo: null,
+        informe: payload.informe,
+        fechaAccion: new Date().toISOString(),
+        observacion: payload.observacion,
+        motivo: payload.motivo,
+        tipoEstado: payload.tipoEstado
+      }
+
+      const current = historyCache.get(rcmId) ?? []
+
+      historyCache.set(rcmId, [entry, ...current])
+
+      if (histDialogOpen && histRowId === rcmId) {
+        setHistRows(prev => [entry, ...prev])
+      }
+
+      // Actualizar columna N° Informe de la tabla con el máximo entre todos los guardados
+      const allSaved = informeDrafts.map(d => {
+        if (d.id === draftId) return numero
+        if ((d as any).saved) return parseInformeNumber(d.numero)
+
+        return null
+      }).filter((n): n is number => n != null)
+
+      const maxNum = allSaved.length ? Math.max(...allSaved) : numero
+
+      setData(prev => prev.map(d =>
+        d.id === rcmId || (d as any).representativeRcmId === rcmId
+          ? { ...d, informe: maxNum }
+          : d
+      ))
+      setFilteredData(prev => prev.map(d =>
+        d.id === rcmId || (d as any).representativeRcmId === rcmId
+          ? { ...d, informe: maxNum }
+          : d
+      ))
+    } catch (e) {
+      console.error('handleSaveInformeDraft error', e)
+      setInformeDialogErrors(prev => ({ ...prev, general: 'No se pudo guardar el informe.' }))
+    } finally {
+      setSavingDraftId(null)
+    }
+  }
+
   const handleConfirmInformeDialog = async () => {
     const { ok, primary, autoCreates, manualCreates } = validateInformeDialog()
+
     if (!ok) return
 
     const rcmId = informeDialogRcmId
+
     if (!rcmId) return
 
     const informeToPersist = primary
+
     if (informeToPersist == null) return
 
     try {
@@ -1029,6 +1341,7 @@ const UserListTable2 = ({
 
       const buildObservacion = (
         tipoInforme: string,
+        fechaEmision: string,
         refCliente: string,
         observaciones: string,
         anexoPrev: string,
@@ -1036,11 +1349,14 @@ const UserListTable2 = ({
       ) => {
         const parts = [
           tipoInforme ? `Tipo: ${tipoInforme}` : '',
+          fechaEmision ? `Fecha: ${fechaEmision}` : '',
           refCliente ? `Ref. Cliente: ${refCliente}` : '',
           observaciones ? `Obs: ${observaciones}` : '',
           anexoPrev ? `Anexo Prev: ${anexoPrev}` : '',
           (rcms ?? []).length ? `RCMs: ${(rcms ?? []).join(', ')}` : ''
         ].filter(Boolean)
+
+
         return parts.length ? parts.join(' | ') : null
       }
 
@@ -1050,11 +1366,15 @@ const UserListTable2 = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         })
+
         if (!res.ok) {
           const txt = await res.text().catch(() => '')
+
           console.error('Failed to save history:', res.status, txt)
           throw new Error('Error al guardar historial')
         }
+
+
         return await res.json().catch(() => null)
       }
 
@@ -1070,14 +1390,16 @@ const UserListTable2 = ({
           tipo: 'Ope',
           tipoEstado: 'INFORME_AUTO',
           motivo: a.label,
-          observacion: buildObservacion('', a.refCliente, a.observaciones, a.anexoPrev, metaRcms),
+          observacion: buildObservacion('', '', a.refCliente, a.observaciones, a.anexoPrev, metaRcms),
           funcionario,
           estPrev: null,
           estNuevo: null,
           aplicadoA,
           informe: a.numero
         }
+
         const created = await postHistory(payload)
+
         createdEntries.push(
           created ?? {
             tipo: payload.tipo,
@@ -1093,20 +1415,29 @@ const UserListTable2 = ({
         )
       }
 
-      // 2) Persistir informes manuales
-      for (const m of manualCreates ?? []) {
+      // 2) Persistir informes manuales (solo los que no fueron guardados individualmente)
+      const unsavedManuals = (manualCreates ?? []).filter(m => {
+        const draft = informeDrafts.find(d => d.id === m.id)
+
+
+        return !(draft as any)?.saved
+      })
+
+      for (const m of unsavedManuals) {
         const payload: any = {
           tipo: 'Ope',
           tipoEstado: 'INFORME_MANUAL',
           motivo: null,
-          observacion: buildObservacion(m.tipoInforme, m.refCliente, m.observaciones, m.anexoPrev, m.rcms),
+          observacion: buildObservacion(m.tipoInforme, m.fechaEmision, m.refCliente, m.observaciones, m.anexoPrev, m.rcms),
           funcionario,
           estPrev: null,
           estNuevo: null,
           aplicadoA,
           informe: m.numero
         }
+
         const created = await postHistory(payload)
+
         createdEntries.push(
           created ?? {
             tipo: payload.tipo,
@@ -1125,6 +1456,7 @@ const UserListTable2 = ({
       // 3) Marcar como DIGITADO (si corresponde)
       const prevNorm = normalizeStateForCompare(prevState)
       let digitadoEntry: any = null
+
       if (prevNorm !== 'DIGITADO') {
         const payload: any = {
           tipo: 'Ope',
@@ -1137,7 +1469,9 @@ const UserListTable2 = ({
           aplicadoA,
           informe: informeToPersist
         }
+
         const created = await postHistory(payload)
+
         digitadoEntry =
           created ?? {
             tipo: payload.tipo,
@@ -1173,7 +1507,9 @@ const UserListTable2 = ({
       if (createdEntries.length) {
         const current = historyCache.get(rcmId) ?? []
         const newestFirst = [...createdEntries].reverse()
+
         historyCache.set(rcmId, [...newestFirst, ...current])
+
         if (histDialogOpen && histRowId === rcmId) {
           setHistRows(prev => [...newestFirst, ...prev])
         }
@@ -1197,14 +1533,17 @@ const UserListTable2 = ({
     setCorrectionObservaciones('')
     setCloseEventoLoading(false)
     setCloseEventoMeta(null)
+
     // Para EVENTO, el tipo debe venir seleccionado por defecto
     setEventType(action === 'EVENTO' ? 'INFO_PENDIENTE' : '')
+
     if (action === 'EVENTO' && rowId != null) {
       // Por regla de negocio: el estado actual debe venir preseleccionado
       setEventReturnState(getCurrentStateForRow(rowId) || '')
     } else {
       setEventReturnState('')
     }
+
     handleCloseMarkMenu()
     setMarkDialogOpen(true)
   }
@@ -1215,6 +1554,7 @@ const UserListTable2 = ({
       try {
         const anyEv = ev as any
         const rcmId = Number(anyEv?.detail?.rcmId)
+
         if (!Number.isFinite(rcmId) || rcmId <= 0) return
 
         openMarkDialogForRow('CERRAR_EVENTO', rcmId)
@@ -1224,22 +1564,27 @@ const UserListTable2 = ({
     }
 
     window.addEventListener('rcmnavigator:cerrar-evento', onResolve as any)
+
     return () => window.removeEventListener('rcmnavigator:cerrar-evento', onResolve as any)
   }, [openMarkDialogForRow])
 
   const findAggregatedRowByRepresentativeRcmId = (rcmId: number) => {
     const fromData = data.find(d => Number((d as any).representativeRcmId) === rcmId)
+
     if (fromData) return fromData
+
     return filteredData.find(d => Number((d as any).representativeRcmId) === rcmId) ?? null
   }
 
   const openInformeDialogFromMark = async (rcmId: number) => {
     const agg = findAggregatedRowByRepresentativeRcmId(rcmId)
+
     if (!agg) {
       // abrir de todas formas, pero sin detalle (no debería pasar si se ejecuta desde una fila visible)
       await openInformeDialog(null, rcmId, null)
       setInformeDialogErrors(prev => ({ ...prev, general: 'No se pudo asociar el RCM a un Código Producto.' }))
       handleCloseMarkMenu()
+
       return
     }
 
@@ -1263,12 +1608,16 @@ const UserListTable2 = ({
     // DIGITADO ahora usa el nuevo popup "Gestionar Informe"
     if (action === 'DIGITADO') {
       const rcmId = rowId ?? markRowId ?? null
+
       if (!rcmId) {
         console.warn('handleMarkAction: missing rowId for DIGITADO')
         handleCloseMarkMenu()
+
         return
       }
+
       await openInformeDialogFromMark(rcmId)
+
       return
     }
 
@@ -1282,9 +1631,11 @@ const UserListTable2 = ({
       'FIRMADO',
       'ENVIADO'
     ])
+
     if (ACTIONS_REQUIRING_DIALOG.has(action)) {
       // si no se pasó rowId, intenta usar el state existente (evita error)
       openMarkDialogForRow(action, rowId ?? markDialogRowId ?? null)
+
       return
     }
 
@@ -1292,6 +1643,7 @@ const UserListTable2 = ({
     if (!rowId) {
       console.warn('handleMarkAction: missing rowId for immediate action', action)
       handleCloseMarkMenu()
+
       return
     }
 
@@ -1322,6 +1674,7 @@ const UserListTable2 = ({
 
       if (!res.ok) {
         const txt = await res.text().catch(() => '')
+
         console.error('Failed to create history for immediate action:', res.status, txt)
         throw new Error('Error creating history')
       }
@@ -1331,8 +1684,11 @@ const UserListTable2 = ({
       // mantener cache local de historial
       try {
         const existing = historyCache.get(rowId) ?? []
+
         if (created) {
           historyCache.set(rowId, [created, ...existing])
+
+
           // si el dialogo de historial está abierto para la misma fila, actualizarlo también
           if (histDialogOpen && histRowId === rowId) {
             setHistRows(prev => [created, ...prev])
@@ -1345,6 +1701,7 @@ const UserListTable2 = ({
       // revertir optimista en caso de error
       console.error('Error marcar (inmediato):', err)
       setData(prev => prev.map(d => (d.id === rowId || d.representativeRcmId === rowId ? { ...d, estadoOperativo: prevState } : d)))
+
       // opcional: mostrar aviso al usuario
       alert('No se pudo actualizar el estado. Ver consola para detalles.')
     } finally {
@@ -1354,6 +1711,7 @@ const UserListTable2 = ({
 
   const validateMarkDialog = (setErrors = true) => {
     const errors: Record<string, string> = {}
+
     if (!markDialogRowId) {
       errors.general = 'RCM no seleccionado'
     }
@@ -1372,6 +1730,7 @@ const UserListTable2 = ({
       if (!correctionObservaciones || !String(correctionObservaciones).trim()) {
         errors.observacion = 'Ingrese observación'
       }
+
       if (!eventReturnState || !String(eventReturnState).trim()) {
         errors.returnState = 'Seleccione estado destino'
       }
@@ -1391,16 +1750,20 @@ const UserListTable2 = ({
     }
 
     if (setErrors) setFormErrors(errors)
+
     return Object.keys(errors).length === 0
   }
 
   const handleSaveMarkDialog = async () => {
     try {
       const rcmId = markDialogRowId
+
       if (rcmId == null) return
+
       if (!validateMarkDialog()) {
         // mostrar feedback rápido en consola / UI
         console.warn('Validation failed', formErrors)
+
         return
       }
 
@@ -1408,6 +1771,7 @@ const UserListTable2 = ({
 
       const isEvento = markDialogAction === 'EVENTO'
       const isCerrarEvento = markDialogAction === 'CERRAR_EVENTO'
+
       const eventTypeLabel =
         eventType === 'INFO_PENDIENTE'
           ? 'Info Pendiente'
@@ -1422,8 +1786,10 @@ const UserListTable2 = ({
       const buildEventoObservacion = () => {
         const obs = String(correctionObservaciones ?? '').trim()
         const dest = String(eventReturnState ?? '').trim()
+
         if (!dest) return obs || null
         if (!obs) return `Estado destino: ${dest}`
+
         return `${obs}\n\nEstado destino: ${dest}`
       }
 
@@ -1456,6 +1822,7 @@ const UserListTable2 = ({
 
       if (!res.ok) {
         const txt = await res.text().catch(() => '')
+
         // eslint-disable-next-line no-console
         console.error('Failed to save RCMHistory:', res.status, txt)
         throw new Error('Error saving history')
@@ -1486,7 +1853,9 @@ const UserListTable2 = ({
         fechaAccion: new Date().toISOString(),
         observacion: payload.observacion ?? null
       }
+
       historyCache.set(rcmId, [newHistEntry, ...(historyCache.get(rcmId) ?? [])])
+
       if (histDialogOpen && histRowId === rcmId) {
         setHistRows(prev => [newHistEntry, ...prev])
       }
@@ -1502,6 +1871,8 @@ const UserListTable2 = ({
       setEventType('')
       setEventReturnState('')
       setSavingHistory(false)
+
+
       // ya actualizamos localmente setData/setFilteredData.
       // Opcional: si el host expone una función para refrescar solo una fila, llámala
       if (typeof (window as any).__REFRESH_RCM_ROW__ === 'function') {
@@ -1551,6 +1922,7 @@ const UserListTable2 = ({
     setMenuAnchorEl(e.currentTarget)
     setMenuRowId(rowId)
   }
+
   const handleCloseRowMenu = () => {
     setMenuAnchorEl(null)
     setMenuRowId(null)
@@ -1560,6 +1932,7 @@ const UserListTable2 = ({
     handleCloseRowMenu()
     if (!rowId) return
     const current = normalizeStateKey(getCurrentStateForRow(rowId))
+
     if (current === 'CODIFICADO') return
     openMarkDialogForRow('EVENTO', rowId)
   }
@@ -1574,26 +1947,36 @@ const UserListTable2 = ({
   const findRowById = (rowId: any) => {
     if (rowId === null || typeof rowId === 'undefined') return null
     const sid = String(rowId).trim()
+
     // 1) buscar en data por id o _id (string/number)
     let r = data.find(d => String((d as any).id ?? '') === sid || String((d as any)._id ?? '') === sid)
+
     if (r) return r
+
     // 2) buscar en filteredData (por si data no está sincronizada)
     r = filteredData.find(d => String((d as any).id ?? '') === sid || String((d as any)._id ?? '') === sid)
     if (r) return r
+
     // 3) intentar comparación numérica (si rowId convertible a número) contra id/_id
     const n = Number(rowId)
+
     if (!Number.isNaN(n)) {
       r = data.find(d => !Number.isNaN(Number((d as any).id)) && Number((d as any).id) === n)
       if (r) return r
       r = filteredData.find(d => !Number.isNaN(Number((d as any).id)) && Number((d as any).id) === n)
       if (r) return r
     }
+
+
     // 4) Fallback: si rowId es el índice interno de react-table (ej '0','1',...), devolver filteredData[idx]
     if (!Number.isNaN(n) && Number.isInteger(n) && n >= 0 && n < filteredData.length) {
       // eslint-disable-next-line no-console
       console.debug('findRowById: using index-fallback for react-table row id ->', n)
+
       return filteredData[n]
     }
+
+
     return null
   }
 
@@ -1601,6 +1984,7 @@ const UserListTable2 = ({
     if (!rowId && rowId !== 0) {
       console.warn('handleEdit: missing rowId')
       handleCloseRowMenu()
+
       return
     }
 
@@ -1610,14 +1994,17 @@ const UserListTable2 = ({
       const parts = (typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean) : [])
       const lang = parts[0] || 'en'
       const target = `${window.location.origin}/${lang}/apps/rcm-edit/${rowId}`
+
       try {
         const newWin = window.open(target, '_blank')
+
         if (newWin) {
           try {
             newWin.opener = null
           } catch (e) {
             /* noop */
           }
+
           try {
             newWin.focus()
           } catch (e) {
@@ -1629,17 +2016,21 @@ const UserListTable2 = ({
       } catch (e) {
         window.location.href = target
       }
+
       handleCloseRowMenu()
+
       return
     }
 
     const row = findRowById(rowId)
+
     if (!row) {
       console.warn('handleEdit: row not found', rowId, {
         dataIds: data.map(d => (d as any).id ?? (d as any)._id),
         filteredIds: filteredData.map(d => (d as any).id ?? (d as any)._id)
       })
       handleCloseRowMenu()
+
       return
     }
 
@@ -1647,26 +2038,32 @@ const UserListTable2 = ({
     const otId = row.ordenTrabajo?.id ?? row.ordenTrabajoId ?? row.ot ?? ''
     const tipo = row.ordenTrabajo?.tipo ?? row.tipo ?? row.tipoOT ?? ''
     let servicioId = ''
+
     if (Array.isArray(row.servicios) && row.servicios.length) {
       const s0: any = row.servicios[0]
+
       servicioId = s0.id ?? s0.servicioId ?? s0._id ?? ''
     }
 
     const params = new URLSearchParams()
+
     if (otId) params.set('otId', String(otId))
     if (tipo) params.set('tipo', String(tipo))
     params.set('servicioId', String(servicioId ?? ''))
     params.set('readonly', '1')
 
     const target = `${window.location.origin}/en/apps/encoder?${params.toString()}`
+
     try {
       const newWin = window.open(target, '_blank')
+
       if (newWin) {
         try {
           newWin.opener = null
         } catch (e) {
           /* noop */
         }
+
         try {
           newWin.focus()
         } catch (e) {
@@ -1678,6 +2075,7 @@ const UserListTable2 = ({
     } catch (e) {
       window.location.href = target
     }
+
     handleCloseRowMenu()
   }
 
@@ -1704,6 +2102,7 @@ const UserListTable2 = ({
 
     if (!rowId) {
       console.warn('handleHistorial: no rowId provided')
+
       return
     }
 
@@ -1716,8 +2115,10 @@ const UserListTable2 = ({
     try {
       const agg = data.find(d => d.representativeRcmId === rowId) ?? filteredData.find(d => d.representativeRcmId === rowId)
       const codigoAgrupadorId = Number((agg as any)?.id)
+
       if (Number.isFinite(codigoAgrupadorId) && codigoAgrupadorId > 0) {
         const cachedLite = codigoLiteCache.get(codigoAgrupadorId)
+
         if (cachedLite) {
           setHistCodigoData(cachedLite)
         } else {
@@ -1740,25 +2141,34 @@ const UserListTable2 = ({
 
     // revisar caché primero
     const cached = historyCache.get(rowId)
+
     if (cached) {
       setHistRows(cached)
       setHistLoading(false)
+
       return
     }
 
     setHistRows([])
     setHistLoading(true)
+
     try {
       const res = await fetch(`/api/rcm/${rowId}/history`)
+
       if (!res.ok) {
         const txt = await res.text().catch(() => '')
+
         console.error('History API returned not ok:', res.status, txt)
         throw new Error('Error loading history')
       }
+
       const json = await res.json()
+
       const rows = (Array.isArray(json) ? json : []).slice().sort((a: any, b: any) => {
         const ta = new Date(a?.fechaAccion ?? 0).getTime()
         const tb = new Date(b?.fechaAccion ?? 0).getTime()
+
+
         return tb - ta
       })
 
@@ -1783,6 +2193,7 @@ const UserListTable2 = ({
 
   const refreshSeguimiento = useCallback(async () => {
     setLoading(true)
+
     try {
       const res = await fetch(`/api/codigo-agrupador/seguimiento?ts=${Date.now()}`, { cache: 'no-store' })
       const result = await res.json()
@@ -1842,9 +2253,9 @@ const UserListTable2 = ({
           cliente: { nombreCliente: clienteNombre ?? undefined, comuna: comuna ?? undefined },
           obra: r?.obra
             ? {
-                numeroObra: r.obra.numeroObra ?? undefined,
-                nombreObra: (r.obra as any).nombreObra ?? undefined
-              }
+              numeroObra: r.obra.numeroObra ?? undefined,
+              nombreObra: (r.obra as any).nombreObra ?? undefined
+            }
             : null
         } as RCM
       })
@@ -1860,6 +2271,7 @@ const UserListTable2 = ({
 
   // Fetch Códigos Producto (seguimiento)
   const pathname = usePathname()
+
   useEffect(() => {
     refreshSeguimiento()
   }, [refreshSeguimiento, pathname])
@@ -1867,6 +2279,7 @@ const UserListTable2 = ({
   // Refrescar cuando el usuario vuelve a la app / pestaña
   useEffect(() => {
     const onFocus = () => refreshSeguimiento()
+
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') refreshSeguimiento()
     }
@@ -1888,19 +2301,23 @@ const UserListTable2 = ({
 
   const toDateOnly = (input: any): Date | null => {
     if (!input) return null
+
     // Si ya es Date
     if (input instanceof Date) return new Date(input.getFullYear(), input.getMonth(), input.getDate())
     const s = String(input)
 
     // Si viene en formato YYYY-MM-DD (o empieza así), parsearlo directamente para evitar shift por timezone
     const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+
     if (m) {
       return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
     }
 
     // Fallback: crear Date y tomar sólo la parte fecha local
     const d = new Date(s)
+
     if (isNaN(d.getTime())) return null
+
     return new Date(d.getFullYear(), d.getMonth(), d.getDate())
   }
 
@@ -1909,9 +2326,11 @@ const UserListTable2 = ({
     const b = toDateOnly(bRaw)
     const at = a ? a.getTime() : null
     const bt = b ? b.getTime() : null
+
     if (at == null && bt == null) return 0
     if (at == null) return 1
     if (bt == null) return -1
+
     return at === bt ? 0 : at > bt ? 1 : -1
   }
 
@@ -1919,6 +2338,7 @@ const UserListTable2 = ({
   const formatDateDDMMYYYY = (v: any) => {
     if (!v) return '-'
     const d = v instanceof Date ? v : new Date(v)
+
     if (isNaN(d.getTime())) return '-'
     const dd = String(d.getDate()).padStart(2, '0')
     const mm = String(d.getMonth() + 1).padStart(2, '0')
@@ -1926,6 +2346,8 @@ const UserListTable2 = ({
     const hh = String(d.getHours()).padStart(2, '0')
     const min = String(d.getMinutes()).padStart(2, '0')
     const ss = String(d.getSeconds()).padStart(2, '0')
+
+
     return `${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}`
   }
 
@@ -1933,10 +2355,13 @@ const UserListTable2 = ({
   const formatDateDDMMYYYYDateOnly = (v: any) => {
     if (!v) return '-'
     const d = v instanceof Date ? v : new Date(v)
+
     if (isNaN(d.getTime())) return '-'
     const dd = String(d.getDate()).padStart(2, '0')
     const mm = String(d.getMonth() + 1).padStart(2, '0')
     const yyyy = d.getFullYear()
+
+
     return `${dd}/${mm}/${yyyy}`
   }
 
@@ -1944,29 +2369,38 @@ const UserListTable2 = ({
   const formatDateDDMMYYYYDateOnlyDash = (v: any) => {
     if (!v) return '-'
     const d = v instanceof Date ? v : new Date(v)
+
     if (isNaN(d.getTime())) return '-'
     const dd = String(d.getDate()).padStart(2, '0')
     const mm = String(d.getMonth() + 1).padStart(2, '0')
     const yyyy = d.getFullYear()
+
+
     return `${dd}-${mm}-${yyyy}`
   }
 
   const formatDateLikeDDMMYYYYDash = (raw: string | null | undefined) => {
     const s = String(raw ?? '').trim()
+
     if (!s) return null
     const t = s.replace(/\//g, '-').trim()
+
     if (/^\d{2}-\d{2}-\d{4}$/.test(t)) return t
     if (/^\d{2}-\d{2}-\d{2}$/.test(t)) return t
     if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return formatDateDDMMYYYYDateOnlyDash(new Date(t))
     const d = new Date(t)
+
     if (!isNaN(d.getTime())) return formatDateDDMMYYYYDateOnlyDash(d)
+
     return t
   }
 
   const extractDueTxtFromText = (raw: string | null | undefined) => {
     const s = String(raw ?? '')
     const m = s.match(/\bvence(?:\s*fecha)?\s*:?\s*(\d{2}[\/-]\d{2}[\/-]\d{4}|\d{4}[\/-]\d{2}[\/-]\d{2}|\d{2}[\/-]\d{2}[\/-]\d{2})\b/i)
+
     if (!m) return null
+
     return formatDateLikeDDMMYYYYDash(String(m[1] ?? '').trim())
   }
 
@@ -1974,11 +2408,16 @@ const UserListTable2 = ({
     const isEventoAbierto = (h: any) => {
       const tipo = String(h?.tipo ?? '').trim()
       const tipoEstado = String(h?.tipoEstado ?? '').trim().toUpperCase()
+
+
       return tipo === 'Evento Abierto' || tipoEstado === 'EVENTO'
     }
+
     const isEventoCerrado = (h: any) => {
       const tipo = String(h?.tipo ?? '').trim()
       const tipoEstado = String(h?.tipoEstado ?? '').trim().toUpperCase()
+
+
       return tipo === 'Evento Cerrado' || tipoEstado === 'EVENTO_CERRADO'
     }
 
@@ -1997,6 +2436,7 @@ const UserListTable2 = ({
       const fechaIso = String(h?.fechaAccion ?? h?.createdAt ?? h?.date ?? '').trim()
       const registradoDate = fechaIso ? formatDateDDMMYYYYDateOnlyDash(fechaIso) : null
       const funcionario = String(h?.funcionario ?? h?.user ?? '').trim()
+
       const registradoTxt = [registradoDate ? `Registrado ${registradoDate}` : null, funcionario ? funcionario : null]
         .filter(Boolean)
         .join(' · ') || null
@@ -2004,6 +2444,7 @@ const UserListTable2 = ({
       const venceTxt = extractDueTxtFromText(obs) ?? extractDueTxtFromText(motivo)
 
       const nt = normalizeText(tipoLabel)
+
       const tone: 'warning' | 'error' | 'secondary' = nt.includes('error')
         ? 'error'
         : nt.includes('correc')
@@ -2031,23 +2472,30 @@ const UserListTable2 = ({
     void (async () => {
       try {
         let rows = historyCache.get(rcmId)
+
         if (!rows) {
           const res = await fetch(`/api/rcm/${rcmId}/history?take=200`)
+
           if (!res.ok) rows = []
           else {
             const json = await res.json().catch(() => [])
+
             rows = Array.isArray(json) ? json : []
           }
+
           historyCache.set(rcmId, rows)
         }
 
         const ordered = (Array.isArray(rows) ? rows : []).slice().sort((a: any, b: any) => {
           const ta = new Date(a?.fechaAccion ?? a?.createdAt ?? a?.date ?? 0).getTime()
           const tb = new Date(b?.fechaAccion ?? b?.createdAt ?? b?.date ?? 0).getTime()
+
+
           return tb - ta
         })
 
         const meta = deriveActiveEventoMetaFromHistory(ordered)
+
         if (alive) setCloseEventoMeta(meta)
       } catch (e) {
         if (alive) setCloseEventoMeta(null)
@@ -2065,10 +2513,13 @@ const UserListTable2 = ({
   const formatDateDDMMYYDateOnlyDash = (v: any) => {
     if (!v) return '-'
     const d = v instanceof Date ? v : new Date(v)
+
     if (isNaN(d.getTime())) return '-'
     const dd = String(d.getDate()).padStart(2, '0')
     const mm = String(d.getMonth() + 1).padStart(2, '0')
     const yy = String(d.getFullYear()).slice(-2)
+
+
     return `${dd}-${mm}-${yy}`
   }
 
@@ -2077,11 +2528,13 @@ const UserListTable2 = ({
 
     // Sólo para los 4 estados requeridos
     const allowed = new Set(['EN_PROCESO', 'CODIFICADO', 'ENVIADO_DIGITACION', 'ENVIADO'])
+
     if (!allowed.has(key)) return
 
     e.stopPropagation()
     setOpHelpAnchorEl(e.currentTarget)
     setOpHelpState(key)
+
     // en imágenes se ve fecha; usamos fecha de codificación como referencia
     setOpHelpDate((row as any)?.fechaCodificacion ?? null)
   }
@@ -2138,17 +2591,23 @@ const UserListTable2 = ({
   const formatTimeHHmm = (v: any) => {
     if (!v) return '-'
     const d = v instanceof Date ? v : new Date(v)
+
     if (isNaN(d.getTime())) return '-'
     const hh = String(d.getHours()).padStart(2, '0')
     const min = String(d.getMinutes()).padStart(2, '0')
+
+
     return `${hh}:${min}`
   }
 
   const daysBetween = (from: any, to: any) => {
     const d1 = toDateOnly(from)
     const d2 = toDateOnly(to)
+
     if (!d1 || !d2) return null
     const diff = d2.getTime() - d1.getTime()
+
+
     return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
   }
 
@@ -2163,6 +2622,7 @@ const UserListTable2 = ({
     // determine which property to use for date filtering
     const dfRaw = filters?.dateField ? String(filters.dateField).toLowerCase() : ''
     let fieldName: 'fechaCodificacion' | 'fechaMuestreo' | null = null
+
     if (dfRaw === 'fecha_codificacion' || dfRaw === 'fechacodificacion' || dfRaw === 'fecha-codificacion') {
       fieldName = 'fechaCodificacion'
     } else if (dfRaw === 'fecha_muestreo' || dfRaw === 'fechamuestreo' || dfRaw === 'fecha-muestreo') {
@@ -2173,11 +2633,14 @@ const UserListTable2 = ({
     if (fieldName && filters && filters.start && filters.end) {
       const start = toDateOnly(filters.start)
       const end = toDateOnly(filters.end)
+
       if (start && end) {
         result = result.filter(r => {
           const raw = (r as any)[fieldName]
           const dOnly = toDateOnly(raw)
+
           if (!dOnly) return false
+
           return dOnly.getTime() >= start.getTime() && dOnly.getTime() <= end.getTime()
         })
       }
@@ -2185,15 +2648,19 @@ const UserListTable2 = ({
 
     // Area filtering: comparar por nombre (Header entrega areaName)
     const areaValue = (filters as any)?.areaName ?? null
+
     if (areaValue !== null && typeof areaValue !== 'undefined' && String(areaValue).trim() !== '') {
       const rawNorm = normalizeText(areaValue)
+
       result = result.filter(r => normalizeText(r.area ?? '').includes(rawNorm))
     }
 
     // Familia/Tipo de Servicio filtering: comparar por nombre
     const familiaValue = (filters as any)?.familia ?? null
+
     if (familiaValue !== null && typeof familiaValue !== 'undefined' && String(familiaValue).trim() !== '') {
       const rawNorm = normalizeText(familiaValue)
+
       result = result.filter(r => normalizeText(r.familia ?? '').includes(rawNorm))
     }
 
@@ -2201,12 +2668,17 @@ const UserListTable2 = ({
     const sedeValue = (filters as any)?.sede ?? null
     const sedeSelected = Array.isArray(sedeValue) ? sedeValue : sedeValue ? [sedeValue] : []
     const sedeWanted = sedeSelected.map(v => normalizeText(v)).filter(Boolean)
+
     if (sedeWanted.length) {
       result = result.filter(r => {
         const sedes = Array.isArray((r as any).sedes) ? ((r as any).sedes as any[]) : []
+
         if (!sedes.length) return false
+
         return sedes.some(s => {
           const norm = normalizeText(s)
+
+
           return sedeWanted.some(w => norm.includes(w))
         })
       })
@@ -2228,10 +2700,14 @@ const UserListTable2 = ({
 
         result = result.filter(r => {
           const counts = r.estadoOperativoCounts
+
           if (keys.length && counts && typeof counts === 'object') {
             if (keys.some(k => (counts as any)[k] && Number((counts as any)[k]) > 0)) return true
           }
+
           const opNorm = normalizeText(r.estadoOperativo ?? '')
+
+
           return norms.some(n => opNorm.includes(n))
         })
       }
@@ -2248,10 +2724,14 @@ const UserListTable2 = ({
 
         result = result.filter(r => {
           const counts = r.estadoAdministrativoCounts
+
           if (keys.length && counts && typeof counts === 'object') {
             if (keys.some(k => (counts as any)[k] && Number((counts as any)[k]) > 0)) return true
           }
+
           const adNorm = normalizeText(r.estadoAdministrativo ?? '')
+
+
           return norms.some(n => adNorm.includes(n))
         })
       }
@@ -2263,24 +2743,30 @@ const UserListTable2 = ({
   const applyDateFilter = (rows: RCM[], filters?: Filters) => {
     console.log('applyDateFilter called, rows:', rows.length, 'filters:', filters)
     const result = filterRowsForNavigator(rows, filters)
+
     console.log('applyDateFilter result count:', result.length)
     setFilteredData(result)
   }
 
   const opStateOrder = useMemo(() => {
     const map = new Map<string, number>()
+
     OPERATIONAL_STATES.forEach((s, idx) => {
       if (s?.value) map.set(String(s.value).trim().toUpperCase(), idx)
     })
+
     return map
   }, [])
 
   const adminStateOrder = useMemo(() => {
     const map = new Map<string, number>()
-    ;(ADMINISTRATIVE_STATES ?? []).forEach((s: any, idx: number) => {
-      const key = String(s?.value ?? '').trim().toUpperCase()
-      if (key) map.set(key, idx)
-    })
+
+      ; (ADMINISTRATIVE_STATES ?? []).forEach((s: any, idx: number) => {
+        const key = String(s?.value ?? '').trim().toUpperCase()
+
+        if (key) map.set(key, idx)
+      })
+
     return map
   }, [])
 
@@ -2319,8 +2805,11 @@ const UserListTable2 = ({
             (r as any).clienteNombre ??
             (r as any).nombreCliente ??
             (typeof (r as any).cliente === 'string' ? (r as any).cliente : null)
+
           const obra = r.obra?.nombreObra ?? r.obra?.numeroObra ?? null
           const parts = [cliente, obra].map(v => String(v ?? '').trim()).filter(Boolean)
+
+
           return parts.length ? parts.join(' - ') : '-'
         },
         sortingFn: (rowA, rowB, columnId) => compareText(rowA.getValue(columnId), rowB.getValue(columnId)),
@@ -2331,6 +2820,7 @@ const UserListTable2 = ({
             (row.original as any).nombreCliente ??
             (typeof (row.original as any).cliente === 'string' ? (row.original as any).cliente : null) ??
             null
+
           const obraNombre = row.original.obra?.nombreObra ?? null
           const obraNumero = row.original.obra?.numeroObra ?? null
           const ciudad = row.original.ciudad ?? null
@@ -2372,14 +2862,17 @@ const UserListTable2 = ({
           const area = String(r.area ?? '').trim()
           const servicio = String(r.familia ?? '').trim()
           const parts = [area, servicio].filter(Boolean)
+
+
           return parts.length ? parts.join(' - ') : '-'
         },
         sortingFn: (rowA, rowB, columnId) => compareText(rowA.getValue(columnId), rowB.getValue(columnId)),
         cell: ({ row }) => {
           const areaText = String(row.original.area ?? '').trim()
           const servicioText = String(row.original.familia ?? '').trim()
+          const descripcion = String(row.original.descripcionServicio ?? '').trim()
 
-          const title = [areaText, servicioText].filter(Boolean).join('\n')
+          const title = [areaText, servicioText, descripcion].filter(Boolean).join('\n')
 
           if (!areaText && !servicioText) {
             return <Typography variant='body2'>-</Typography>
@@ -2388,11 +2881,13 @@ const UserListTable2 = ({
           return (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }} title={title}>
               <Typography variant='body2' sx={{ fontWeight: 700 }}>
-                {areaText || '-'}
+                {areaText} {servicioText ? `- ${servicioText}` : ''}
               </Typography>
-              <Typography variant='caption' color='text.secondary' sx={{ lineHeight: 1.2 }}>
-                {servicioText || '-'}
-              </Typography>
+              {descripcion ? (
+                <Typography variant='caption' color='text.secondary' sx={{ lineHeight: 1.2, maxWidth: 220, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  {descripcion}
+                </Typography>
+              ) : null}
             </Box>
           )
         }
@@ -2415,7 +2910,7 @@ const UserListTable2 = ({
       },
       {
         id: 'estOp',
-        header: 'EST. OPERATIVO',
+        header: 'Est. Op',
         accessorKey: 'estadoOperativo',
         sortingFn: (rowA, rowB, columnId) => {
           const aRaw = rowA.getValue(columnId) as any
@@ -2424,19 +2919,25 @@ const UserListTable2 = ({
           const bKey = normalizeStateKey(bRaw) ?? String(bRaw ?? '').trim().toUpperCase()
           const ai = aKey ? opStateOrder.get(aKey) : null
           const bi = bKey ? opStateOrder.get(bKey) : null
+
           if (ai == null && bi == null) return compareText(aKey, bKey)
           if (ai == null) return 1
           if (bi == null) return -1
+
           return ai === bi ? 0 : ai > bi ? 1 : -1
         },
         cell: ({ row }) => {
           const opRaw = row.original.estadoOperativo ?? null
+
           const opLabel = (() => {
             if (!opRaw) return '-'
             const opKey = normalizeStateKey(opRaw) ?? String(opRaw ?? '').trim().toUpperCase()
+
             if (opKey === 'ENVIADO_DIGITACION') return 'Env. Digitación'
+
             return OPERATIONAL_STATES.find(s => s.value === opKey)?.label ?? opRaw
           })()
+
           const info = getOperationalInfo(opRaw ?? undefined)
 
           const hasEvento = Boolean((row.original as any).conEvento)
@@ -2477,23 +2978,31 @@ const UserListTable2 = ({
                   if (canAdvanceToEnviadoDigitacion) {
                     e.stopPropagation()
                     openMarkDialogForRow('ENVIADO_DIGITACION', repId as number)
+
                     return
                   }
+
                   if (canAdvanceToRevisado) {
                     e.stopPropagation()
                     openMarkDialogForRow('REVISADO', repId as number)
+
                     return
                   }
+
                   if (canAdvanceToFirmado) {
                     e.stopPropagation()
                     openMarkDialogForRow('FIRMADO', repId as number)
+
                     return
                   }
+
                   if (canAdvanceToEnviado) {
                     e.stopPropagation()
                     openMarkDialogForRow('ENVIADO', repId as number)
+
                     return
                   }
+
                   if (isHelpEnabled) {
                     openOperationalHelp(e as any, opRaw, row.original)
                   }
@@ -2518,7 +3027,7 @@ const UserListTable2 = ({
       },
       {
         id: 'estAd',
-        header: 'EST. ADMINISTRATIVO',
+        header: 'Est. Adm.',
         accessorKey: 'estadoAdministrativo',
         sortingFn: (rowA, rowB, columnId) => {
           const aRaw = rowA.getValue(columnId) as any
@@ -2527,13 +3036,16 @@ const UserListTable2 = ({
           const bKey = normalizeStateKey(bRaw) ?? String(bRaw ?? '').trim().toUpperCase()
           const ai = aKey ? adminStateOrder.get(aKey) : null
           const bi = bKey ? adminStateOrder.get(bKey) : null
+
           if (ai == null && bi == null) return compareText(aKey, bKey)
           if (ai == null) return 1
           if (bi == null) return -1
+
           return ai === bi ? 0 : ai > bi ? 1 : -1
         },
         cell: ({ row }) => {
           const adRaw = row.original.estadoAdministrativo ?? null
+
           if (!adRaw) {
             return (
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -2559,6 +3071,7 @@ const UserListTable2 = ({
           }
 
           const adKey = normalizeStateKey(adRaw) ?? String(adRaw ?? '').trim().toUpperCase()
+
           const adLabel =
             (ADMINISTRATIVE_STATES ?? []).find((s: any) => String(s?.value ?? '').trim().toUpperCase() === adKey)?.label ??
             String(adRaw)
@@ -2624,6 +3137,8 @@ const UserListTable2 = ({
                 if (op === 'EN_PROCESO') {
                   const counts = (row.original as any).estadoOperativoCounts as Record<string, number> | undefined
                   const ensayadoCount = Number(counts?.ENSAYADO ?? 0)
+
+
                   return !(Number.isFinite(ensayadoCount) && ensayadoCount > 0)
                 }
 
@@ -2672,7 +3187,9 @@ const UserListTable2 = ({
 
   const searchedData = useMemo(() => {
     const q = String(globalFilter ?? '').toLowerCase().trim()
+
     if (!q) return filteredData
+
     return filteredData.filter(item =>
       [
         item.codigoNombre,
@@ -2699,6 +3216,7 @@ const UserListTable2 = ({
       if (selectedCodigoId == null) return
 
       const target = ev.target as HTMLElement | null
+
       if (!target) return
 
       // si el click ocurre dentro del panel de detalle inferior, no limpiar
@@ -2708,6 +3226,7 @@ const UserListTable2 = ({
       if (target.closest('.MuiPopover-root') || target.closest('.MuiMenu-root') || target.closest('.MuiModal-root')) return
 
       const root = tableKeyboardRef.current
+
       if (!root) return
       if (root.contains(target)) return
 
@@ -2716,6 +3235,7 @@ const UserListTable2 = ({
     }
 
     window.addEventListener('mousedown', onMouseDown, true)
+
     return () => window.removeEventListener('mousedown', onMouseDown, true)
   }, [selectedCodigoId, onSelectCodigo])
 
@@ -2723,6 +3243,7 @@ const UserListTable2 = ({
   useEffect(() => {
     if (selectedCodigoId == null) return
     const exists = searchedData.some(it => Number((it as any).id) === selectedCodigoId)
+
     if (!exists) setSelectedCodigoId(null)
   }, [searchedData, selectedCodigoId])
 
@@ -2791,6 +3312,7 @@ const UserListTable2 = ({
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport)
     const workbook = XLSX.utils.book_new()
+
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Navegador')
 
     worksheet['!cols'] = [
@@ -2807,6 +3329,7 @@ const UserListTable2 = ({
     ]
 
     const today = new Date().toISOString().split('T')[0]
+
     XLSX.writeFile(workbook, `Navegador_RCM_${today}.xlsx`)
   }, [table])
 
@@ -2819,6 +3342,7 @@ const UserListTable2 = ({
       if (!raw) return ''
       const u = normalizeState(raw)
       const byValue = OPERATIONAL_STATES.find(s => s.value === u)
+
       if (byValue) return byValue.value
 
       const rawNorm =
@@ -2827,6 +3351,7 @@ const UserListTable2 = ({
           .normalize?.('NFD')
           ?.replace(/[\u0300-\u036f]/g, '')
           ?.toLowerCase() ?? String(raw ?? '').toLowerCase()
+
       const byLabel = OPERATIONAL_STATES.find(
         s =>
           (s.label ?? '')
@@ -2835,6 +3360,7 @@ const UserListTable2 = ({
             ?.replace(/[\u0300-\u036f]/g, '')
             .toLowerCase() === rawNorm
       )
+
       if (byLabel) return byLabel.value
 
       return u
@@ -2843,20 +3369,26 @@ const UserListTable2 = ({
     const isConEvento = (d: RCM) => {
       if (Boolean((d as any).conEvento)) return true
       const counts = d.estadoOperativoCounts
+
       if (counts && typeof counts === 'object' && Number(counts.EVENTO ?? 0) > 0) return true
+
       return false
     }
 
     const isPagado = (d: RCM) => {
       const counts = d.estadoAdministrativoCounts
+
       if (counts && typeof counts === 'object') {
         return Number(counts.PAGADO ?? 0) > 0
       }
 
       const raw = String((d as any).estadoAdministrativo ?? '').trim()
+
       if (!raw) return false
       const key = normalizeStateKey(raw)
+
       if (key === 'PAGADO') return true
+
       return normalizeText(raw).includes('pag')
     }
 
@@ -2865,6 +3397,7 @@ const UserListTable2 = ({
       if (isPagado(d)) return false
 
       const counts = d.estadoAdministrativoCounts
+
       if (counts && typeof counts === 'object') {
         if (Number(counts.FACTURADO ?? 0) > 0) return true
         if (Number((counts as any).PENDIENTE ?? 0) > 0) return true
@@ -2872,6 +3405,8 @@ const UserListTable2 = ({
 
       const raw = String((d as any).estadoAdministrativo ?? '').trim()
       const norm = normalizeText(raw)
+
+
       return norm.includes('factur') || norm.includes('pend')
     }
 
@@ -2902,6 +3437,7 @@ const UserListTable2 = ({
       }
 
       const hasEvento = isConEvento(d)
+
       if (hasEvento) {
         conEventoTotal += 1
         if (opVal === 'EN_PROCESO') conEventoEnProceso += 1
@@ -2925,8 +3461,11 @@ const UserListTable2 = ({
   const isDashboardCardActive = (key: string) => {
     if (key === 'CON_EVENTO') return Boolean(filters?.conEvento)
     const raw = (filters as any)?.estadoOperativo
+
     if (Array.isArray(raw)) return raw.map(v => normalizeStateKey(v)).includes(key)
     const current = normalizeStateKey(raw ?? null)
+
+
     return Boolean(current) && current === key
   }
 
@@ -2944,6 +3483,7 @@ const UserListTable2 = ({
       const normalized = list.map(v => normalizeStateKey(v)).filter(Boolean) as string[]
       const has = normalized.includes(key)
       const nextList = has ? normalized.filter(k => k !== key) : [...normalized, key]
+
       next.estadoOperativo = nextList.length ? nextList : undefined
     }
 
@@ -2952,8 +3492,10 @@ const UserListTable2 = ({
       if (typeof v === 'string') return v.trim() === ''
       if (Array.isArray(v)) return v.length === 0
       if (typeof v === 'boolean') return v === false
+
       return false
     }
+
     const nextIsEmpty =
       isEmpty(next.dateField) &&
       isEmpty(next.start) &&
@@ -3126,9 +3668,11 @@ const UserListTable2 = ({
           if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
 
           const rows = table.getRowModel().rows
+
           if (!rows.length) return
 
           const currentIndex = selectedCodigoId == null ? -1 : rows.findIndex(r => Number((r.original as any).id) === selectedCodigoId)
+
           const nextIndex =
             e.key === 'ArrowDown'
               ? Math.min((currentIndex < 0 ? 0 : currentIndex + 1), rows.length - 1)
@@ -3136,6 +3680,7 @@ const UserListTable2 = ({
 
           const next = rows[nextIndex]
           const nextId = next ? Number((next.original as any).id) : null
+
           if (!next || !Number.isFinite(nextId) || (nextId as number) <= 0) return
 
           e.preventDefault()
@@ -3172,7 +3717,9 @@ const UserListTable2 = ({
                         <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
                         {(() => {
                           const s = header.column.getIsSorted()
+
                           if (!s) return null
+
                           return (
                             <Typography component='span' variant='caption' sx={{ fontWeight: 900, lineHeight: 1 }}>
                               {s === 'asc' ? '▲' : '▼'}
@@ -3192,10 +3739,13 @@ const UserListTable2 = ({
                 key={row.id}
                 onClick={() => {
                   const id = Number((row.original as any).id)
+
                   if (Number.isFinite(id) && id > 0) {
                     setSelectedCodigoId(id)
                     onSelectCodigo?.(id)
                   }
+
+
                   // dar foco al contenedor para permitir navegación con teclado inmediatamente
                   tableKeyboardRef.current?.focus()
                 }}
@@ -3245,6 +3795,7 @@ const UserListTable2 = ({
       >
         {(() => {
           const copy = getOperationalHelpCopy(opHelpState)
+
           if (!copy) return null
 
           const st = OPERATIONAL_STATES.find(s => s.value === opHelpState)
@@ -3329,7 +3880,9 @@ const UserListTable2 = ({
       >
         {(() => {
           const opts = getStatesForRow(markRowId)
+
           if (!opts || opts.length === 0) return <MenuItem disabled>No hay acciones disponibles</MenuItem>
+
           return opts.map(opt => (
             <MenuItem
               key={opt.value}
@@ -3337,6 +3890,7 @@ const UserListTable2 = ({
               onClick={() => {
                 // no ejecutar acción si es el estado actual (disabled)
                 if ((opt as any).disabled) return
+
                 // usar el id de la fila donde se abrió el menu (markRowId), no markDialogRowId
                 handleMarkAction(opt.value, markRowId)
               }}
@@ -3365,17 +3919,20 @@ const UserListTable2 = ({
               >
                 {(() => {
                   const ot = String(codigoDialogMeta?.ot ?? '').trim()
+
                   const clienteName =
                     String(codigoDialogMeta?.cliente?.razonSocial ?? codigoDialogMeta?.cliente?.nombreCliente ?? '').trim() ||
                     String(codigoDialogMeta?.clienteNombre ?? '').trim()
+
                   const obraNum = String(codigoDialogMeta?.obra?.numeroObra ?? '').trim()
                   const obraTxt = obraNum ? `Obra ${obraNum}` : ''
+
                   const ciudad = String(
                     codigoDialogMeta?.ciudad ??
-                      codigoDialogMeta?.obra?.comuna ??
-                      codigoDialogMeta?.cliente?.comuna ??
-                      codigoDialogMeta?.cliente?.ciudad ??
-                      ''
+                    codigoDialogMeta?.obra?.comuna ??
+                    codigoDialogMeta?.cliente?.comuna ??
+                    codigoDialogMeta?.cliente?.ciudad ??
+                    ''
                   ).trim()
 
                   return [ot ? `OT ${ot}` : '', clienteName, obraTxt, ciudad].filter(Boolean).join(' - ') || ' '
@@ -3389,10 +3946,12 @@ const UserListTable2 = ({
                 {(() => {
                   const op = String(codigoDialogMeta?.estadoOperativo ?? '').trim()
                   const adm = String(codigoDialogMeta?.estadoAdministrativo ?? '').trim()
+
                   if (!op && !adm) return null
 
                   const opKey = String(op).trim().toUpperCase()
                   const opInfo = op ? getOperationalInfo(op) : null
+
                   const opLabel = op
                     ? OPERATIONAL_STATES.find(s => s.value === opKey)?.label ?? op
                     : null
@@ -3403,13 +3962,17 @@ const UserListTable2 = ({
                   const daysSinceDigitado = (() => {
                     if (opKey !== 'DIGITADO') return null
                     const raw = String(dateSrc ?? '').trim()
+
                     if (!raw) return null
                     const d = new Date(raw)
+
                     if (isNaN(d.getTime())) return null
                     const from = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
                     const now = new Date()
                     const to = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
                     const diff = Math.floor((to - from) / (24 * 60 * 60 * 1000))
+
+
                     return Number.isFinite(diff) && diff >= 0 ? diff : null
                   })()
 
@@ -3493,6 +4056,7 @@ const UserListTable2 = ({
               const sedes = Array.isArray(codigoDialogMeta?.sedes)
                 ? (codigoDialogMeta.sedes as any[]).map(v => String(v ?? '').trim()).filter(Boolean)
                 : []
+
               const sedeTxt = sedes.length ? sedes.join(', ') : String(codigoDialogMeta?.ciudad ?? '').trim() || '-'
 
               const areaTxt = String(codigoDialogMeta?.area ?? '').trim() || '-'
@@ -3510,9 +4074,11 @@ const UserListTable2 = ({
                 const parts = window.location.pathname.split('/').filter(Boolean)
                 const lang = parts[0] || 'en'
                 const params = new URLSearchParams()
+
                 params.set('otId', String(otId))
                 params.set('readonly', '1')
                 const target = `${window.location.origin}/${lang}/apps/encoder?${params.toString()}`
+
                 window.open(target, '_blank')
               }
 
@@ -3562,6 +4128,8 @@ const UserListTable2 = ({
                   {(() => {
                     const desc = String(codigoDialogData?.descripcionServicio ?? codigoDialogMeta?.descripcionServicio ?? '').trim()
                     const value = desc || '-'
+
+
                     return (
                       <Box sx={{ gridColumn: { xs: 'auto', sm: '1 / -1' }, minWidth: 0 }}>
                         <Typography
@@ -3603,8 +4171,10 @@ const UserListTable2 = ({
               for (const e of ens) {
                 const sku = String(e?.sku ?? e?.producto?.sku ?? '').trim()
                 const nombre = String(e?.nombre ?? e?.producto?.nombre ?? '').trim()
+
                 if (!sku) continue
                 const prev = map.get(sku)
+
                 map.set(sku, {
                   sku,
                   nombre: prev?.nombre || nombre,
@@ -3613,6 +4183,7 @@ const UserListTable2 = ({
               }
 
               const items = Array.from(map.values())
+
               if (!items.length) {
                 return (
                   <Typography variant='body2' color='text.secondary'>
@@ -3659,13 +4230,17 @@ const UserListTable2 = ({
 
               const formatInforme = (n: number) => {
                 const s = String(n)
+
                 if (s.length <= 3) return s
+
                 return `${s.slice(0, -3)}-${s.slice(-3)}`
               }
 
               const extractTipoFromObs = (obs: string) => {
                 const raw = String(obs ?? '')
                 const m = raw.match(/(?:^|\|\s)\s*Tipo:\s*([^|\n\r]+)/i)
+
+
                 return String(m?.[1] ?? '').trim() || null
               }
 
@@ -3673,7 +4248,9 @@ const UserListTable2 = ({
                 const raw = String(obs ?? '')
                 const m = raw.match(/RCMs?:\s*([^|\n\r]+)/i)
                 const bag = String(m?.[1] ?? '').trim()
+
                 if (!bag) return [] as string[]
+
                 return bag
                   .split(/[,\s]+/)
                   .map(x => String(x ?? '').trim())
@@ -3681,9 +4258,11 @@ const UserListTable2 = ({
               }
 
               const rows = Array.isArray(codigoDialogHistory) ? codigoDialogHistory : []
+
               const informes = rows
                 .map((r: any) => {
                   const tipoEstado = normalize(r?.tipoEstado)
+
                   if (tipoEstado !== 'INFORME_AUTO' && tipoEstado !== 'INFORME_MANUAL') return null
                   const informeN = Number(r?.informe)
                   const hasN = Number.isFinite(informeN) && informeN > 0
@@ -3700,16 +4279,22 @@ const UserListTable2 = ({
                       : motivo || String(codigoDialogData?.descripcionServicio ?? codigoDialogMeta?.descripcionServicio ?? '').trim() || '—'
 
                   const rcmsRaw = extractRcmsFromObs(obs)
+
                   const repRcmFallback = (() => {
                     const rep = Number(codigoDialogMeta?.representativeRcmId)
+
+
                     return Number.isFinite(rep) && rep > 0 ? [String(rep)] : ([] as string[])
                   })()
+
                   const rcms = rcmsRaw.length ? rcmsRaw : repRcmFallback
 
                   const slug = (() => {
                     const norm = normalize(motivo)
+
                     if (norm.includes('DENSIDAD')) return 'densidad'
                     if (norm.includes('HORMIGON') || norm.includes('HORMIGÓN')) return 'hormigon'
+
                     return null
                   })()
 
@@ -3725,15 +4310,15 @@ const UserListTable2 = ({
                   }
                 })
                 .filter(Boolean) as Array<{
-                key: string
-                modo: 'Digital' | 'Manual'
-                informeN: number | null
-                numeroTxt: string
-                dateTxt: string
-                nombre: string
-                rcms: string[]
-                slug: string | null
-              }>
+                  key: string
+                  modo: 'Digital' | 'Manual'
+                  informeN: number | null
+                  numeroTxt: string
+                  dateTxt: string
+                  nombre: string
+                  rcms: string[]
+                  slug: string | null
+                }>
 
               if (!informes.length) {
                 return (
@@ -3775,11 +4360,11 @@ const UserListTable2 = ({
                                 isManual
                                   ? { fontWeight: 900, bgcolor: '#595959', color: '#FFFFFF' }
                                   : theme => ({
-                                      fontWeight: 900,
-                                      bgcolor: alpha(theme.palette.primary.main, 0.12),
-                                      border: `1px solid ${alpha(theme.palette.primary.main, 0.25)}`,
-                                      color: theme.palette.primary.main
-                                    })
+                                    fontWeight: 900,
+                                    bgcolor: alpha(theme.palette.primary.main, 0.12),
+                                    border: `1px solid ${alpha(theme.palette.primary.main, 0.25)}`,
+                                    color: theme.palette.primary.main
+                                  })
                               }
                             />
                           </Box>
@@ -3796,21 +4381,26 @@ const UserListTable2 = ({
                                 onClick={e => {
                                   e.stopPropagation()
                                   const slug = it.slug
+
                                   if (!slug) return
 
                                   let url = `/api/informes/${slug}/mock`
+
                                   if (slug === 'densidad') {
                                     const params = new URLSearchParams()
                                     const codigoId = Number(codigoDialogMeta?.id)
                                     const repRcmId = Number(codigoDialogMeta?.representativeRcmId)
+
                                     if (Number.isFinite(codigoId) && codigoId > 0) params.set('codigoAgrupadorId', String(codigoId))
                                     if (Number.isFinite(repRcmId) && repRcmId > 0) params.set('rcmId', String(repRcmId))
                                     if (it.informeN != null) params.set('informe', String(it.informeN))
                                     const qs = params.toString()
+
                                     if (qs) url = `/api/informes/densidad/generate?${qs}`
                                   }
 
                                   const w = window.open(url, '_blank')
+
                                   if (w) {
                                     try {
                                       w.opener = null
@@ -3847,13 +4437,16 @@ const UserListTable2 = ({
           {/* Eventos activos */}
           {(() => {
             const rcms = Array.isArray(codigoDialogData?.rcms) ? codigoDialogData.rcms : []
+
             const activos = rcms
               .map((r: any) => {
                 const last = Array.isArray(r?.RCMHistory) ? r.RCMHistory[0] : null
+
                 if (!last) return null
                 const tipo = String(last?.tipo ?? '').trim()
                 const tipoEstado = String(last?.tipoEstado ?? '').trim().toUpperCase()
                 const isOpen = tipo === 'Evento Abierto' || tipoEstado === 'EVENTO'
+
                 if (!isOpen) return null
 
                 const motivo = String(last?.motivo ?? '').trim()
@@ -3867,13 +4460,17 @@ const UserListTable2 = ({
                 const extractDueTxt = (raw: string) => {
                   const s = String(raw ?? '')
                   const m = s.match(/\bvence(?:\s*fecha)?\s*:?\s*(\d{2}[\/-]\d{2}[\/-]\d{4}|\d{4}[\/-]\d{2}[\/-]\d{2})\b/i)
+
                   if (!m) return null
                   const v = String(m[1] ?? '').trim().replace(/\//g, '-')
+
                   if (!v) return null
                   if (/^\d{2}-\d{2}-\d{4}$/.test(v)) return v
                   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return formatDateDDMMYYYYDateOnly(v)
                   const d = new Date(v)
+
                   if (!isNaN(d.getTime())) return formatDateDDMMYYYYDateOnly(d.toISOString())
+
                   return v
                 }
 
@@ -3977,12 +4574,16 @@ const UserListTable2 = ({
               <Typography variant='caption' color='text.secondary' sx={{ mt: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {(() => {
                   const code = String(informeDialogMeta?.codigoNombre ?? informeDialogData?.codigoNombre ?? '').trim()
+
                   const clienteName =
                     String(informeDialogMeta?.cliente?.razonSocial ?? informeDialogMeta?.cliente?.nombreCliente ?? '').trim() ||
                     String(informeDialogData?.cliente?.razonSocial ?? informeDialogData?.cliente?.nombreCliente ?? '').trim()
+
                   const obraNum = String(informeDialogMeta?.obra?.numeroObra ?? '').trim()
                   const obraName = String(informeDialogMeta?.obra?.nombreObra ?? '').trim()
                   const obraTxt = obraNum || obraName ? `Obra ${obraNum || obraName}` : ''
+
+
                   return [code, clienteName, obraTxt].filter(Boolean).join(' - ') || ' '
                 })()}
               </Typography>
@@ -4061,11 +4662,13 @@ const UserListTable2 = ({
 
           {(() => {
             const detailRcms = Array.isArray(informeDialogData?.rcms) ? (informeDialogData?.rcms ?? []) : []
+
             const metaRcms: string[] = Array.isArray(informeDialogMeta?.rcmNumeros)
               ? (informeDialogMeta?.rcmNumeros ?? []).map((x: any) => String(x ?? '').trim()).filter(Boolean)
               : []
 
             const digitales = detailRcms.length || metaRcms.length
+
             if (!digitales) return null
 
             const rcms = detailRcms.length ? detailRcms : metaRcms.map(n => ({ numeroRcm: n }))
@@ -4088,12 +4691,12 @@ const UserListTable2 = ({
                     <Chip
                       size='small'
                       variant='outlined'
-                      label={`${digitales} digitales`}
+                      label={digitales === 0 ? '1 manual' : digitales === 1 ? '1 digital' : `${digitales} digitales`}
                       sx={theme => ({
                         fontWeight: 900,
-                        color: theme.palette.primary.main,
-                        borderColor: alpha(theme.palette.primary.main, 0.5),
-                        bgcolor: alpha(theme.palette.primary.main, 0.08)
+                        color: digitales === 0 ? theme.palette.success.main : theme.palette.primary.main,
+                        borderColor: digitales === 0 ? alpha(theme.palette.success.main, 0.5) : alpha(theme.palette.primary.main, 0.5),
+                        bgcolor: digitales === 0 ? alpha(theme.palette.success.main, 0.08) : alpha(theme.palette.primary.main, 0.08)
                       })}
                     />
                   </Box>
@@ -4118,27 +4721,36 @@ const UserListTable2 = ({
                       const numero = String(r?.numeroRcm ?? '').trim()
                       const rcmType = String(r?.rcmType ?? '').trim()
                       const tarjeta = String(r?.numeroTarjeta ?? '').trim()
-
-                      const details = [r?.tipoMaterial, r?.tomaMuestra ?? r?.procedencia ?? r?.item, r?.ubicacionSector]
-                        .map(v => String(v ?? '').trim())
-                        .filter(Boolean)
-                        .join(' ')
+                      const tipoMaterial = String(r?.tipoMaterial ?? '').trim()
+                      const item = String(r?.item ?? '').trim()
+                      const tomaMuestra = String(r?.tomaMuestra ?? r?.procedencia ?? '').trim()
 
                       const opKey = normalizeStateKey(r?.estadoOperativo) ?? null
+
                       const opLabel = (() => {
                         if (!opKey) return ''
                         const hit = OPERATIONAL_STATES.find(s => s.value === opKey)
+
+
                         return hit?.label ?? formatStateForChip(opKey)
                       })()
+
                       const opInfo = getOperationalInfo(opKey ?? undefined)
 
                       const servicios = Array.isArray(r?.servicios) ? (r.servicios as any[]) : []
+
                       const ensayos = servicios
                         .map(s => ({
                           nombre: String(s?.nombre ?? '').trim(),
                           estado: normalizeStateKey(s?.estadoOperativo ?? s?.estado) ?? null
                         }))
                         .filter(e => e.nombre)
+
+                      const infoItems = [
+                        tipoMaterial,
+                        item,
+                        tomaMuestra ? `#${tomaMuestra}` : ''
+                      ].filter(Boolean)
 
                       return (
                         <Box
@@ -4150,57 +4762,48 @@ const UserListTable2 = ({
                             bgcolor: alpha(theme.palette.common.white, 0.55)
                           })}
                         >
-                          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
-                            <Box sx={{ minWidth: 0 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                                <Typography variant='subtitle2' sx={{ fontWeight: 900 }}>
-                                  {numero || '-'}
-                                </Typography>
-
-                                {rcmType ? <Chip size='small' label={rcmType.toUpperCase()} sx={{ fontWeight: 800 }} /> : null}
-
-                                {tarjeta ? (
-                                  <Chip size='small' variant='outlined' label={`T: ${tarjeta}`} sx={{ fontWeight: 900 }} />
-                                ) : null}
-                              </Box>
-
-                              {details ? (
-                                <Typography
-                                  variant='caption'
-                                  color='text.secondary'
-                                  sx={{ fontWeight: 700, display: 'block', mt: 0.25 }}
-                                >
-                                  {details}
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', minWidth: 0 }}>
+                              {numero ? (
+                                <Typography variant='caption' sx={{ fontWeight: 900, fontSize: '0.78rem' }}>
+                                  {numero}
                                 </Typography>
                               ) : null}
 
-                              {hideEnsayosByRcm || !ensayos.length ? null : (
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1 }}>
-                                  {ensayos.map((e, i) => {
-                                    const k = e.estado ?? undefined
-                                    const info = getOperationalInfo(k)
-                                    return (
-                                      <Chip
-                                        key={`${e.nombre}-${i}`}
-                                        size='small'
-                                        label={e.nombre}
-                                        sx={theme => {
-                                          const isEnsayado = String(k ?? '').toUpperCase() === 'ENSAYADO'
-                                          const bg = isEnsayado ? alpha(theme.palette.success.main, 0.12) : info.bgcolor
-                                          const bd = isEnsayado ? alpha(theme.palette.success.main, 0.28) : info.border
+                              {numero && (rcmType || tarjeta || infoItems.length > 0) ? (
+                                <Typography variant='caption' color='text.disabled' sx={{ fontWeight: 400 }}>·</Typography>
+                              ) : null}
 
-                                          return {
-                                            fontWeight: 800,
-                                            bgcolor: bg,
-                                            border: `1px solid ${bd}`,
-                                            color: 'text.primary'
-                                          }
-                                        }}
-                                      />
-                                    )
-                                  })}
+                              {rcmType ? (
+                                <Typography variant='caption' sx={{ fontWeight: 700, fontSize: '0.75rem' }}>
+                                  {rcmType.toUpperCase()}
+                                </Typography>
+                              ) : null}
+
+                              {rcmType && (tarjeta || infoItems.length > 0) ? (
+                                <Typography variant='caption' color='text.disabled' sx={{ fontWeight: 400 }}>·</Typography>
+                              ) : null}
+
+                              {tarjeta ? (
+                                <Typography variant='caption' sx={{ fontWeight: 700, fontSize: '0.75rem' }}>
+                                  T: {tarjeta}
+                                </Typography>
+                              ) : null}
+
+                              {tarjeta && infoItems.length > 0 ? (
+                                <Typography variant='caption' color='text.disabled' sx={{ fontWeight: 400 }}>·</Typography>
+                              ) : null}
+
+                              {infoItems.map((item, i) => (
+                                <Box key={i} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                                  <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600, fontSize: '0.73rem' }}>
+                                    {item}
+                                  </Typography>
+                                  {i < infoItems.length - 1 ? (
+                                    <Typography variant='caption' color='text.disabled' sx={{ fontWeight: 400 }}>·</Typography>
+                                  ) : null}
                                 </Box>
-                              )}
+                              ))}
                             </Box>
 
                             {opLabel ? (
@@ -4211,11 +4814,55 @@ const UserListTable2 = ({
                                   fontWeight: 900,
                                   bgcolor: opInfo.bgcolor,
                                   border: `1px solid ${opInfo.border}`,
-                                  color: opInfo.colorText
+                                  color: opInfo.colorText,
+                                  flexShrink: 0
                                 }}
                               />
                             ) : null}
                           </Box>
+
+                          {!ensayos.length ? null : (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1 }}>
+                              {(() => {
+                                const grouped = new Map<string, { count: number; estado: string | null }>()
+
+                                for (const e of ensayos) {
+                                  const existing = grouped.get(e.nombre)
+
+                                  if (existing) {
+                                    existing.count++
+                                  } else {
+                                    grouped.set(e.nombre, { count: 1, estado: e.estado })
+                                  }
+                                }
+
+                                return Array.from(grouped.entries()).map(([nombre, { count, estado }]) => {
+                                  const k = estado ?? undefined
+                                  const info = getOperationalInfo(k)
+
+                                  return (
+                                    <Chip
+                                      key={nombre}
+                                      size='small'
+                                      label={count > 1 ? `✓ ${nombre} x${count}` : `✓ ${nombre}`}
+                                      sx={theme => {
+                                        const isEnsayado = String(k ?? '').toUpperCase() === 'ENSAYADO'
+                                        const bg = isEnsayado ? alpha(theme.palette.success.main, 0.12) : info.bgcolor
+                                        const bd = isEnsayado ? alpha(theme.palette.success.main, 0.28) : info.border
+
+                                        return {
+                                          fontWeight: 800,
+                                          bgcolor: bg,
+                                          border: `1px solid ${bd}`,
+                                          color: 'text.primary'
+                                        }
+                                      }}
+                                    />
+                                  )
+                                })
+                              })()}
+                            </Box>
+                          )}
                         </Box>
                       )
                     })}
@@ -4227,6 +4874,7 @@ const UserListTable2 = ({
 
           {(() => {
             const applicableKeys = getApplicableAutoTemplateKeys(informeDialogMeta)
+
             if (!applicableKeys.length) return null
 
             const totalEnsayos = Number(informeDialogMeta?.ensayos?.total ?? 0)
@@ -4312,20 +4960,24 @@ const UserListTable2 = ({
                                   onClick={e => {
                                     e.stopPropagation()
                                     const slug = t.key === 'DENSIDAD' ? 'densidad' : t.key === 'HORMIGON' ? 'hormigon' : null
+
                                     if (!slug) return
 
                                     let url = `/api/informes/${slug}/mock`
 
                                     if (slug === 'densidad') {
                                       const params = new URLSearchParams()
+
                                       if (informeDialogCodigoId) params.set('codigoAgrupadorId', String(informeDialogCodigoId))
                                       if (informeDialogRcmId) params.set('rcmId', String(informeDialogRcmId))
                                       if (existing != null) params.set('informe', String(existing))
                                       const qs = params.toString()
+
                                       if (qs) url = `/api/informes/densidad/generate?${qs}`
                                     }
 
                                     const w = window.open(url, '_blank')
+
                                     if (w) {
                                       try {
                                         w.opener = null
@@ -4361,6 +5013,7 @@ const UserListTable2 = ({
                                 value={draft.numero}
                                 onChange={e => {
                                   const v = e.target.value
+
                                   setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyDraft), numero: v } }))
                                   if (informeDialogErrors.numero) setInformeDialogErrors(prev => ({ ...prev, numero: undefined }))
                                 }}
@@ -4373,6 +5026,7 @@ const UserListTable2 = ({
                                 value={draft.refCliente}
                                 onChange={e => {
                                   const v = e.target.value
+
                                   setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyDraft), refCliente: v } }))
                                 }}
                                 size='small'
@@ -4387,6 +5041,7 @@ const UserListTable2 = ({
                                 value={draft.observaciones}
                                 onChange={e => {
                                   const v = e.target.value
+
                                   setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyDraft), observaciones: v } }))
                                 }}
                                 size='small'
@@ -4401,6 +5056,7 @@ const UserListTable2 = ({
                                 value={draft.anexoPrev}
                                 onChange={e => {
                                   const v = e.target.value
+
                                   setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyDraft), anexoPrev: v } }))
                                 }}
                                 size='small'
@@ -4419,7 +5075,7 @@ const UserListTable2 = ({
 
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 1 }}>
             <Typography variant='subtitle2' sx={{ fontWeight: 800 }}>
-              📋 Informes manuales— un RCM puede estar en más de un informe
+              Informes manuales
             </Typography>
 
             <Button
@@ -4427,16 +5083,21 @@ const UserListTable2 = ({
               size='small'
               onClick={() => {
                 setInformeDialogErrors(prev => ({ ...prev, numero: undefined }))
+
                 const allRcms: string[] = Array.isArray(informeDialogMeta?.rcmNumeros)
                   ? (informeDialogMeta?.rcmNumeros ?? []).map((x: any) => String(x ?? '').trim()).filter(Boolean)
                   : []
+
                 const defaultRcms = allRcms.length === 1 ? [allRcms[0]] : ([] as string[])
+
                 setInformeDrafts(prev => {
                   if (prev.length >= 10) return prev
                   const nextId = `${Date.now()}-${prev.length + 1}`
+
+
                   return [
                     ...prev,
-                    { id: nextId, numero: '', tipoInforme: '', refCliente: '', observaciones: '', anexoPrev: '', rcms: defaultRcms }
+                    { id: nextId, numero: '', tipoInforme: '', fechaEmision: '', refCliente: '', observaciones: '', anexoPrev: '', rcms: defaultRcms }
                   ]
                 })
               }}
@@ -4463,10 +5124,7 @@ const UserListTable2 = ({
               })}
             >
               <Typography variant='body2' color='text.secondary'>
-                Haz click en <strong>+ Añadir informe</strong> para agregar informes manuales.
-              </Typography>
-              <Typography variant='caption' color='text.secondary'>
-                Por cada informe: indica qué RCMs incluye y su N° de informe.
+                Haz click en + Añadir informe para agregar informes manuales.
               </Typography>
             </Paper>
           ) : (
@@ -4474,6 +5132,7 @@ const UserListTable2 = ({
               {informeDrafts.map((d, idx) => (
                 (() => {
                   const isOk = parseInformeNumber(d.numero) != null
+
                   const allRcms: string[] = Array.isArray(informeDialogMeta?.rcmNumeros)
                     ? (informeDialogMeta?.rcmNumeros ?? []).map((x: any) => String(x ?? '').trim()).filter(Boolean)
                     : []
@@ -4483,178 +5142,269 @@ const UserListTable2 = ({
                     : []
 
                   const hasRcmsSelected = selectedRcms.length > 0
+
+
                   return (
-                <Paper
-                  key={d.id}
-                  variant='outlined'
-                  sx={theme => ({
-                    p: 2,
-                    mb: 2,
-                    borderRadius: 2,
-                    borderColor: isOk ? alpha(theme.palette.success.main, 0.55) : alpha(theme.palette.text.primary, 0.18),
-                    bgcolor: isOk ? alpha(theme.palette.success.main, 0.08) : 'transparent'
-                  })}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 1.5 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-                      <CheckBoxOutlinedIcon fontSize='small' sx={theme => ({ color: isOk ? theme.palette.success.main : theme.palette.text.disabled })} />
-                      <Typography variant='subtitle2' sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}>
-                        Informe {idx + 1}
-                      </Typography>
-                    </Box>
-
-                    <IconButton
-                      size='small'
-                      aria-label='Eliminar informe'
-                      onClick={() => setInformeDrafts(prev => prev.filter(x => x.id !== d.id))}
-                      sx={{ color: 'error.main' }}
-                    >
-                      <CloseIcon fontSize='small' />
-                    </IconButton>
-                  </Box>
-
-                  <Box sx={{ mb: 1.5 }}>
-                    <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 800, display: 'block', mb: 0.75 }}>
-                      RCMS INCLUIDOS{' '}
-                      <Typography component='span' variant='caption' color='text.secondary' sx={{ fontWeight: 600 }}>
-                        — (el mismo RCM puede estar en más de un informe)
-                      </Typography>
-                    </Typography>
-
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-                      <Button
-                        size='small'
-                        variant='outlined'
-                        onClick={() => {
-                          setInformeDrafts(prev =>
-                            prev.map(x =>
-                              x.id === d.id
-                                ? {
-                                    ...x,
-                                    rcms: Array.from(new Set(allRcms))
-                                  }
-                                : x
-                            )
-                          )
-                        }}
-                        sx={{ textTransform: 'none', borderRadius: 2 }}
-                      >
-                        Seleccionar todos
-                      </Button>
-
-                      {allRcms.map((rcm: string) => {
-                        const selected = selectedRcms.includes(rcm)
-                        return (
-                          <Chip
-                            key={rcm}
-                            size='small'
-                            label={rcm}
-                            onClick={() => {
-                              setInformeDrafts(prev =>
-                                prev.map(x => {
-                                  if (x.id !== d.id) return x
-                                  const cur = Array.isArray((x as any).rcms) ? (x as any).rcms : []
-                                  const next = selected
-                                    ? cur.filter((n: any) => String(n) !== rcm)
-                                    : Array.from(new Set([...cur, rcm]))
-                                  return { ...x, rcms: next }
-                                })
-                              )
-                            }}
-                            sx={theme => ({
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              ...(selected
-                                ? {
-                                    bgcolor: alpha(theme.palette.primary.main, 0.15),
-                                    border: `1px solid ${alpha(theme.palette.primary.main, 0.35)}`
-                                  }
-                                : {
-                                    bgcolor: alpha(theme.palette.text.primary, 0.04),
-                                    border: `1px solid ${alpha(theme.palette.text.primary, 0.12)}`
-                                  })
-                            })}
-                          />
-                        )
+                    <Paper
+                      key={d.id}
+                      variant='outlined'
+                      sx={theme => ({
+                        p: 1.25,
+                        mb: 1.25,
+                        borderRadius: 2,
+                        borderColor: (d as any).saved
+                          ? alpha(theme.palette.success.main, 0.7)
+                          : isOk ? alpha(theme.palette.success.main, 0.55) : alpha(theme.palette.text.primary, 0.18),
+                        bgcolor: (d as any).saved
+                          ? alpha(theme.palette.success.main, 0.08)
+                          : 'transparent'
                       })}
-                    </Box>
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 0.75 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                          <CheckBoxOutlinedIcon sx={theme => ({ fontSize: 15, color: (d as any).saved ? theme.palette.success.main : isOk ? theme.palette.success.main : theme.palette.text.disabled })} />
+                          <Typography variant='caption' sx={{ fontWeight: 800, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
+                            Informe {idx + 1}
+                          </Typography>
+                          {(d as any).saved && d.numero && (
+                            <Typography variant='caption' sx={theme => ({ fontWeight: 900, color: theme.palette.success.dark, ml: 0.5, fontSize: '0.78rem' })}>
+                              — {d.numero}
+                            </Typography>
+                          )}
+                          {(d as any).saved && (
+                            <Typography variant='caption' sx={theme => ({ color: theme.palette.success.main, fontWeight: 800, ml: 0.75, fontSize: '0.72rem' })}>
+                              ✓ Guardado
+                            </Typography>
+                          )}
+                        </Box>
 
-                    {isOk && !hasRcmsSelected ? (
-                      <Typography variant='caption' sx={{ color: 'error.main', fontWeight: 700, mt: 0.75, display: 'block' }}>
-                        Selecciona al menos 1 RCM para este informe
-                      </Typography>
-                    ) : null}
-                  </Box>
+                        <IconButton
+                          size='small'
+                          aria-label='Eliminar informe'
+                          onClick={() => setInformeDrafts(prev => prev.filter(x => x.id !== d.id))}
+                          sx={{ color: 'error.main', p: 0.25 }}
+                          disabled={(d as any).saved}
+                        >
+                          <CloseIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Box>
 
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                    <TextField
-                      label='N° INFORME *'
-                      placeholder='Ej: INF-2026-045'
-                      value={d.numero}
-                      onChange={e => {
-                        const v = e.target.value
-                        setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, numero: v } : x)))
-                        if (informeDialogErrors.numero) setInformeDialogErrors(prev => ({ ...prev, numero: undefined }))
-                      }}
-                      size='small'
-                      fullWidth
-                      error={!!informeDialogErrors.numero && idx === 0}
-                      helperText={idx === 0 ? informeDialogErrors.numero : undefined}
-                    />
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, display: 'block', mb: 0.6, fontSize: '0.68rem', letterSpacing: '0.04em' }}>
+                          RCMs incluidos
+                        </Typography>
 
-                    <TextField
-                      label='TIPO DE INFORME'
-                      placeholder='Ej: EMS Prospección, Corte Directo…'
-                      value={(d as any).tipoInforme ?? ''}
-                      onChange={e => {
-                        const v = e.target.value
-                        setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, tipoInforme: v } : x)))
-                      }}
-                      size='small'
-                      fullWidth
-                    />
-                  </Box>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+                          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                            <Button
+                              size='small'
+                              variant='outlined'
+                              disabled={(d as any).saved}
+                              onClick={() => {
+                                setInformeDrafts(prev =>
+                                  prev.map(x =>
+                                    x.id === d.id
+                                      ? { ...x, rcms: Array.from(new Set(allRcms)) }
+                                      : x
+                                  )
+                                )
+                              }}
+                              sx={{ textTransform: 'none', borderRadius: 1.5, fontSize: '0.72rem', py: 0.4, px: 1.25 }}
+                            >
+                              Seleccionar todos
+                            </Button>
+                            <Box
+                              sx={theme => ({
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 24,
+                                height: 24,
+                                borderRadius: '50%',
+                                bgcolor: selectedRcms.length > 0 ? alpha(theme.palette.warning.main, 0.2) : alpha(theme.palette.text.primary, 0.08),
+                                border: `1.5px solid ${selectedRcms.length > 0 ? theme.palette.warning.main : alpha(theme.palette.text.primary, 0.12)}`,
+                                fontWeight: 700,
+                                fontSize: '0.7rem',
+                                color: selectedRcms.length > 0 ? theme.palette.warning.main : theme.palette.text.secondary,
+                              })}
+                            >
+                              {selectedRcms.length}
+                            </Box>
+                          </Box>
 
-                  <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                    <TextField
-                      label='REF. CLIENTE'
-                      placeholder='N° OC del cliente'
-                      value={d.refCliente}
-                      onChange={e => {
-                        const v = e.target.value
-                        setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, refCliente: v } : x)))
-                      }}
-                      size='small'
-                      fullWidth
-                    />
+                          {allRcms.map((rcm: string) => {
+                            const selected = selectedRcms.includes(rcm)
 
-                    <TextField
-                      label='OBSERVACIONES'
-                      placeholder='Ej: Calicata Cal-1, 2 estratos'
-                      value={d.observaciones}
-                      onChange={e => {
-                        const v = e.target.value
-                        setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, observaciones: v } : x)))
-                      }}
-                      size='small'
-                      fullWidth
-                    />
-                  </Box>
+                            return (
+                              <Box
+                                key={rcm}
+                                onClick={() => {
+                                  if ((d as any).saved) return
+                                  setInformeDrafts(prev =>
+                                    prev.map(x => {
+                                      if (x.id !== d.id) return x
+                                      const cur = Array.isArray((x as any).rcms) ? (x as any).rcms : []
 
-                  <Box sx={{ mt: 2 }}>
-                    <TextField
-                      label='ANEXO — N° DE VERSIÓN ANTERIOR (OPCIONAL)'
-                      placeholder='Si este informe reemplaza a otro, indica el N° anterior (ej: INF-2026-040)'
-                      value={d.anexoPrev}
-                      onChange={e => {
-                        const v = e.target.value
-                        setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, anexoPrev: v } : x)))
-                      }}
-                      size='small'
-                      fullWidth
-                    />
-                  </Box>
-                </Paper>
+                                      const next = selected
+                                        ? cur.filter((n: any) => String(n) !== rcm)
+                                        : Array.from(new Set([...cur, rcm]))
+
+
+                                      return { ...x, rcms: next }
+                                    })
+                                  )
+                                }}
+                                sx={theme => ({
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.35,
+                                  px: 0.75,
+                                  py: 0.15,
+                                  borderRadius: 1.5,
+                                  cursor: 'pointer',
+                                  fontWeight: 700,
+                                  fontSize: '0.7rem',
+                                  userSelect: 'none',
+                                  ...(selected
+                                    ? {
+                                      bgcolor: alpha(theme.palette.primary.main, 0.15),
+                                      border: `1px solid ${alpha(theme.palette.primary.main, 0.5)}`,
+                                      color: theme.palette.primary.main,
+                                    }
+                                    : {
+                                      bgcolor: alpha(theme.palette.text.primary, 0.04),
+                                      border: `1px solid ${alpha(theme.palette.text.primary, 0.12)}`,
+                                      color: theme.palette.text.secondary,
+                                    })
+                                })}
+                              >
+                                {selected
+                                  ? <CheckBoxOutlinedIcon sx={{ fontSize: 13, color: 'inherit' }} />
+                                  : <CheckBoxOutlineBlankIcon sx={{ fontSize: 13, color: 'inherit' }} />
+                                }
+                                {rcm}
+                              </Box>
+                            )
+                          })}
+                        </Box>
+
+                        {!hasRcmsSelected ? (
+                          <Typography variant='caption' sx={{ color: 'error.main', fontWeight: 700, mt: 0.4, display: 'block', fontSize: '0.68rem' }}>
+                            Selecciona al menos 1 RCM para este informe
+                          </Typography>
+                        ) : null}
+                      </Box>
+
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 1, mt: 2 }}>
+                        <TextField
+                          label='N° INFORME *'
+                          placeholder='Ej: INF-2026-045'
+                          value={d.numero}
+                          onChange={e => {
+                            const v = e.target.value
+
+                            setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, numero: v } : x)))
+                            if (informeDialogErrors.numero) setInformeDialogErrors(prev => ({ ...prev, numero: undefined }))
+                          }}
+                          size='small'
+                          fullWidth
+                          disabled={(d as any).saved}
+                          error={!!informeDialogErrors.numero && idx === 0}
+                          helperText={
+                            idx === 0 && informeDialogErrors.numero
+                              ? informeDialogErrors.numero
+                              : d.anexoPrev
+                                ? `corrección: ${d.anexoPrev}`
+                                : undefined
+                          }
+                          InputProps={{ sx: { fontSize: '0.8rem' } }}
+                          InputLabelProps={{ shrink: true, sx: { fontSize: '0.75rem' } }}
+                        />
+                        <TextField
+                          label='TIPO DE INFORME'
+                          placeholder='Ej: Análisis de Suelo x4'
+                          value={(d as any).tipoInforme ?? ''}
+                          onChange={e => {
+                            const v = e.target.value
+
+                            setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, tipoInforme: v } : x)))
+                          }}
+                          size='small'
+                          fullWidth
+                          disabled={(d as any).saved}
+                          InputProps={{ sx: { fontSize: '0.8rem' } }}
+                          InputLabelProps={{ shrink: true, sx: { fontSize: '0.75rem' } }}
+                        />
+                        <TextField
+                          label='FECHA DE EMISIÓN'
+                          placeholder='Ej: 23-04-2026'
+                          value={(d as any).fechaEmision ?? ''}
+                          onChange={e => {
+                            const v = e.target.value
+
+                            setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, fechaEmision: v } : x)))
+                          }}
+                          size='small'
+                          fullWidth
+                          disabled={(d as any).saved}
+                          InputProps={{ sx: { fontSize: '0.8rem' } }}
+                          InputLabelProps={{ shrink: true, sx: { fontSize: '0.75rem' } }}
+                        />
+                      </Box>
+
+                      <Box sx={{ mt: 2.5, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
+                        <TextField
+                          label='REF. CLIENTE'
+                          placeholder='N° OC del cliente'
+                          value={d.refCliente}
+                          onChange={e => {
+                            const v = e.target.value
+
+                            setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, refCliente: v } : x)))
+                          }}
+                          size='small'
+                          fullWidth
+                          disabled={(d as any).saved}
+                          InputProps={{ sx: { fontSize: '0.8rem' } }}
+                          InputLabelProps={{ shrink: true, sx: { fontSize: '0.75rem' } }}
+                        />
+                        <TextField
+                          label='OBSERVACIONES'
+                          placeholder='Ej: Calicata Cal-1, 2 estratos'
+                          value={d.observaciones}
+                          onChange={e => {
+                            const v = e.target.value
+
+                            setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, observaciones: v } : x)))
+                          }}
+                          size='small'
+                          fullWidth
+                          disabled={(d as any).saved}
+                          InputProps={{ sx: { fontSize: '0.8rem' } }}
+                          InputLabelProps={{ shrink: true, sx: { fontSize: '0.75rem' } }}
+                        />
+                      </Box>
+
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                        {!(d as any).saved ? (
+                          <Button
+                            variant='contained'
+                            color='primary'
+                            size='small'
+                            disabled={!isOk || !hasRcmsSelected || savingDraftId === d.id}
+                            onClick={() => handleSaveInformeDraft(d.id)}
+                            startIcon={<CheckBoxOutlinedIcon sx={{ fontSize: '0.9rem !important' }} />}
+                            sx={{ textTransform: 'none', borderRadius: 2, fontSize: '0.75rem', py: 0.4 }}
+                          >
+                            {savingDraftId === d.id ? 'Guardando…' : 'Guardar Informe'}
+                          </Button>
+                        ) : (
+                          <Typography variant='caption' sx={theme => ({ color: theme.palette.success.main, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.72rem' })}>
+                            <CheckBoxOutlinedIcon sx={{ fontSize: 14 }} /> Guardado
+                          </Typography>
+                        )}
+                      </Box>
+                    </Paper>
                   )
                 })()
               ))}
@@ -4664,16 +5414,21 @@ const UserListTable2 = ({
                 fullWidth
                 onClick={() => {
                   setInformeDialogErrors(prev => ({ ...prev, numero: undefined }))
+
                   const allRcms: string[] = Array.isArray(informeDialogMeta?.rcmNumeros)
                     ? (informeDialogMeta?.rcmNumeros ?? []).map((x: any) => String(x ?? '').trim()).filter(Boolean)
                     : []
+
                   const defaultRcms = allRcms.length === 1 ? [allRcms[0]] : ([] as string[])
+
                   setInformeDrafts(prev => {
                     if (prev.length >= 10) return prev
                     const nextId = `${Date.now()}-${prev.length + 1}`
+
+
                     return [
                       ...prev,
-                      { id: nextId, numero: '', tipoInforme: '', refCliente: '', observaciones: '', anexoPrev: '', rcms: defaultRcms }
+                      { id: nextId, numero: '', tipoInforme: '', fechaEmision: '', refCliente: '', observaciones: '', anexoPrev: '', rcms: defaultRcms }
                     ]
                   })
                 }}
@@ -4684,7 +5439,7 @@ const UserListTable2 = ({
                   borderColor: alpha(theme.palette.primary.main, 0.55)
                 })}
               >
-                + Añadir otro informe
+                + Añadir informe
               </Button>
             </Box>
           )}
@@ -4692,6 +5447,7 @@ const UserListTable2 = ({
           {(() => {
             const applicableKeys = getApplicableAutoTemplateKeys(informeDialogMeta)
             const requiresAutos = applicableKeys.length > 0
+
             if (requiresAutos) return null
 
             const allRcms: string[] = Array.isArray(informeDialogMeta?.rcmNumeros)
@@ -4699,15 +5455,21 @@ const UserListTable2 = ({
               : []
 
             const covered = new Set<string>()
+
             for (const d of informeDrafts ?? []) {
               const hasNumero = parseInformeNumber((d as any).numero) != null
+
               if (!hasNumero) continue
+
               const selected = Array.isArray((d as any).rcms)
                 ? (d as any).rcms.map((x: any) => String(x ?? '').trim()).filter(Boolean)
                 : []
+
               for (const r of selected) covered.add(String(r))
             }
+
             const missing = allRcms.filter((r: string) => !covered.has(String(r)))
+
             if (!missing.length) return null
 
             return (
@@ -4739,11 +5501,15 @@ const UserListTable2 = ({
 
             const applicableKeys = getApplicableAutoTemplateKeys(informeDialogMeta)
             const requiresAutos = applicableKeys.length > 0
+
             const autosCompletos = applicableKeys.filter(k => {
               const existing = autoInformeExisting?.[k]
+
               if (existing != null) return true
               const n = parseInformeNumber(autoInformeDrafts?.[k]?.numero)
+
               if (n == null) return false
+
               return pendientes === 0
             }).length
 
@@ -4751,27 +5517,17 @@ const UserListTable2 = ({
             const manualAssigned = informeDrafts.filter(d => parseInformeNumber(d.numero) != null).length
 
             return (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mt: 1 }}>
-                <Box>
-                  <Typography variant='subtitle2' sx={{ fontWeight: 800 }}>
-                    {requiresAutos
-                      ? `Automáticos requeridos: ${autosCompletos}/${applicableKeys.length} completos · Manuales: ${manualAssigned}/${manualTotal} con N°`
-                      : `Manuales: ${manualAssigned}/${manualTotal} con N°`}
-                  </Typography>
-                  <Typography variant='caption' color='text.secondary'>
-                    {requiresAutos
-                      ? autosCompletos === applicableKeys.length
-                        ? 'Al confirmar, el CP pasa a Digitado y el N° queda visible en la tabla.'
-                        : pendientes > 0
-                          ? 'Pendiente: faltan ensayos para completar automáticos.'
-                          : 'Complete los informes automáticos requeridos para confirmar.'
-                      : manualAssigned > 0
-                        ? 'Al confirmar, el CP pasa a Digitado y el N° queda visible en la tabla.'
-                        : 'Ingrese al menos un informe manual para confirmar.'}
-                  </Typography>
-                </Box>
-                <Typography variant='h4' color='text.disabled' sx={{ fontWeight: 800 }}>
-                  {autosCompletos + manualAssigned}
+              <Box sx={{ mt: 1 }}>
+                <Typography variant='subtitle2' sx={{ fontWeight: 800 }}>
+                  {requiresAutos
+                    ? autosCompletos === applicableKeys.length
+                      ? 'Informes listos para confirmar'
+                      : pendientes > 0
+                        ? 'Pendiente: faltan ensayos para completar informes'
+                        : 'Completa los informes requeridos'
+                    : manualAssigned > 0
+                      ? 'Informes listos para confirmar'
+                      : 'Añade al menos un informe'}
                 </Typography>
               </Box>
             )
@@ -4790,6 +5546,8 @@ const UserListTable2 = ({
             const digitadoByHistory = (informeDialogHistory ?? []).some((h: any) => {
               const k1 = normalizeStateForCompare(h?.tipoEstado)
               const k2 = normalizeStateForCompare(h?.estNuevo)
+
+
               return k1 === 'DIGITADO' || k2 === 'DIGITADO'
             })
 
@@ -4819,6 +5577,8 @@ const UserListTable2 = ({
                     const selected = Array.isArray((d as any).rcms)
                       ? (d as any).rcms.map((x: any) => String(x ?? '').trim()).filter(Boolean)
                       : []
+
+
                     return selected.length === 0
                   })
 
@@ -4833,7 +5593,9 @@ const UserListTable2 = ({
                   const missingAuto = applicableKeys.some(k => {
                     if (autoInformeExisting?.[k] != null) return false
                     const n = parseInformeNumber(autoInformeDrafts?.[k]?.numero)
+
                     if (n == null) return true
+
                     return pendientes > 0
                   })
 
@@ -4870,12 +5632,15 @@ const UserListTable2 = ({
                   >
                     {(() => {
                       const rcmId = markDialogRowId
+
                       if (!rcmId) return ''
                       const agg = findAggregatedRowByRepresentativeRcmId(rcmId)
                       const code = String((agg as any)?.codigoNombre ?? '').trim()
                       const cliente = String((agg as any)?.cliente?.razonSocial ?? (agg as any)?.cliente?.nombreCliente ?? '').trim()
                       const obraNum = String((agg as any)?.obra?.numeroObra ?? '').trim()
                       const parts = [code, cliente, obraNum ? `Obra ${obraNum}` : ''].filter(Boolean)
+
+
                       return parts.join(' - ')
                     })()}
                   </Typography>
@@ -4885,6 +5650,8 @@ const UserListTable2 = ({
                   const currentState = markDialogRowId != null ? getCurrentStateForRow(markDialogRowId) : ''
                   const currentInfo = getOperationalInfo(currentState)
                   const currentLabel = OPERATIONAL_STATES.find(s => s.value === currentState)?.label ?? (currentState || 'Estado')
+
+
                   return (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
                       <Chip
@@ -4957,6 +5724,8 @@ const UserListTable2 = ({
                   size='small'
                   label={(() => {
                     const currentState = markDialogRowId != null ? getCurrentStateForRow(markDialogRowId) : ''
+
+
                     return OPERATIONAL_STATES.find(s => s.value === currentState)?.label ?? (currentState || '—')
                   })()}
                 />
@@ -4994,6 +5763,8 @@ const UserListTable2 = ({
                         sx={theme => ({
                           ...(true && (() => {
                             const mainColor = theme.palette[opt.tone].main
+
+
                             return {
                               borderColor: selected ? mainColor : theme.palette.divider,
                               bgcolor: selected ? alpha(mainColor, 0.12) : 'transparent',
@@ -5123,6 +5894,7 @@ const UserListTable2 = ({
 
                   const current = markDialogRowId != null ? getCurrentStateForRow(markDialogRowId) : ''
                   const currentIndex = all.findIndex(s => s.value === current)
+
                   // Regla de negocio: mostrar el estado actual y los estados hacia atrás.
                   // NO se muestran estados hacia adelante.
                   const visible = currentIndex >= 0 ? all.slice(0, currentIndex + 1) : all
@@ -5261,6 +6033,8 @@ const UserListTable2 = ({
                             label={closeEventoMeta.tipoLabel}
                             sx={theme => {
                               const main = theme.palette[closeEventoMeta.tone].main
+
+
                               return {
                                 height: 22,
                                 fontWeight: 900,
@@ -5334,11 +6108,15 @@ const UserListTable2 = ({
                   size='small'
                   label={(() => {
                     const currentState = markDialogRowId != null ? getCurrentStateForRow(markDialogRowId) : ''
+
+
                     return OPERATIONAL_STATES.find(s => s.value === currentState)?.label ?? (currentState || '—')
                   })()}
                   sx={() => {
                     const currentState = markDialogRowId != null ? getCurrentStateForRow(markDialogRowId) : ''
                     const info = getOperationalInfo(currentState)
+
+
                     return {
                       bgcolor: info.bgcolor,
                       color: info.colorText,
@@ -5395,7 +6173,9 @@ const UserListTable2 = ({
           {markDialogAction !== 'EVENTO' && markDialogAction !== 'CERRAR_EVENTO' &&
             (() => {
               const targetLabel = OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? (markDialogAction || '')
+
               if (!targetLabel) return null
+
               return (
                 <Box sx={{ mb: 2 }}>
                   <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, display: 'block', mb: 0.75 }}>
@@ -5529,10 +6309,10 @@ const UserListTable2 = ({
           {/* Nota visual (no afecta lógica) */}
           {markDialogAction !== 'EVENTO' && markDialogAction !== 'CERRAR_EVENTO' &&
             !['ENVIADO_DIGITACION', 'REVISADO', 'FIRMADO', 'ENVIADO'].includes(String(markDialogAction ?? '')) && (
-            <Typography variant='caption' color='text.secondary' sx={{ mt: 2, display: 'block' }}>
-              Retroceder: Registrar Evento → al resolver, el declarante indica el estado de retorno.
-            </Typography>
-          )}
+              <Typography variant='caption' color='text.secondary' sx={{ mt: 2, display: 'block' }}>
+                Retroceder: Registrar Evento → al resolver, el declarante indica el estado de retorno.
+              </Typography>
+            )}
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -5552,7 +6332,7 @@ const UserListTable2 = ({
                 ? 'Confirmar'
                 : markDialogAction === 'CERRAR_EVENTO'
                   ? 'Cerrar evento'
-                : `Confirmar → ${OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? (markDialogAction || '')}`}
+                  : `Confirmar → ${OPERATIONAL_STATES.find(s => s.value === markDialogAction)?.label ?? (markDialogAction || '')}`}
           </Button>
         </DialogActions>
       </Dialog>
@@ -5567,6 +6347,7 @@ const UserListTable2 = ({
       >
         {(() => {
           const rcmId = menuRowId
+
           if (!rcmId) return null
           const agg = findAggregatedRowByRepresentativeRcmId(rcmId)
           const hasEvento = Boolean((agg as any)?.conEvento)
@@ -5692,14 +6473,17 @@ const UserListTable2 = ({
           {(() => {
             if (!histRowId) return null
             const r = data.find(d => d.representativeRcmId === histRowId) ?? data.find(d => d.id === histRowId)
+
             if (!r) return null
 
             const code = String(histCodigoData?.codigoNombre ?? r?.codigoNombre ?? r?.numeroRcm ?? '').trim()
             const area = String((r as any)?.area ?? '').trim()
             const tipoServicio = String((r as any)?.familia ?? '').trim()
+
             const cliente =
               String(r?.cliente?.nombreCliente ?? (r as any)?.clienteNombre ?? (r as any)?.nombreCliente ?? '').trim() ||
               (typeof (r as any)?.cliente === 'string' ? String((r as any).cliente).trim() : '')
+
             const obraNum = String(r?.obra?.numeroObra ?? '').trim()
             const fechaCodTxt = formatDateDDMMYYDateOnlyDash((r as any)?.fechaCodificacion)
 
@@ -5759,25 +6543,34 @@ const UserListTable2 = ({
             const r = data.find(d => d.representativeRcmId === histRowId) ?? data.find(d => d.id === histRowId)
             const currentState = getCurrentStateForRow(histRowId)
             const info = getOperationalInfo(currentState)
+
             const sinceHit = (histRows ?? []).find((h: any) => {
               const est = normalizeStateForCompare(h?.estNuevo)
+
+
               return currentState && est === currentState
             })
+
             const sinceRaw =
               sinceHit?.fechaAccion ??
               sinceHit?.createdAt ??
               (r as any)?.fechaCodificacion ??
               (r as any)?.fechaMuestreo ??
               null
+
             const since = sinceRaw ? new Date(sinceRaw) : null
+
             const days = (() => {
               if (!since) return null
               const from = new Date(since.getFullYear(), since.getMonth(), since.getDate()).getTime()
               const now = new Date()
               const to = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
               const diff = Math.floor((to - from) / (24 * 60 * 60 * 1000))
+
+
               return Number.isFinite(diff) && diff >= 0 ? diff : null
             })()
+
             const hasEvento = Boolean((r as any)?.conEvento)
 
             if (!currentState && !hasEvento) return null
@@ -5934,6 +6727,8 @@ const UserListTable2 = ({
                         {(() => {
                           const raw = String(h.tipo ?? '-')
                           const label = raw && raw !== 'null' && raw !== 'undefined' ? raw : '-'
+
+
                           return (
                             <Chip
                               label={label}
@@ -5948,6 +6743,8 @@ const UserListTable2 = ({
                       <TableCell>
                         {(() => {
                           const info = getOperationalInfo(h.estAnterior)
+
+
                           return (
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <Chip
@@ -5973,6 +6770,8 @@ const UserListTable2 = ({
                       <TableCell>
                         {(() => {
                           const info = getOperationalInfo(h.estNuevo)
+
+
                           return (
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <Chip

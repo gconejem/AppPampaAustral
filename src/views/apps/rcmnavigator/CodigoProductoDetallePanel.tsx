@@ -277,8 +277,8 @@ export default function CodigoProductoDetallePanel({
   onClose?: () => void
   onResolveEvento?: (rcmId: number) => void
 }) {
-  // objetivo: en md+ quepan 5 RCM “completos” sin scroll vertical
-  const detailBodyHeight = { xs: 320, sm: 380, md: 420 } as const
+  // objetivo: en md+ quepan 3 RCM “completos” sin scroll vertical
+  const detailBodyHeight = { xs: 220, sm: 260, md: 260 } as const
   const [tab, setTab] = useState<'rcms' | 'eventos'>('rcms')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<AgrupadorDetalle | null>(null)
@@ -470,7 +470,15 @@ export default function CodigoProductoDetallePanel({
     window.open(url, '_blank')
   }
 
-  if (!codigoAgrupadorId) return null
+  if (!codigoAgrupadorId) {
+    return (
+      <Card data-rcmnav-detail sx={{ mt: 4, minHeight: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center', width: '100%' }}>
+          Selecciona un Código Producto para ver el detalle
+        </Typography>
+      </Card>
+    )
+  }
 
   return (
     <Card data-rcmnav-detail sx={{ mt: 4 }}>
@@ -574,12 +582,12 @@ export default function CodigoProductoDetallePanel({
                   <th style={{ textAlign: 'left' }}>#</th>
                   <th style={{ textAlign: 'center' }}>TARJETA</th>
                   <th style={{ textAlign: 'center' }}>TIPO</th>
+                  <th style={{ textAlign: 'center' }}>ESTADO</th>
                   <th style={{ textAlign: 'center' }}>ÁREA / SERVICIO</th>
                   <th style={{ textAlign: 'left' }}>MATERIAL · ÍTEM · TOMA</th>
                   <th style={{ textAlign: 'center' }}>F. Muest. / Serv</th>
                   <th style={{ textAlign: 'center' }}>ENS</th>
                   <th style={{ textAlign: 'center' }}>SUB</th>
-                  <th style={{ textAlign: 'center' }}>ESTADO</th>
                   <th style={{ textAlign: 'center' }} />
                 </tr>
               </thead>
@@ -629,6 +637,21 @@ export default function CodigoProductoDetallePanel({
                         />
                       </td>
                       <td style={{ textAlign: 'center' }}>
+                        {(() => {
+                          // El estado aquí representa el avance de ensayos (ServicioRCM.estadoOperativo), no el estado operativo del RCM.
+                          if (ens.total <= 0) {
+                            return (
+                              <Chip size='small' label='-' variant='outlined' sx={{ fontWeight: 800, fontSize: '0.72rem' }} />
+                            )
+                          }
+
+                          const ensayoState = ens.ensayados >= ens.total ? 'ENSAYADO' : ens.ensayados > 0 ? 'EN_PROCESO' : 'CODIFICADO'
+                          const label = OPERATIONAL_STATES.find(s => s.value === ensayoState)?.label ?? ensayoState
+
+                          return <Chip size='small' label={label} sx={getOperativeChipSx(ensayoState)} />
+                        })()}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2 }}>
                           <Typography variant='body2' sx={{ fontWeight: 700 }}>
                             {r.area?.nombre ?? '-'}
@@ -653,24 +676,6 @@ export default function CodigoProductoDetallePanel({
                         <Typography variant='body2' sx={{ fontWeight: 800 }}>
                           {sub > 0 ? String(sub) : ''}
                         </Typography>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {(() => {
-                          // El estado aquí representa el avance de ensayos (ServicioRCM.estadoOperativo), no el estado operativo del RCM.
-                          if (ens.total <= 0) {
-                            return (
-                              <Chip size='small' label='-' variant='outlined' sx={{ fontWeight: 800, fontSize: '0.72rem' }} />
-                            )
-                          }
-
-                          const ensayoState = ens.ensayados >= ens.total ? 'ENSAYADO' : ens.ensayados > 0 ? 'EN_PROCESO' : 'CODIFICADO'
-                          const label =
-                            ensayoState === 'CODIFICADO'
-                              ? 'Pendiente'
-                              : OPERATIONAL_STATES.find(s => s.value === ensayoState)?.label ?? ensayoState
-
-                          return <Chip size='small' label={label} sx={getOperativeChipSx(ensayoState)} />
-                        })()}
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
@@ -857,39 +862,39 @@ export default function CodigoProductoDetallePanel({
             }) ?? null
           const cliente = String(
             r?.cliente?.razonSocial ??
-              r?.cliente?.nombreCliente ??
-              fallbackRow?.cliente?.razonSocial ??
-              fallbackRow?.cliente?.nombreCliente ??
-              fallbackAny?.cliente?.razonSocial ??
-              fallbackAny?.cliente?.nombreCliente ??
-              r?.obra?.razonSocial ??
-              r?.obra?.nombreCliente ??
-              fallbackRow?.obra?.razonSocial ??
-              fallbackRow?.obra?.nombreCliente ??
-              fallbackAny?.obra?.razonSocial ??
-              fallbackAny?.obra?.nombreCliente ??
-              ''
+            r?.cliente?.nombreCliente ??
+            fallbackRow?.cliente?.razonSocial ??
+            fallbackRow?.cliente?.nombreCliente ??
+            fallbackAny?.cliente?.razonSocial ??
+            fallbackAny?.cliente?.nombreCliente ??
+            r?.obra?.razonSocial ??
+            r?.obra?.nombreCliente ??
+            fallbackRow?.obra?.razonSocial ??
+            fallbackRow?.obra?.nombreCliente ??
+            fallbackAny?.obra?.razonSocial ??
+            fallbackAny?.obra?.nombreCliente ??
+            ''
           ).trim()
           const obra = String(
             r?.obra?.numeroObra ??
-              r?.obra?.nombreObra ??
-              fallbackRow?.obra?.numeroObra ??
-              fallbackRow?.obra?.nombreObra ??
-              fallbackAny?.obra?.numeroObra ??
-              fallbackAny?.obra?.nombreObra ??
-              ''
+            r?.obra?.nombreObra ??
+            fallbackRow?.obra?.numeroObra ??
+            fallbackRow?.obra?.nombreObra ??
+            fallbackAny?.obra?.numeroObra ??
+            fallbackAny?.obra?.nombreObra ??
+            ''
           ).trim()
           const ciudad = String(
             r?.obra?.comuna ??
-              fallbackRow?.obra?.comuna ??
-              fallbackRow?.obra?.ciudad ??
-              fallbackAny?.obra?.comuna ??
-              fallbackAny?.obra?.ciudad ??
-              rcmDialogCpMeta?.ciudad ??
-              rcmDialogCpMeta?.obra?.comuna ??
-              rcmDialogCpMeta?.cliente?.comuna ??
-              rcmDialogCpMeta?.cliente?.ciudad ??
-              ''
+            fallbackRow?.obra?.comuna ??
+            fallbackRow?.obra?.ciudad ??
+            fallbackAny?.obra?.comuna ??
+            fallbackAny?.obra?.ciudad ??
+            rcmDialogCpMeta?.ciudad ??
+            rcmDialogCpMeta?.obra?.comuna ??
+            rcmDialogCpMeta?.cliente?.comuna ??
+            rcmDialogCpMeta?.cliente?.ciudad ??
+            ''
           ).trim()
           const cpCliente = String(
             rcmDialogCpMeta?.cliente?.razonSocial ?? rcmDialogCpMeta?.cliente?.nombreCliente ?? ''
@@ -898,10 +903,10 @@ export default function CodigoProductoDetallePanel({
 
           const ot = String(
             rcmDialogCpMeta?.ot ??
-              r?.ordenTrabajo?.correlativ ??
-              r?.ordenTrabajo?.correlativo ??
-              r?.ordenTrabajo?.clave ??
-              ''
+            r?.ordenTrabajo?.correlativ ??
+            r?.ordenTrabajo?.correlativo ??
+            r?.ordenTrabajo?.clave ??
+            ''
           ).trim()
 
           const belongsText = [
@@ -1072,12 +1077,15 @@ export default function CodigoProductoDetallePanel({
                   })}
                 >
                   <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {/* Columna 1: Sede / Área / Servicio */}
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 260 }}>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
-                          TIPO
+                          SEDE
                         </Typography>
-                        <Chip size='small' label={tipo || '-'} sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', fontWeight: 900 }} />
+                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                          {sede || '-'}
+                        </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
@@ -1089,61 +1097,30 @@ export default function CodigoProductoDetallePanel({
                       </Box>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
-                          SEDE
-                        </Typography>
-                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
-                          {sede || '-'}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                          <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
-                            F.MUESTREO
-                          </Typography>
-                          <Typography variant='body2' sx={{ fontWeight: 700 }}>
-                            {muestreo}
-                          </Typography>
-                        </Box>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
-                          MATERIAL
-                        </Typography>
-                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
-                          {material || '-'}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
-                          ÍTEM
-                        </Typography>
-                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
-                          {item || '-'}
-                        </Typography>
-                      </Box>
-                    </Box>
-
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 260 }}>
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
-                          ESTADO
-                        </Typography>
-                        {stateKey ? (
-                          <Chip size='small' label={getOperationalLabel(stateKey)} sx={getOperativeChipSx(stateKey)} />
-                        ) : (
-                          <Typography variant='body2' sx={{ fontWeight: 700 }}>
-                            -
-                          </Typography>
-                        )}
-                      </Box>
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
                           SERVICIO
                         </Typography>
                         <Typography variant='body2' sx={{ fontWeight: 700 }}>
                           {servicio || '-'}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    {/* Columna 2: F. Muestreo / F. Ingreso / Tarjeta */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 260 }}>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          F.MUESTREO
+                        </Typography>
+                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                          {muestreo}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          F.INGRESO
+                        </Typography>
+                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                          {ingreso}
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -1154,16 +1131,26 @@ export default function CodigoProductoDetallePanel({
                           {tarjeta || '-'}
                         </Typography>
                       </Box>
+                    </Box>
 
+                    {/* Columna 3: Material / Item / Toma / Cantidad */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 260 }}>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
-                          F.INGRESO
+                          MATERIAL
                         </Typography>
                         <Typography variant='body2' sx={{ fontWeight: 700 }}>
-                          {ingreso}
+                          {material || '-'}
                         </Typography>
                       </Box>
-
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          ÍTEM
+                        </Typography>
+                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                          {item || '-'}
+                        </Typography>
+                      </Box>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
                           TOMA
@@ -1172,7 +1159,6 @@ export default function CodigoProductoDetallePanel({
                           {toma || '-'}
                         </Typography>
                       </Box>
-
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
                           CANTIDAD
@@ -1225,29 +1211,34 @@ export default function CodigoProductoDetallePanel({
                           </tr>
                         </thead>
                         <tbody>
-                          {(servicios ?? []).map((s: any, idx: number) => {
+                          {(servicios ?? []).flatMap((s: any, idx: number) => {
+                            const rows = []
                             const sku = String(s?.producto?.sku ?? s?.codigo ?? s?.sku ?? '').trim() || '-'
                             const nombre = String(s?.producto?.nombre ?? s?.nombre ?? '').trim() || '-'
                             const norma = String(s?.producto?.norma ?? s?.norma ?? '').trim()
                             const qty = Number(s?.cantidad ?? 0)
                             const stKey = normalizeStateKey(s?.estadoOperativo ?? s?.estado) ?? null
-
-                            return (
-                              <tr key={String(s?.id ?? idx)}>
+                            const esPaquete = s?.esPaquete || Array.isArray(s?.hijos) || Array.isArray(s?.detalles) || Array.isArray(s?.componentes)
+                            // Fila principal (paquete o normal)
+                            rows.push(
+                              <tr key={String(s?.id ?? idx)} style={esPaquete ? { background: '#eaf4ff' } : {}}>
                                 <td style={{ textAlign: 'center' }}>
                                   <Chip size='small' label={sku} variant='outlined' sx={{ fontWeight: 800 }} />
                                 </td>
                                 <td>
-                                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                  <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 1 }}>
                                     <Typography variant='body2' sx={{ fontWeight: 800 }}>
                                       {nombre}
                                     </Typography>
-                                    {norma ? (
-                                      <Typography variant='caption' color='text.secondary' sx={{ lineHeight: 1.2 }}>
-                                        {norma}
-                                      </Typography>
+                                    {esPaquete ? (
+                                      <Chip size='small' label='Paquete' color='primary' sx={{ fontWeight: 900, ml: 1 }} />
                                     ) : null}
                                   </Box>
+                                  {norma ? (
+                                    <Typography variant='caption' color='text.secondary' sx={{ lineHeight: 1.2 }}>
+                                      {norma}
+                                    </Typography>
+                                  ) : null}
                                 </td>
                                 <td style={{ textAlign: 'center' }}>
                                   <Typography variant='body2' sx={{ fontWeight: 800 }}>
@@ -1263,6 +1254,47 @@ export default function CodigoProductoDetallePanel({
                                 </td>
                               </tr>
                             )
+                            // Si es paquete, mostrar hijos
+                            const hijos = s?.hijos || s?.detalles || s?.componentes || []
+                            if (esPaquete && Array.isArray(hijos)) {
+                              hijos.forEach((h: any, hidx: number) => {
+                                const hsku = String(h?.producto?.sku ?? h?.codigo ?? h?.sku ?? '').trim() || '-'
+                                const hnombre = String(h?.producto?.nombre ?? h?.nombre ?? '').trim() || '-'
+                                const hnorma = String(h?.producto?.norma ?? h?.norma ?? '').trim()
+                                const hqty = Number(h?.cantidad ?? 0)
+                                const hstKey = normalizeStateKey(h?.estadoOperativo ?? h?.estado) ?? null
+                                rows.push(
+                                  <tr key={String(s?.id ?? idx) + '-hijo-' + hidx} style={{ background: '#eaf4ff' }}>
+                                    <td style={{ textAlign: 'center', paddingLeft: 24 }}>
+                                      <Typography variant='body2' sx={{ fontWeight: 700, color: 'text.secondary' }}>↳ {hsku}</Typography>
+                                    </td>
+                                    <td>
+                                      <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                        {hnombre}
+                                      </Typography>
+                                      {hnorma ? (
+                                        <Typography variant='caption' color='text.secondary' sx={{ lineHeight: 1.2 }}>
+                                          {hnorma}
+                                        </Typography>
+                                      ) : null}
+                                    </td>
+                                    <td style={{ textAlign: 'center' }}>
+                                      <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                                        {Number.isFinite(hqty) && hqty > 0 ? hqty : '-'}
+                                      </Typography>
+                                    </td>
+                                    <td style={{ textAlign: 'center' }}>
+                                      {hstKey ? (
+                                        <Chip size='small' label={getOperationalLabel(hstKey)} sx={getOperativeChipSx(hstKey)} />
+                                      ) : (
+                                        <Chip size='small' label='-' variant='outlined' sx={{ fontWeight: 800, fontSize: '0.72rem' }} />
+                                      )}
+                                    </td>
+                                  </tr>
+                                )
+                              })
+                            }
+                            return rows
                           })}
                         </tbody>
                       </table>
