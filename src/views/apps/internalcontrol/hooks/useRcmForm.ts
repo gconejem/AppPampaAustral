@@ -7,6 +7,9 @@ interface UseRcmFormParams {
 
 const STANDARD_SEDES = ['PA Chillán', 'PA Concepción', 'Cliente']
 
+const normalizeName = (value?: string | null) =>
+    (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+
 export function useRcmForm({ otData }: UseRcmFormParams) {
     const getTodayDateForInput = () => {
         const today = new Date()
@@ -74,17 +77,25 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
     const [errorVencimiento, setErrorVencimiento] = useState('')
 
     // Auto-activar vencimiento para áreas Hormigón / Elementos y Componentes
-    const autoEnableVencimiento = (areas: AreaType[]) => {
+    const autoEnableVencimiento = (areas: AreaType[], familias: FamiliaType[]) => {
         if (rcmType !== 'Muestra') {
             setTieneVencimiento(false)
             setSubmuestrasVencimiento([])
             return
         }
         const foundArea = areas.find(a => a.id === area)
-        const currentAreaName = foundArea?.nombre?.toLowerCase()
+        const foundTipoServicio = familias.find(f => f.id === tipoServicio)
+
+        if ((area !== '' && !foundArea) || (tipoServicio !== '' && !foundTipoServicio)) {
+            return
+        }
+
+        const currentAreaName = normalizeName(foundArea?.nombre)
+        const currentTipoServicioName = normalizeName(foundTipoServicio?.nombre)
         const shouldHaveVencimiento =
-            currentAreaName === 'hormigón' ||
-            currentAreaName === 'elementos y componentes'
+            (currentAreaName === 'hormigon' &&
+                ['hormigon fresco', 'hormigon endurecido', 'hormigon edurecido'].includes(currentTipoServicioName)) ||
+            (currentAreaName === 'elementos y componentes' && currentTipoServicioName === 'elementos y componentes')
 
         if (shouldHaveVencimiento) {
             setTieneVencimiento(true)
