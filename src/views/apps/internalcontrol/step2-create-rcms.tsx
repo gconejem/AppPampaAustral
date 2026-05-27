@@ -104,6 +104,7 @@ const Step2CreateRcms = ({
     // DERIVED STATE
     // ═══════════════════════════════════════
     const [infoMessage, setInfoMessage] = useState('')
+    const tarjetaLookupRequestRef = useRef(0)
 
     const rcmIdsAgrupados = new Set<number>()
     codigoReal.codigosAgrupadores.forEach(ag => {
@@ -194,22 +195,83 @@ const Step2CreateRcms = ({
         }
     }, [initialRcmType])
 
-    // Verificar si el número de tarjeta ya existe en los RCMs guardados
+    // Avisar si el número de tarjeta ya existe en RCMs tipo Muestra locales o persistidos.
     useEffect(() => {
         const tarjeta = form.numeroTarjeta?.trim()
-        if (!tarjeta) {
+        tarjetaLookupRequestRef.current += 1
+
+        if (form.rcmType !== 'Muestra' || !tarjeta) {
             setInfoMessage('')
             return
         }
+
         const editingId = crud.editingRcmId
-        const duplicado = savedRcms.find(rcm => rcm.numeroTarjeta?.trim() === tarjeta && rcm.id !== editingId)
-        if (duplicado) {
-            const esAgrupado = rcmIdsAgrupados.has(duplicado.id)
+        const duplicadoLocal = savedRcms.find(rcm =>
+            rcm.rcmType === 'Muestra' &&
+            rcm.numeroTarjeta?.trim() === tarjeta &&
+            rcm.id !== editingId
+        )
+
+        if (duplicadoLocal) {
+            const esAgrupado = codigoReal.codigosAgrupadores.some(ag =>
+                ag.rcmsVinculados.some(rcm => rcm.id === duplicadoLocal.id)
+            )
             setInfoMessage(`El Nº de Tarjeta "${tarjeta}" ya existe en los RCMs ${esAgrupado ? 'agrupados' : 'pendientes de agrupar'}`)
-        } else {
+            return
+        }
+
+        const requestId = tarjetaLookupRequestRef.current
+        const controller = new AbortController()
+        const timeoutId = window.setTimeout(async () => {
+            try {
+                const params = new URLSearchParams({ numero: tarjeta })
+                const excludeId = crud.originalRcm?.dbId
+
+                if (excludeId) params.set('excludeId', String(excludeId))
+
+                const response = await fetch(`/api/rcm/tarjeta?${params.toString()}`, {
+                    cache: 'no-store',
+                    signal: controller.signal,
+                })
+
+                if (!response.ok || tarjetaLookupRequestRef.current !== requestId) return
+
+                const data = await response.json()
+                const match = Array.isArray(data.matches) ? data.matches[0] : null
+
+                if (!match) {
+                    setInfoMessage('')
+                    return
+                }
+
+                const rcmLabel = match.numeroRcm ? `RCM ${match.numeroRcm}` : `RCM #${match.id}`
+                const obraLabel = match.obra?.nombreObra ? ` (${match.obra.nombreObra})` : ''
+
+                setInfoMessage(`El Nº de Tarjeta "${tarjeta}" ya existe en ${rcmLabel}${obraLabel}`)
+            } catch (error) {
+                if (error instanceof Error && error.name === 'AbortError') return
+                if (tarjetaLookupRequestRef.current === requestId) setInfoMessage('')
+            }
+        }, 500)
+
+        return () => {
+            controller.abort()
+            window.clearTimeout(timeoutId)
+        }
+    }, [
+        form.rcmType,
+        form.numeroTarjeta,
+        savedRcms,
+        codigoReal.codigosAgrupadores,
+        crud.editingRcmId,
+        crud.originalRcm?.dbId,
+    ])
+
+    useEffect(() => {
+        if (form.rcmType !== 'Muestra') {
             setInfoMessage('')
         }
-    }, [form.numeroTarjeta, savedRcms, rcmIdsAgrupados, crud.editingRcmId])
+    }, [form.rcmType])
 
     useEffect(() => {
         if (crud.isDuplicatingRcm) return
