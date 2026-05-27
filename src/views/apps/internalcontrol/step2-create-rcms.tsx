@@ -212,8 +212,9 @@ const Step2CreateRcms = ({
     }, [form.numeroTarjeta, savedRcms, rcmIdsAgrupados, crud.editingRcmId])
 
     useEffect(() => {
+        if (crud.isDuplicatingRcm) return
         form.autoEnableVencimiento(productSearch.areas)
-    }, [form.area, productSearch.areas, form.rcmType])
+    }, [form.area, productSearch.areas, form.rcmType, crud.isDuplicatingRcm])
 
     const handleQuickDuplicate = (rcmId: number) => {
         crud.handleDuplicateInline(rcmId)
@@ -268,6 +269,7 @@ const Step2CreateRcms = ({
                         todasLasFamilias={productSearch.todasLasFamilias}
                         parametrosArea={productSearch.parametrosArea}
                         isEditingRcm={crud.isEditingRcm}
+                        isDuplicatingRcm={crud.isDuplicatingRcm}
                         isSavingRcm={crud.isSavingRcm}
                         onSaveRcm={crud.handleSaveRcm}
                         onCancelEdit={crud.handleCancelEdit}

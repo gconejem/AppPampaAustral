@@ -179,34 +179,62 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         const familiaFound = todasLasFamilias.find(f => f.nombre === rcm.tipoServicio)
         setTipoServicio(familiaFound ? familiaFound.id : '')
 
+        const areaId = areaFound?.id
+        const areaName = (areaFound?.nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+        const validMaterials = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'MATERIAL').map(p => p.descripcion) : []
+        const validItems = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'ITEM').map(p => p.descripcion) : []
+        const validGrades = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'GRADO').map(p => p.descripcion) : []
+
+        const setSelectOrCustom = (
+            value: string | undefined,
+            validOptions: string[],
+            setValue: (next: string) => void,
+            setCustomValue: (next: string) => void
+        ) => {
+            if (value && !validOptions.includes(value)) {
+                setValue('Otro')
+                setCustomValue(value)
+            } else {
+                setValue(value || '')
+                setCustomValue('')
+            }
+        }
+
         // En duplicar, forzar nuevo número de tarjeta y número de muestra
         setNumeroTarjeta(mode === 'duplicate' ? '' : rcm.numeroTarjeta)
         setTomaMuestra(mode === 'duplicate' ? '' : rcm.tomaMuestra || '')
 
         // Si es modo duplicar, resetear campos dinámicos que dependen del área
         if (mode === 'duplicate') {
-            setTipoMaterial('')
-            setCustomTipoMaterial('')
-            setItem('')
-            setCustomItem('')
-            setGrado('')
-            setCustomGrado('')
-            setProcedencia('')
-            setUbicacionSector('')
-            setElemento('')
-            setCalicata('')
-            setEstrato('')
-            setCota1('')
-            setCota2('')
-            setObservacionItem('')
+            setSelectOrCustom(rcm.tipoMaterial, validMaterials, setTipoMaterial, setCustomTipoMaterial)
+            setSelectOrCustom(rcm.item, validItems, setItem, setCustomItem)
+            setSelectOrCustom(rcm.grado, validGrades, setGrado, setCustomGrado)
+            setProcedencia(rcm.procedencia || '')
+            setUbicacionSector(rcm.ubicacionSector || '')
+            setElemento(rcm.elemento || '')
+            setCalicata(rcm.calicata || '')
+            setEstrato(rcm.estrato || '')
+            setCota1(rcm.cota1 || '')
+            setCota2(rcm.cota2 || '')
+            setObservacionItem(rcm.observacionItem || '')
+            setFechaConfeccion(rcm.fechaConfeccion || '')
+
+            if (rcm.rcmType === 'Muestra') {
+                if (areaName === 'hormigon' || areaName === 'elementos y componentes') {
+                    setFechaConfeccion('')
+                    setElemento('')
+                    setGrado('')
+                    setCustomGrado('')
+                } else if (areaName === 'asfalto' || areaName === 'otros') {
+                    setFechaConfeccion('')
+                } else if (areaName === 'suelo') {
+                    setCota1('')
+                    setCota2('')
+                }
+            }
         } else {
             // Modo edición: cargar todos los campos dinámicos
             // Obtener opciones válidas para el área del RCM
-            const areaId = areaFound?.id
-            const validMaterials = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'MATERIAL').map(p => p.descripcion) : []
-            const validItems = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'ITEM').map(p => p.descripcion) : []
-            const validGrades = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'GRADO').map(p => p.descripcion) : []
-
             // Manejar tipoMaterial "Otro"
             if (rcm.tipoMaterial && !validMaterials.includes(rcm.tipoMaterial)) {
                 setTipoMaterial('Otro')
@@ -242,6 +270,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
             setCota1(rcm.cota1 || '')
             setCota2(rcm.cota2 || '')
             setObservacionItem(rcm.observacionItem || '')
+            setFechaConfeccion(rcm.fechaConfeccion || '')
         }
 
         setObservaciones(rcm.observaciones || '')

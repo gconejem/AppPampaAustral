@@ -97,6 +97,7 @@ interface RcmDraftFormProps {
     todasLasFamilias: FamiliaType[]
     parametrosArea: ParametroAreaType[]
     isEditingRcm: boolean
+    isDuplicatingRcm: boolean
     isSavingRcm: boolean
     onSaveRcm: () => void
     onCancelEdit: () => void
@@ -115,7 +116,7 @@ interface RcmDraftFormProps {
 const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
     form, ensayoHandlers, ensayosAsociados,
     areas, todasLasFamilias, parametrosArea,
-    isEditingRcm, isSavingRcm,
+    isEditingRcm, isDuplicatingRcm, isSavingRcm,
     onSaveRcm, onCancelEdit,
     searchTerm, onSearchChange, paginatedProductos,
     totalProductos, productsPage, onPageChange,
@@ -187,7 +188,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
     const presetRef = React.useRef<{ area: number | '', tipoServicio: number | '' }>({ area: '', tipoServicio: '' })
 
     React.useEffect(() => {
-        if (isEditingRcm) return
+        if (isEditingRcm || isDuplicatingRcm) return
         const areaObj = areas.find(a => a.id === area)
         const familiaObj = todasLasFamilias.find(f => f.id === tipoServicio)
         const isHormigonFresco =
