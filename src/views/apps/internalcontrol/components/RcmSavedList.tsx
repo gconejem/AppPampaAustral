@@ -409,9 +409,6 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                         <Typography variant='body2' sx={{ fontWeight: 600 }}>
                                             {rcm.temporaryCode || (rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...')}
                                         </Typography>
-                                        {!rcm.dbId && (
-                                            <Chip label='No guardado' size='small' sx={{ fontWeight: 600, bgcolor: '#FFEBEE', color: '#C62828', border: '1px solid #EF5350' }} />
-                                        )}
                                         <Chip label='Pendiente de agrupar' size='small' sx={{ fontWeight: 600, bgcolor: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D' }} />
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
                                             {renderRcmHeaderFields(rcm)}
@@ -494,9 +491,6 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                         <Typography variant='body2' sx={{ fontWeight: 600 }}>
                                             {rcm.temporaryCode || (rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...')}
                                         </Typography>
-                                        {!rcm.dbId && (
-                                            <Chip label='No guardado' size='small' sx={{ fontWeight: 600, bgcolor: '#FFEBEE', color: '#C62828', border: '1px solid #EF5350' }} />
-                                        )}
                                         <Chip label='Agrupado' size='small' sx={{ fontWeight: 600, bgcolor: '#C8E6C9', color: '#2E7D32', border: '1px solid #81C784' }} />
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
                                             {rcm.area && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.area}</Typography></>}

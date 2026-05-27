@@ -116,9 +116,6 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
                                             <Typography variant='body2' sx={{ fontWeight: 700, color: '#1976D2', fontFamily: 'monospace' }}>
                                                 {agrupador.temporaryCode || agrupador.codigoNombre || agrupador.id}
                                             </Typography>
-                                            {!agrupador.dbId && (
-                                                <Chip label='No guardado' size='small' sx={{ fontWeight: 600, bgcolor: '#FFEBEE', color: '#C62828', border: '1px solid #EF5350', fontSize: '0.65rem', height: '20px' }} />
-                                            )}
                                         </Box>
                                     </td>
 
