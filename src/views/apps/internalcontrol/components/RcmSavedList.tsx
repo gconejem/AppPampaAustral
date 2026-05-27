@@ -392,6 +392,20 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
             {rcmsCreados.length > 0 && (
                 <Box sx={{ mt: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                        <Checkbox
+                            size='small'
+                            indeterminate={rcmsCreados.some(r => selectedRcmIds.includes(r.id)) && !rcmsCreados.every(r => selectedRcmIds.includes(r.id))}
+                            checked={rcmsCreados.every(r => selectedRcmIds.includes(r.id))}
+                            onChange={() => {
+                                const creadosIds = rcmsCreados.map(r => r.id)
+                                const allSelected = creadosIds.every(id => selectedRcmIds.includes(id))
+                                if (allSelected) {
+                                    onSetSelectedRcmIds(selectedRcmIds.filter(id => !creadosIds.includes(id)))
+                                } else {
+                                    onSetSelectedRcmIds([...new Set([...selectedRcmIds, ...creadosIds])])
+                                }
+                            }}
+                        />
                         <Typography variant='h6' sx={{ fontWeight: 600 }}>Creados (Pendientes de Agrupar)</Typography>
                         <Chip label={rcmsCreados.length} size='small' sx={{ fontWeight: 700, bgcolor: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D', minWidth: 28 }} />
                     </Box>
