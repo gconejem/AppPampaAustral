@@ -68,6 +68,12 @@ const Step2CreateRcms = ({
         setSkuSearchAnchor,
     })
 
+    const isRcmLinkedToCodigoProducto = useCallback((rcmId: number) => {
+        return codigoReal.codigosAgrupadores.some(agrupador =>
+            agrupador.rcmsVinculados.some(rcm => rcm.id === rcmId)
+        )
+    }, [codigoReal.codigosAgrupadores])
+
     const codigoUnoAUnoRef = React.useRef<(rcm: RCMData, setError: (msg: string) => void) => Promise<void>>(
         async () => { /* se sobreescribe después */ }
     )
@@ -91,6 +97,7 @@ const Step2CreateRcms = ({
         resetSearchFilters: productSearch.resetSearchFilters,
         onAutoAgrupar: (newRcm, setError) => codigoUnoAUnoRef.current(newRcm, setError),
         onUpdateAgrupador: (rcm) => updateAgrupadorRef.current(rcm),
+        isRcmLinkedToCodigoProducto,
     })
 
     // ═══════════════════════════════════════
@@ -113,6 +120,10 @@ const Step2CreateRcms = ({
     const dialogAreaNombre = selectedRcmsData.length > 0
         ? (selectedRcmsData[0].area || '—')
         : (productSearch.areas.find(a => a.id === form.area)?.nombre || '—')
+
+    const selectedRcmLinkedToCodigoProducto = crud.selectedRcmId !== null
+        ? isRcmLinkedToCodigoProducto(crud.selectedRcmId)
+        : false
 
     // ═══════════════════════════════════════
     // CARD REF (for bottom panel positioning)
@@ -325,7 +336,11 @@ const Step2CreateRcms = ({
                 <MenuItem onClick={crud.handleDuplicateRcm}>
                     <ContentCopyIcon fontSize='small' sx={{ mr: 1 }} /> Duplicar
                 </MenuItem>
-                <MenuItem onClick={crud.handleDeleteRcm} sx={{ color: 'error.main' }}>
+                <MenuItem
+                    onClick={crud.handleDeleteRcm}
+                    disabled={selectedRcmLinkedToCodigoProducto}
+                    sx={{ color: selectedRcmLinkedToCodigoProducto ? 'text.disabled' : 'error.main' }}
+                >
                     <DeleteIcon fontSize='small' sx={{ mr: 1 }} /> Eliminar
                 </MenuItem>
             </Menu>

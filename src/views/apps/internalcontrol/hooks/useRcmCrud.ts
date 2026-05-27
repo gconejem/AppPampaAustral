@@ -57,6 +57,7 @@ interface UseRcmCrudParams {
     resetSearchFilters?: () => void
     onAutoAgrupar?: (newRcm: RCMData, setError: (msg: string) => void) => Promise<void>
     onUpdateAgrupador?: (rcm: RCMData) => void
+    isRcmLinkedToCodigoProducto?: (rcmId: number) => boolean
 }
 
 export function useRcmCrud({
@@ -66,6 +67,7 @@ export function useRcmCrud({
     getFormValues, getTodayDateForInput, resetForm, populateFormFromRcm,
     hasUnsavedChanges, setShowRcmCard, setErrorVencimiento,
     clearEnsayosPendientes, resetSearchFilters, onAutoAgrupar, onUpdateAgrupador,
+    isRcmLinkedToCodigoProducto,
 }: UseRcmCrudParams) {
     // Estado de edición
     const [isEditingRcm, setIsEditingRcm] = useState(false)
@@ -383,6 +385,12 @@ export function useRcmCrud({
 
     const handleDeleteRcm = () => {
         if (selectedRcmId !== null) {
+            if (isRcmLinkedToCodigoProducto?.(selectedRcmId)) {
+                setErrorVencimiento('No se puede eliminar este RCM porque está vinculado a un Código Producto. Primero elimina el Código Producto asociado.')
+                handleCloseRcmMenu()
+                return
+            }
+
             setRcmIdToDelete(selectedRcmId)
             setShowDeleteConfirm(true)
         }
