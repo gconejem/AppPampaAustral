@@ -107,6 +107,7 @@ export async function GET(request: Request) {
                     obraId: true,
                     numeroObra: true,
                     nombreObra: true,
+                    mandante: true,
                     comuna: true,
                     region: true,
                   },
@@ -166,6 +167,7 @@ export async function GET(request: Request) {
             obraId: true,
             numeroObra: true,
             nombreObra: true,
+            mandante: true,
             comuna: true,
             region: true
           }
@@ -356,6 +358,7 @@ export async function GET(request: Request) {
         fechaMuestreoMin: fechaMuesMinIso,
         areaNombre: firstArea,
         familiaNombre: firstFamilia,
+        mandante: String((fallbackObra as any)?.mandante ?? '').trim() || null,
         ciudad,
         cliente: fallbackCliente,
         obra: fallbackObra,

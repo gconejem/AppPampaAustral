@@ -29,7 +29,24 @@ export async function GET(request: Request, { params }: Params) {
                     select: {
                         sku: true,
                         nombre: true,
-                        producto: { select: { sku: true, nombre: true } }
+                        producto: {
+                            select: {
+                                sku: true,
+                                nombre: true,
+                                esPaquete: true,
+                                productosEnPaquete: {
+                                    select: {
+                                        cantidad: true,
+                                        producto: {
+                                            select: {
+                                                sku: true,
+                                                nombre: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -44,13 +61,36 @@ export async function GET(request: Request, { params }: Params) {
                         select: {
                             sku: true,
                             nombre: true,
-                            producto: { select: { sku: true, nombre: true } }
+                            producto: {
+                                select: {
+                                    sku: true,
+                                    nombre: true,
+                                    esPaquete: true,
+                                    productosEnPaquete: {
+                                        select: {
+                                            cantidad: true,
+                                            producto: {
+                                                select: {
+                                                    sku: true,
+                                                    nombre: true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     },
                     rcms: {
                         orderBy: { numeroRcm: 'asc' },
                         select: {
                             id: true,
+                            servicios: {
+                                select: {
+                                    codigo: true,
+                                    cantidad: true
+                                }
+                            },
                             RCMHistory: {
                                 orderBy: { createdAt: 'desc' },
                                 take: 1,

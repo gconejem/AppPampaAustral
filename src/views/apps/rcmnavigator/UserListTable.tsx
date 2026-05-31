@@ -2254,7 +2254,8 @@ const UserListTable2 = ({
           obra: r?.obra
             ? {
               numeroObra: r.obra.numeroObra ?? undefined,
-              nombreObra: (r.obra as any).nombreObra ?? undefined
+              nombreObra: (r.obra as any).nombreObra ?? undefined,
+              mandante: (r.obra as any).mandante ?? undefined
             }
             : null
         } as RCM
@@ -3693,6 +3694,15 @@ const UserListTable2 = ({
           '--rcmnav-selected-row-bg': alpha(theme.palette.primary.main, 0.08) as any,
           outline: 'none',
           borderRadius: 1,
+          '& table': {
+            whiteSpace: 'normal'
+          },
+          '& th, & td': {
+            whiteSpace: 'normal'
+          },
+          '& td': {
+            overflowWrap: 'anywhere'
+          },
           '&:focus-visible': {
             boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.25)}`
           }
@@ -3912,37 +3922,51 @@ const UserListTable2 = ({
               <Typography variant='subtitle1' sx={{ fontWeight: 900, lineHeight: 1.2, color: 'primary.main' }}>
                 {String(codigoDialogMeta?.codigoNombre ?? codigoDialogData?.codigoNombre ?? '').trim() || '—'}
               </Typography>
-              <Typography
-                variant='caption'
-                color='text.secondary'
-                sx={{ mt: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-              >
+              <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                <Typography
+                  variant='caption'
+                  color='text.secondary'
+                  sx={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                >
+                  {(() => {
+                    const ot = String(codigoDialogMeta?.ot ?? '').trim()
+
+                    const clienteName =
+                      String(codigoDialogMeta?.cliente?.razonSocial ?? codigoDialogMeta?.cliente?.nombreCliente ?? '').trim() ||
+                      String(codigoDialogMeta?.clienteNombre ?? '').trim()
+
+                    const obraNum = String(codigoDialogMeta?.obra?.numeroObra ?? '').trim()
+                    const obraTxt = obraNum ? `Obra ${obraNum}` : ''
+
+                    const ciudad = String(
+                      codigoDialogMeta?.ciudad ??
+                      codigoDialogMeta?.obra?.comuna ??
+                      codigoDialogMeta?.cliente?.comuna ??
+                      codigoDialogMeta?.cliente?.ciudad ??
+                      ''
+                    ).trim()
+
+                    return [ot ? `OT ${ot}` : '', clienteName, obraTxt, ciudad].filter(Boolean).join(' - ') || ' '
+                  })()}
+                </Typography>
+
                 {(() => {
-                  const ot = String(codigoDialogMeta?.ot ?? '').trim()
+                  const mandante = String((codigoDialogMeta as any)?.mandante ?? codigoDialogMeta?.obra?.mandante ?? '').trim()
 
-                  const clienteName =
-                    String(codigoDialogMeta?.cliente?.razonSocial ?? codigoDialogMeta?.cliente?.nombreCliente ?? '').trim() ||
-                    String(codigoDialogMeta?.clienteNombre ?? '').trim()
+                  if (!mandante) return null
 
-                  const obraNum = String(codigoDialogMeta?.obra?.numeroObra ?? '').trim()
-                  const obraTxt = obraNum ? `Obra ${obraNum}` : ''
-
-                  const ciudad = String(
-                    codigoDialogMeta?.ciudad ??
-                    codigoDialogMeta?.obra?.comuna ??
-                    codigoDialogMeta?.cliente?.comuna ??
-                    codigoDialogMeta?.cliente?.ciudad ??
-                    ''
-                  ).trim()
-
-                  return [ot ? `OT ${ot}` : '', clienteName, obraTxt, ciudad].filter(Boolean).join(' - ') || ' '
+                  return (
+                    <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'nowrap', fontWeight: 700, flexShrink: 0 }}>
+                      {`- Mandante ${mandante}`}
+                    </Typography>
+                  )
                 })()}
-              </Typography>
+              </Box>
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25 }}>
               {/* Estados (mover a esquina superior derecha) */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: 170 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: 0 }}>
                 {(() => {
                   const op = String(codigoDialogMeta?.estadoOperativo ?? '').trim()
                   const adm = String(codigoDialogMeta?.estadoAdministrativo ?? '').trim()
@@ -3950,10 +3974,15 @@ const UserListTable2 = ({
                   if (!op && !adm) return null
 
                   const opKey = String(op).trim().toUpperCase()
+                  const opNormKey = normalizeStateKey(op) ?? opKey
                   const opInfo = op ? getOperationalInfo(op) : null
 
                   const opLabel = op
-                    ? OPERATIONAL_STATES.find(s => s.value === opKey)?.label ?? op
+                    ? (
+                      {
+                        ENVIADO_DIGITACION: 'Env. Digitación'
+                      } as Record<string, string>
+                    )[opNormKey] ?? OPERATIONAL_STATES.find(s => s.value === opKey)?.label ?? op
                     : null
 
                   const dateSrc = op ? (codigoDialogOpAt ?? (opKey === 'DIGITADO' ? codigoDialogDigitadoAt : null)) : null
@@ -3979,8 +4008,8 @@ const UserListTable2 = ({
                   const admInfo = adm ? getAdministrativeInfo(adm) : null
 
                   return (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1, minWidth: 0 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end', minWidth: 0 }}>
                         {op && opInfo ? (
                           <Chip
                             size='small'
@@ -3992,7 +4021,8 @@ const UserListTable2 = ({
                               textTransform: 'capitalize',
                               fontWeight: 700,
                               fontSize: '0.72rem',
-                              borderRadius: 999
+                              borderRadius: 999,
+                              whiteSpace: 'nowrap'
                             }}
                           />
                         ) : null}
@@ -4008,7 +4038,8 @@ const UserListTable2 = ({
                               textTransform: 'capitalize',
                               fontWeight: 700,
                               fontSize: '0.72rem',
-                              borderRadius: 999
+                              borderRadius: 999,
+                              whiteSpace: 'nowrap'
                             }}
                           />
                         ) : null}
@@ -4166,19 +4197,72 @@ const UserListTable2 = ({
 
             {(() => {
               const ens = Array.isArray(codigoDialogData?.ensayos) ? codigoDialogData.ensayos : []
-              const map = new Map<string, { sku: string; nombre: string; cantidad: number }>()
+              const qtyBySku = new Map<string, number>()
+              const rcms = Array.isArray(codigoDialogData?.rcms) ? codigoDialogData.rcms : []
+
+              for (const r of rcms) {
+                const servicios = Array.isArray((r as any)?.servicios) ? (r as any).servicios : []
+
+                for (const s of servicios) {
+                  const skuSrv = String((s as any)?.codigo ?? '').trim()
+                  const qtySrv = Number((s as any)?.cantidad ?? 0)
+
+                  if (!skuSrv || !Number.isFinite(qtySrv) || qtySrv <= 0) continue
+                  qtyBySku.set(skuSrv, (qtyBySku.get(skuSrv) ?? 0) + qtySrv)
+                }
+              }
+
+              const map = new Map<
+                string,
+                {
+                  sku: string
+                  nombre: string
+                  cantidad: number
+                  esPaquete: boolean
+                  subProductos: Array<{ sku: string; nombre: string; cantidad: number }>
+                }
+              >()
 
               for (const e of ens) {
                 const sku = String(e?.sku ?? e?.producto?.sku ?? '').trim()
                 const nombre = String(e?.nombre ?? e?.producto?.nombre ?? '').trim()
+                const esPaquete = Boolean(e?.producto?.esPaquete)
+
+                const subProductos = Array.isArray(e?.producto?.productosEnPaquete)
+                  ? e.producto.productosEnPaquete
+                    .map((sp: any) => {
+                      const spSku = String(sp?.producto?.sku ?? '').trim()
+                      const spNombre = String(sp?.producto?.nombre ?? '').trim()
+                      const spCantidad = Number(sp?.cantidad ?? 1)
+
+                      if (!spSku) return null
+
+                      return {
+                        sku: spSku,
+                        nombre: spNombre,
+                        cantidad: Number.isFinite(spCantidad) && spCantidad > 0 ? spCantidad : 1
+                      }
+                    })
+                    .filter(Boolean) as Array<{ sku: string; nombre: string; cantidad: number }>
+                  : []
 
                 if (!sku) continue
                 const prev = map.get(sku)
+                const qtyFromServicios = qtyBySku.get(sku)
+                const fallbackTotalEnsayos = Number((codigoDialogMeta as any)?.ensayos?.total ?? 0)
+                const baseCantidad =
+                  Number.isFinite(qtyFromServicios) && (qtyFromServicios as number) > 0
+                    ? (qtyFromServicios as number)
+                    : ens.length === 1 && Number.isFinite(fallbackTotalEnsayos) && fallbackTotalEnsayos > 0
+                      ? fallbackTotalEnsayos
+                      : 1
 
                 map.set(sku, {
                   sku,
                   nombre: prev?.nombre || nombre,
-                  cantidad: (prev?.cantidad ?? 0) + 1
+                  cantidad: (prev?.cantidad ?? 0) + baseCantidad,
+                  esPaquete: prev?.esPaquete ?? esPaquete,
+                  subProductos: prev?.subProductos?.length ? prev.subProductos : subProductos
                 })
               }
 
@@ -4205,13 +4289,47 @@ const UserListTable2 = ({
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {items.slice(0, 24).map(it => (
-                        <TableRow key={it.sku} hover>
-                          <TableCell sx={{ fontWeight: 900, color: 'primary.main' }}>{it.sku}</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>{it.nombre || '-'}</TableCell>
-                          <TableCell align='right' sx={{ fontWeight: 700 }}>{it.cantidad}</TableCell>
-                        </TableRow>
-                      ))}
+                      {items.slice(0, 24).flatMap(it => {
+                        const rows: React.ReactNode[] = []
+
+                        rows.push(
+                          <TableRow key={`sku-${it.sku}`} hover>
+                            <TableCell sx={{ fontWeight: 900, color: 'primary.main' }}>{it.sku}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                <span>{it.nombre || '-'}</span>
+                                {it.esPaquete ? (
+                                  <Chip
+                                    size='small'
+                                    label='Paquete'
+                                    color='primary'
+                                    sx={{ height: 22, fontWeight: 800 }}
+                                  />
+                                ) : null}
+                              </Box>
+                            </TableCell>
+                            <TableCell align='right' sx={{ fontWeight: 700 }}>{it.cantidad}</TableCell>
+                          </TableRow>
+                        )
+
+                        if (it.esPaquete && it.subProductos.length) {
+                          for (const sp of it.subProductos) {
+                            rows.push(
+                              <TableRow key={`sku-${it.sku}-sub-${sp.sku}`}>
+                                <TableCell sx={{ pl: 3, color: 'text.secondary', fontWeight: 700 }}>{sp.sku}</TableCell>
+                                <TableCell sx={{ color: 'text.secondary' }}>
+                                  {`↳ ${sp.nombre || '-'}`}
+                                </TableCell>
+                                <TableCell align='right' sx={{ color: 'text.secondary', fontWeight: 700 }}>
+                                  {sp.cantidad * it.cantidad}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          }
+                        }
+
+                        return rows
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>

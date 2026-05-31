@@ -35,7 +35,17 @@ export async function GET(
                 muestraId: muestraId
             },
             include: {
-                producto: true,
+                producto: {
+                    include: {
+                        productosEnPaquete: {
+                            include: {
+                                producto: {
+                                    select: { productoId: true, sku: true, nombre: true, norma: true }
+                                }
+                            }
+                        }
+                    }
+                },
                 history: {
                     orderBy: { registro: 'desc' },
                     take: 1,
@@ -55,7 +65,15 @@ export async function GET(
             ensayador: s.history?.[0]?.aplicadoA ?? null,
             observacion: s.history?.[0]?.observacion ?? null,
             area: s.producto?.area,
-            familia: s.producto?.familia
+            familia: s.producto?.familia,
+            esPaquete: s.producto?.esPaquete ?? false,
+            productosEnPaquete: (s.producto?.productosEnPaquete ?? []).map((pp: any) => ({
+                cantidad: pp.cantidad ?? 1,
+                sku: pp.producto?.sku ?? null,
+                nombre: pp.producto?.nombre ?? null,
+                norma: pp.producto?.norma ?? null,
+                id: pp.producto?.productoId ?? null,
+            }))
         }))
 
         // ✅ 4. Retornar muestra + servicios (observaciones incluido)

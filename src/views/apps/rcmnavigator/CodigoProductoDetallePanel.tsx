@@ -126,10 +126,17 @@ const formatRcmLabel = (numeroRcm?: string | null) => {
   return raw
 }
 
+const getMaterialItemTomaParts = (r: RcmRow) => {
+  const material = String(r.tipoMaterial ?? '').trim()
+  const item = String(r.procedencia ?? r.item ?? '').trim()
+  const nota = String(r.tomaMuestra ?? r.ubicacionSector ?? '').trim()
+
+  return { material, item, nota }
+}
+
 const formatMaterialItemToma = (r: RcmRow) => {
-  const parts = [r.tipoMaterial, r.procedencia ?? r.item, r.tomaMuestra ?? r.ubicacionSector]
-    .map(v => String(v ?? '').trim())
-    .filter(Boolean)
+  const { material, item, nota } = getMaterialItemTomaParts(r)
+  const parts = [material, item, nota].filter(Boolean)
 
   return parts.length ? parts.join(' - ') : '-'
 }
@@ -278,7 +285,7 @@ export default function CodigoProductoDetallePanel({
   onResolveEvento?: (rcmId: number) => void
 }) {
   // objetivo: en md+ quepan 3 RCM “completos” sin scroll vertical
-  const detailBodyHeight = { xs: 220, sm: 260, md: 260 } as const
+  const detailBodyHeight = { xs: 240, sm: 300, md: 320 } as const
   const [tab, setTab] = useState<'rcms' | 'eventos'>('rcms')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<AgrupadorDetalle | null>(null)
@@ -470,6 +477,14 @@ export default function CodigoProductoDetallePanel({
     window.open(url, '_blank')
   }
 
+  const handleOpenSalaNavigator = (rcmId: number) => {
+    if (typeof window === 'undefined') return
+    const parts = window.location.pathname.split('/').filter(Boolean)
+    const lang = parts[0] || 'en'
+    const url = `${window.location.origin}/${lang}/apps/rcmnavigatordetail?rcmId=${rcmId}`
+    window.open(url, '_blank')
+  }
+
   if (!codigoAgrupadorId) {
     return (
       <Card data-rcmnav-detail sx={{ mt: 4, minHeight: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -584,7 +599,7 @@ export default function CodigoProductoDetallePanel({
                   <th style={{ textAlign: 'center' }}>TIPO</th>
                   <th style={{ textAlign: 'center' }}>ESTADO</th>
                   <th style={{ textAlign: 'center' }}>ÁREA / SERVICIO</th>
-                  <th style={{ textAlign: 'left' }}>MATERIAL · ÍTEM · TOMA</th>
+                  <th style={{ textAlign: 'left', width: '34%' }}>MATERIAL · ÍTEM · TOMA</th>
                   <th style={{ textAlign: 'center' }}>F. Muest. / Serv</th>
                   <th style={{ textAlign: 'center' }}>ENS</th>
                   <th style={{ textAlign: 'center' }}>SUB</th>
@@ -661,7 +676,71 @@ export default function CodigoProductoDetallePanel({
                           </Typography>
                         </Box>
                       </td>
-                      <td>{formatMaterialItemToma(r)}</td>
+                      <td style={{ maxWidth: 420 }}>
+                        {(() => {
+                          const { material, item, nota } = getMaterialItemTomaParts(r)
+                          const fullText = formatMaterialItemToma(r)
+
+                          if (!material && !item && !nota) {
+                            return <Typography variant='body2'>-</Typography>
+                          }
+
+                          return (
+                            <Box
+                              title={fullText}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                minWidth: 0,
+                                maxWidth: 420,
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {material ? (
+                                <Typography variant='body2' sx={{ flexShrink: 0 }}>
+                                  {material}
+                                </Typography>
+                              ) : null}
+
+                              {item ? (
+                                <>
+                                  {material ? (
+                                    <Typography variant='body2' sx={{ px: 0.5, flexShrink: 0 }}>
+                                      {' - '}
+                                    </Typography>
+                                  ) : null}
+                                  <Typography
+                                    variant='body2'
+                                    sx={{
+                                      minWidth: 0,
+                                      maxWidth: 260,
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                      flexShrink: 1
+                                    }}
+                                  >
+                                    {item}
+                                  </Typography>
+                                </>
+                              ) : null}
+
+                              {nota ? (
+                                <>
+                                  {material || item ? (
+                                    <Typography variant='body2' sx={{ px: 0.5, flexShrink: 0 }}>
+                                      {' - '}
+                                    </Typography>
+                                  ) : null}
+                                  <Typography variant='body2' sx={{ flexShrink: 0 }}>
+                                    {nota}
+                                  </Typography>
+                                </>
+                              ) : null}
+                            </Box>
+                          )
+                        })()}
+                      </td>
                       <td style={{ textAlign: 'center' }}>
                         <Typography variant='body2'>
                           {fecha ? formatDateDDMMYYYYDash(fecha) : '-'}
@@ -716,11 +795,12 @@ export default function CodigoProductoDetallePanel({
 
                           <IconButton
                             size='small'
-                            aria-label='(sin acción)'
-                            title='(sin acción)'
+                            aria-label='Abrir en Navegador de Sala'
+                            title='Abrir en Navegador de Sala'
                             onClick={e => {
                               e.preventDefault()
                               e.stopPropagation()
+                              handleOpenSalaNavigator(r.id)
                             }}
                             sx={theme => ({
                               width: 28,
@@ -732,7 +812,7 @@ export default function CodigoProductoDetallePanel({
                               '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.9) }
                             })}
                           >
-                            <EditIcon fontSize='small' />
+                            <i className='ri-flask-line' style={{ fontSize: 16 }} />
                           </IconButton>
                         </Box>
                       </td>

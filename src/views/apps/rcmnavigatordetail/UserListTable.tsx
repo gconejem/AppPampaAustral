@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 
 // Next Imports
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 
 
 // NextAuth Imports
@@ -309,6 +309,8 @@ const getStatesForServicio = (servicioId: number | null, serviciosMuestra: any[]
 const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const { data: session } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const initialRcmIdParam = searchParams ? Number(searchParams.get('rcmId') ?? '') || null : null
 
   const getCurrentUserName = () => {
     const name = session?.user?.name
@@ -2043,6 +2045,18 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     fetchRCMs()
   }, [])
 
+  // Auto-seleccionar fila si llega rcmId como query param
+  const initialRcmSelected = useRef(false)
+  useEffect(() => {
+    if (!initialRcmIdParam || initialRcmSelected.current || data.length === 0) return
+    const matchRow = data.find(d => d.rcmOriginalId === initialRcmIdParam)
+    if (matchRow) {
+      initialRcmSelected.current = true
+      handleView(matchRow)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
+
   // aplicar filtro cuando cambian filters
   useEffect(() => {
     console.log('UserListTable - filters changed:', filters)
@@ -2990,7 +3004,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       <Divider />
 
-      <div className='overflow-x-auto'>
+      <Box
+        className='overflow-x-auto'
+        sx={{
+          '& table': {
+            whiteSpace: 'normal'
+          },
+          '& th, & td': {
+            whiteSpace: 'normal'
+          },
+          '& td': {
+            overflowWrap: 'anywhere'
+          }
+        }}
+      >
         <table className={tableStyles.table}>
           <thead>
             {table.getHeaderGroups().map(headerGroup => (
@@ -3027,7 +3054,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             ))}
           </tbody>
         </table>
-      </div>
+      </Box>
 
       <TablePagination
         rowsPerPageOptions={[10, 25, 50]}
@@ -3450,35 +3477,66 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                           serviciosMuestra.map((servicio: any, idx: number) => {
                             const servicioId = servicio.id ?? servicio.servicioMuestraId ?? servicio.servicioId ?? servicio._id ?? null
                             const estadoRaw = servicio.estado ?? servicio.estadoServicio ?? 'CODIFICADO'
+                            const esPaquete = servicio.esPaquete === true
+                            const subProductos: any[] = esPaquete && Array.isArray(servicio.productosEnPaquete) ? servicio.productosEnPaquete : []
 
                             return (
-                              <TableRow key={servicioId ?? idx}>
-                                <TableCell>
-                                  <Typography sx={{ display: 'inline-flex', px: 1, py: 0.2, borderRadius: 1, bgcolor: '#eceff3', border: '1px solid #d0d7e2', fontSize: '0.82rem', fontWeight: 700, color: '#313845' }}>
-                                    {servicio.codigo ?? '-'}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography sx={{ fontSize: '0.92rem', fontWeight: 700, color: '#111827', lineHeight: 1.15 }}>
-                                    {servicio.nombre ?? servicio.servicio?.nombre ?? '-'}
-                                  </Typography>
-                                  <Typography sx={{ fontSize: '0.78rem', color: '#818b9a' }}>
-                                    {servicio.norma ?? '-'}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align='center'>
-                                  <Typography sx={{ fontSize: '0.95rem', color: '#111827' }}>{servicio.cantidad ?? 1}</Typography>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography sx={{ fontSize: '0.92rem', color: '#374151' }}>{ensayador}</Typography>
-                                </TableCell>
-                                <TableCell align='center'>
-                                  <Chip label={getOperationalLabel(estadoRaw)} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.74rem', ...estadoPillSx(String(estadoRaw)) }} />
-                                </TableCell>
-                                <TableCell>
-                                  <Typography sx={{ fontSize: '0.9rem', color: '#9ca3af' }}>{servicio.observacion ?? '—'}</Typography>
-                                </TableCell>
-                              </TableRow>
+                              <>
+                                <TableRow key={servicioId ?? idx}>
+                                  <TableCell>
+                                    <Typography sx={{ display: 'inline-flex', px: 1, py: 0.2, borderRadius: 1, bgcolor: '#eceff3', border: '1px solid #d0d7e2', fontSize: '0.82rem', fontWeight: 700, color: '#313845' }}>
+                                      {servicio.codigo ?? '-'}
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                      <Typography sx={{ fontSize: '0.92rem', fontWeight: 700, color: '#111827', lineHeight: 1.15 }}>
+                                        {servicio.nombre ?? servicio.servicio?.nombre ?? '-'}
+                                      </Typography>
+                                      {esPaquete && (
+                                        <Chip label='Paquete' size='small' sx={{ height: 18, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#1d4ed8', color: '#fff', borderRadius: '6px', '& .MuiChip-label': { px: 0.75 } }} />
+                                      )}
+                                    </Box>
+                                    <Typography sx={{ fontSize: '0.78rem', color: '#818b9a' }}>
+                                      {servicio.norma ?? '-'}
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell align='center'>
+                                    <Typography sx={{ fontSize: '0.95rem', color: '#111827' }}>{servicio.cantidad ?? 1}</Typography>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Typography sx={{ fontSize: '0.92rem', color: '#374151' }}>{ensayador}</Typography>
+                                  </TableCell>
+                                  <TableCell align='center'>
+                                    <Chip label={getOperationalLabel(estadoRaw)} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.74rem', ...estadoPillSx(String(estadoRaw)) }} />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Typography sx={{ fontSize: '0.9rem', color: '#9ca3af' }}>{servicio.observacion ?? '—'}</Typography>
+                                  </TableCell>
+                                </TableRow>
+                                {subProductos.map((sp: any, spIdx: number) => (
+                                  <TableRow key={`${servicioId ?? idx}-sub-${spIdx}`} sx={{ bgcolor: 'rgba(59,130,246,0.04)' }}>
+                                    <TableCell sx={{ pl: 3 }}>
+                                      <Typography sx={{ display: 'inline-flex', px: 1, py: 0.2, borderRadius: 1, bgcolor: '#f0f4ff', border: '1px solid #c7d4f0', fontSize: '0.78rem', fontWeight: 600, color: '#3b5bdb' }}>
+                                        {sp.sku ?? '-'}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell sx={{ pl: 2 }}>
+                                      <Typography sx={{ fontSize: '0.85rem', color: '#374151', pl: 1.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <span style={{ color: '#9ca3af', marginRight: 2 }}>↳</span>
+                                        {sp.nombre ?? '-'}
+                                      </Typography>
+                                      {sp.norma && (
+                                        <Typography sx={{ fontSize: '0.75rem', color: '#818b9a', pl: 3 }}>{sp.norma}</Typography>
+                                      )}
+                                    </TableCell>
+                                    <TableCell align='center'>
+                                      <Typography sx={{ fontSize: '0.88rem', color: '#6b7280' }}>{sp.cantidad ?? 1}</Typography>
+                                    </TableCell>
+                                    <TableCell colSpan={3} />
+                                  </TableRow>
+                                ))}
+                              </>
                             )
                           })
                         )}
