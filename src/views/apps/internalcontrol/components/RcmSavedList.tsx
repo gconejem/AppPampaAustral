@@ -87,7 +87,17 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
         )
     }
 
+    const getCantidadRcm = (rcm: RCMData) => {
+        if (rcm.cantidadMuestras) return rcm.cantidadMuestras
+
+        const totalEnsayos = rcm.ensayos.reduce((sum, ensayo) => sum + (ensayo.cantidad || 0), 0)
+
+        return totalEnsayos > 0 ? String(totalEnsayos) : ''
+    }
+
     const renderRcmHeaderFields = (rcm: RCMData) => {
+        const cantidadRcm = getCantidadRcm(rcm)
+
         if (rcm.rcmType === 'Muestra') {
             return (
                 <>
@@ -111,11 +121,12 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
         if (rcm.rcmType === 'Control') {
             return (
                 <>
-                    {rcm.sede && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.sede}</Typography></>}
                     {rcm.area && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.area}</Typography></>}
                     {rcm.tipoServicio && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.tipoServicio}</Typography></>}
                     <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{formatDateOnly(rcm.fechaServicio)}</Typography></>
+                    {rcm.sede && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.sede}</Typography></>}
                     {rcm.item && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.item}</Typography></>}
+                    {cantidadRcm && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>×{cantidadRcm}</Typography></>}
                 </>
             )
         }
@@ -125,6 +136,8 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                 {rcm.area && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.area}</Typography></>}
                 {rcm.tipoServicio && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.tipoServicio}</Typography></>}
                 <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{formatDateOnly(rcm.fechaServicio)}</Typography></>
+                {rcm.sede && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.sede}</Typography></>}
+                {cantidadRcm && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>×{cantidadRcm}</Typography></>}
             </>
         )
     }
@@ -497,6 +510,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                     </Box>
                     {rcmsAgrupados.map(rcm => {
                         const rcmBorderColor = rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b'
+                        const cantidadRcm = getCantidadRcm(rcm)
                         return (
                             <Box key={rcm.id} sx={{ bgcolor: '#F5F5F5', borderRadius: '8px', overflow: 'hidden', mb: 2, border: `2px solid ${rcmBorderColor}` }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: '#F5F5F5', cursor: 'pointer' }} onClick={() => onToggleSavedRcm(rcm.id)}>
@@ -518,6 +532,10 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                                 <><Typography variant='body2' color='text.secondary'>|</Typography>{renderVencimientoPill(rcm)}</>
                                             )}
                                             {rcm.rcmType === 'Muestra' && rcm.cantidadMuestras && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.cantidadMuestras}</Typography></>}
+                                            {rcm.rcmType === 'Control' && rcm.sede && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.sede}</Typography></>}
+                                            {rcm.rcmType === 'Control' && rcm.item && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.item}</Typography></>}
+                                            {rcm.rcmType === 'Servicio' && rcm.sede && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.sede}</Typography></>}
+                                            {(rcm.rcmType === 'Control' || rcm.rcmType === 'Servicio') && cantidadRcm && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>×{cantidadRcm}</Typography></>}
                                         </Box>
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
