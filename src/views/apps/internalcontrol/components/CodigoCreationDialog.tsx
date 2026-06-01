@@ -69,7 +69,7 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
             onClose={onClose}
             maxWidth='sm'
             fullWidth
-            PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden' } }}
+            PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden', maxWidth: '690px' } }}
         >
             <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem', pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 Agrupar en Código Producto
@@ -91,6 +91,9 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                 {selectedRcmIds.map((id, idx) => {
                                     const rcm = savedRcms.find(r => r.id === id)
                                     const rcmNum = rcm?.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
+                                    const tipoMaterial = rcm?.tipoMaterial || '-'
+                                    const item = rcm?.item || '-'
+                                    const tomaMuestra = rcm?.tomaMuestra || '-'
                                     return (
                                         <Box
                                             key={id}
@@ -108,6 +111,7 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                                 T:{rcm?.numeroTarjeta || '-'}
                                                 {rcm?.area ? ` ${rcm.area}` : ''}
                                                 {rcm?.tipoServicio ? ` ${rcm.tipoServicio}` : ''}
+                                                {` | ${tipoMaterial} | ${item} | #${tomaMuestra}`}
                                             </Typography>
                                         </Box>
                                     )
