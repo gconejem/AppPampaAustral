@@ -258,13 +258,16 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
 
     // ── Shared expanded body for Pendientes and Agrupados ─────────────────────
     const renderExpandedContent = (rcm: RCMData) => {
+        const esMuestra = rcm.rcmType === 'Muestra'
+        const esControl = rcm.rcmType === 'Control'
+        const esServicio = rcm.rcmType === 'Servicio'
         const areaName = rcm.area?.toLowerCase() || ''
         const esHormigon = areaName === 'hormigón' || areaName === 'hormigon'
         const esElementosComponentes = areaName === 'elementos y componentes'
         const esAsfalto = areaName === 'asfalto'
         const esSuelo = areaName === 'suelo'
         const esOtros = areaName === 'otros'
-        const tieneCamposDinamicos = esHormigon || esElementosComponentes || esAsfalto || esSuelo || esOtros
+        const tieneCamposDinamicos = esMuestra && (esHormigon || esElementosComponentes || esAsfalto || esSuelo || esOtros)
 
         // Helper: a single date-cell, always rendered
         const dateCell = (label: string, value?: string) => (
@@ -293,33 +296,57 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                 </Box>
                 <Divider sx={{ mb: 2 }} />
 
-                {/* ── FILA 2: PROCEDENCIA / UBICACIÓN / CANTIDAD / CHECKS ── */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(120px, 1fr))', gap: 2, mb: 2, alignItems: 'center' }}>
-                    {textCell('Procedencia', rcm.procedencia)}
-                    {textCell('Ubicación / Sector', rcm.ubicacionSector)}
+                {/* ── FILA 2: CAMPOS SEGÚN TIPO ── */}
+                {esMuestra && (
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(120px, 1fr))', gap: 2, mb: 2, alignItems: 'center' }}>
+                        {textCell('Procedencia', rcm.procedencia)}
+                        {textCell('Ubicación / Sector', rcm.ubicacionSector)}
 
-                    {rcm.rcmType === 'Muestra' && rcm.cantidadMuestras
-                        ? (
-                            <Box sx={{ minWidth: 120 }}>
-                                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>Cantidad</Typography>
-                                <Typography variant='body2' sx={{ fontWeight: 700 }}>×{rcm.cantidadMuestras}</Typography>
+                        {rcm.cantidadMuestras
+                            ? (
+                                <Box sx={{ minWidth: 120 }}>
+                                    <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>Cantidad</Typography>
+                                    <Typography variant='body2' sx={{ fontWeight: 700 }}>×{rcm.cantidadMuestras}</Typography>
+                                </Box>
+                            )
+                            : <Box />
+                        }
+
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                {rcm.informeEnsayo ? <CheckBoxIcon fontSize='small' sx={{ color: '#1976d2' }} /> : <CheckBoxOutlineBlankIcon fontSize='small' sx={{ color: '#bdbdbd' }} />}
+                                <Typography variant='body2' sx={{ color: rcm.informeEnsayo ? '#1976d2' : 'text.disabled' }}>Informe</Typography>
                             </Box>
-                        )
-                        : <Box />
-                    }
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                {rcm.tieneVencimiento ? <CheckBoxIcon fontSize='small' sx={{ color: '#1976d2' }} /> : <CheckBoxOutlineBlankIcon fontSize='small' sx={{ color: '#bdbdbd' }} />}
+                                <Typography variant='body2' sx={{ color: rcm.tieneVencimiento ? '#1976d2' : 'text.disabled' }}>Vencimiento</Typography>
+                            </Box>
+                        </Box>
+                    </Box>
+                )}
+
+                {esControl && (
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(120px, 1fr))', gap: 2, mb: 2, alignItems: 'center' }}>
+                        {textCell('Item', rcm.item)}
+                        {textCell('Obs. al item', rcm.observacionItem)}
+                        {textCell('Ubicación / Sector', rcm.ubicacionSector)}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                             {rcm.informeEnsayo ? <CheckBoxIcon fontSize='small' sx={{ color: '#1976d2' }} /> : <CheckBoxOutlineBlankIcon fontSize='small' sx={{ color: '#bdbdbd' }} />}
                             <Typography variant='body2' sx={{ color: rcm.informeEnsayo ? '#1976d2' : 'text.disabled' }}>Informe</Typography>
                         </Box>
+                    </Box>
+                )}
 
+                {esServicio && (
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(120px, 1fr))', gap: 2, mb: 2, alignItems: 'center' }}>
+                        {textCell('Ubicación / Sector', rcm.ubicacionSector)}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            {rcm.tieneVencimiento ? <CheckBoxIcon fontSize='small' sx={{ color: '#1976d2' }} /> : <CheckBoxOutlineBlankIcon fontSize='small' sx={{ color: '#bdbdbd' }} />}
-                            <Typography variant='body2' sx={{ color: rcm.tieneVencimiento ? '#1976d2' : 'text.disabled' }}>Vencimiento</Typography>
+                            {rcm.informeEnsayo ? <CheckBoxIcon fontSize='small' sx={{ color: '#1976d2' }} /> : <CheckBoxOutlineBlankIcon fontSize='small' sx={{ color: '#bdbdbd' }} />}
+                            <Typography variant='body2' sx={{ color: rcm.informeEnsayo ? '#1976d2' : 'text.disabled' }}>Informe</Typography>
                         </Box>
                     </Box>
-                </Box>
+                )}
 
                 {/* ── FILA 3: CAMPOS DINÁMICOS (según área) ─── */}
                 {tieneCamposDinamicos && (
@@ -366,25 +393,29 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                     </Box>
                 )}
 
-                {/* ── ENSAYOS Y SERVICIOS ASOCIADOS ──────────── */}
-                <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2 }}>
-                    Ensayos y servicios asociados ({rcm.ensayos.length})
-                </Typography>
-                {renderEnsayosTable(rcm.ensayos)}
+                {!esServicio && (
+                    <>
+                        {/* ── ENSAYOS Y SERVICIOS ASOCIADOS ──────────── */}
+                        <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2 }}>
+                            Ensayos y servicios asociados ({rcm.ensayos.length})
+                        </Typography>
+                        {renderEnsayosTable(rcm.ensayos)}
 
-                {/* ── SUBMUESTRAS COMPACTAS ───────────────────── */}
-                {rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 &&
-                    renderSubmuestrasPills(rcm.submuestrasVencimiento)}
+                        {/* ── SUBMUESTRAS COMPACTAS ───────────────────── */}
+                        {rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 &&
+                            renderSubmuestrasPills(rcm.submuestrasVencimiento)}
 
-                {/* ── OBSERVACIONES GENERALES ────────────────── */}
-                <Box sx={{ mt: 3 }}>
-                    <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 1 }}>Observaciones</Typography>
-                    <TextField
-                        multiline rows={2} fullWidth size='small' disabled
-                        value={rcm.observaciones || ''}
-                        placeholder='Sin observaciones'
-                    />
-                </Box>
+                        {/* ── OBSERVACIONES GENERALES ────────────────── */}
+                        <Box sx={{ mt: 3 }}>
+                            <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 1 }}>Observaciones</Typography>
+                            <TextField
+                                multiline rows={2} fullWidth size='small' disabled
+                                value={rcm.observaciones || ''}
+                                placeholder='Sin observaciones'
+                            />
+                        </Box>
+                    </>
+                )}
             </Box>
         )
     }

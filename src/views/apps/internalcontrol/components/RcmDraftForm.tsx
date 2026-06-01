@@ -506,8 +506,8 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
 
                                 <Grid container spacing={3} alignItems='center'>
                                     <Grid item xs={12} md={8}>
-                                        <TextField label='Descripción' value={observacionItem}
-                                            onChange={(e) => setObservacionItem(e.target.value)} fullWidth multiline rows={3}
+                                        <TextField label='Descripción' value={ubicacionSector}
+                                            onChange={(e) => setUbicacionSector(e.target.value)} fullWidth multiline rows={3}
                                             placeholder='Ingrese una descripción del servicio...' />
                                     </Grid>
                                     <Grid item xs={12} md={4}>
