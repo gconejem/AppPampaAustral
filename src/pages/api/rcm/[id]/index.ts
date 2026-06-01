@@ -51,7 +51,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const rcm = await prisma.rCM.findUnique({
                 where: { id: rcmId },
                 include: {
-                    servicios: { include: { subProductos: true, producto: true } },
+                    servicios: {
+                        include: {
+                            subProductos: true,
+                            producto: {
+                                include: {
+                                    productosEnPaquete: {
+                                        include: {
+                                            producto: {
+                                                select: {
+                                                    productoId: true,
+                                                    sku: true,
+                                                    nombre: true,
+                                                    norma: true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
                     muestras: {
                         include: {
                             servicios: { include: { producto: true } },

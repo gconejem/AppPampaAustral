@@ -4734,13 +4734,7 @@ const UserListTable2 = ({
             {(() => {
               const area = String(informeDialogMeta?.area ?? '').trim()
               const familia = String(informeDialogMeta?.familia ?? '').trim()
-              const ss = String(informeDialogMeta?.ss ?? '').trim()
-
-              const totalEnsayos = Number(informeDialogMeta?.ensayos?.total ?? 0)
-              const desc = String(informeDialogData?.descripcionServicio ?? '').trim()
-
-              const norm = `${familia} ${desc}`.toLowerCase()
-              const unidad = norm.includes('control') ? 'controles' : 'ensayos'
+              const desc = String(informeDialogData?.descripcionServicio ?? informeDialogMeta?.descripcionServicio ?? '').trim()
 
               const firstEnsayo = (informeDialogData?.ensayos ?? [])?.[0]
               const firstSku = String(firstEnsayo?.sku ?? firstEnsayo?.producto?.sku ?? '').trim()
@@ -4753,11 +4747,11 @@ const UserListTable2 = ({
                     {[area, familia].filter(Boolean).join(' — ') || '—'}
                   </Typography>
 
-                  <Typography variant='caption' sx={{ fontWeight: 700, mt: 0.25, display: 'block', color: 'text.primary' }}>
-                    {desc || '—'}
-                    {totalEnsayos > 0 ? ` — ${totalEnsayos} ${unidad}` : ''}
-                    {ss ? ` ${ss}` : ''}
-                  </Typography>
+                  {desc ? (
+                    <Typography variant='caption' sx={{ fontWeight: 700, mt: 0.25, display: 'block', color: 'text.primary' }}>
+                      {desc}
+                    </Typography>
+                  ) : null}
 
                   {chipLabel ? (
                     <Chip

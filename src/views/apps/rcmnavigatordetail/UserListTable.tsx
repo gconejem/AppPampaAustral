@@ -386,6 +386,22 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return { hex, bgcolor, colorText, border }
   }
 
+  const resolveServiceStateFromRcm = (rawState?: string | null, rcmType?: string | null, rcmState?: string | null) => {
+    const type = String(rcmType ?? '').trim().toUpperCase()
+    const rcm = String(rcmState ?? '').trim().toUpperCase()
+    const current = String(rawState ?? '').trim().toUpperCase()
+
+    // Regla de auto-completado para Control/Servicio
+    if (type === 'CONTROL' && rcm === 'ENSAYADO') return 'ENSAYADO'
+    if (type === 'SERVICIO' && (rcm === 'EJECUTADO' || rcm === 'ENSAYADO')) return rcm
+
+    // En MUESTRA, no forzamos ENSAYADO desde la carga del popup.
+    // Si el registro quedó como ENSAYADO pero el RCM aún no avanzó, lo tratamos como EN_PROCESO.
+    if (type === 'MUESTRA' && current === 'ENSAYADO' && rcm !== 'ENSAYADO') return 'EN_PROCESO'
+
+    return current || 'CODIFICADO'
+  }
+
   // devuelve informaci├│n visual para un estado administrativo (usa ADMINISTRATIVE_STATES)
   const getAdministrativeInfo = (raw?: string) => {
     if (!raw) return { hex: undefined as string | undefined, bgcolor: 'rgba(0,0,0,0.06)', colorText: '#000', border: 'transparent' }
@@ -564,11 +580,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       const combined = (Array.isArray(dataServ.servicios) ? dataServ.servicios : []).map((s: any) => {
         const match = serviciosDetalle.find((sd: any) => Number(sd?.id) === Number(s?.id))
 
+        const estadoResuelto = resolveServiceStateFromRcm(
+          s?.estado ?? match?.estado ?? 'CODIFICADO',
+          detalleRcm?.rcmType,
+          detalleRcm?.estadoOperativo
+        )
+
 
         return {
           ...s,
           norma: s?.norma ?? match?.produto?.norma ?? match?.producto?.norma ?? null,
-          estado: s?.estado ?? match?.estado ?? 'CODIFICADO'
+          estado: estadoResuelto
         }
       })
 
@@ -646,6 +668,27 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           ? 'EN_PROCESO'
           : 'CODIFICADO'
 
+      const rcmId = gestionarRow?.rcmOriginalId ?? null
+
+      if (rcmId) {
+        try {
+          await fetch(`/api/rcm/${rcmId}/history`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tipo: 'Ens',
+              tipoEstado: 'ENSAYOS',
+              funcionario: user,
+              estPrev: gestionarRow?.estadoOperativo ?? gestionarRow?.estadoMuestra ?? null,
+              estNuevo: estadoFinal,
+              observacion: `Estado actualizado desde gestión de ensayos a ${estadoFinal}`
+            })
+          })
+        } catch (error) {
+          console.warn('No se pudo persistir el estado del RCM padre:', error)
+        }
+      }
+
       // Ensayador predominante (del primer servicio con ensayador asignado)
       const ensayadorFinal =
         gestionarServicios
@@ -660,6 +703,34 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
         return row
       }))
+
+      setFilteredData(prev => prev.map(row => {
+        if (row.id === gestionarRow?.id) {
+          return { ...row, estadoMuestra: estadoFinal, estadoOperativo: estadoFinal, ensayador: ensayadorFinal || row.ensayador }
+        }
+
+        return row
+      }))
+
+      if (selectedInlineRowId && gestionarRow?.id === selectedInlineRowId) {
+        setInlineServicios(prev => prev.map((servicio: any) => {
+          const servicioId = servicio.id ?? servicio.servicioMuestraId ?? servicio.servicioId ?? servicio._id
+          const nuevoEstado = gestionarEstados[servicioId] ?? servicio.estado ?? 'CODIFICADO'
+
+          return { ...servicio, estado: nuevoEstado }
+        }))
+
+        setInlineRcmDetalle(prev => prev ? { ...prev, estadoOperativo: estadoFinal, estadoMuestra: estadoFinal } : prev)
+        setInlineMuestraDetalle(prev => prev ? { ...prev } : prev)
+      }
+
+      if (typeof (window as any).__REFRESH_RCM_ROW__ === 'function' && rcmId) {
+        try {
+          ; (window as any).__REFRESH_RCM_ROW__(rcmId, { estadoOperativo: estadoFinal })
+        } catch (error) {
+          /* noop */
+        }
+      }
 
       setGestionarOpen(false)
     } catch (e) {
@@ -1077,12 +1148,18 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       const serviciosCombinados = (Array.isArray(data.servicios) ? data.servicios : []).map((servicio: any) => {
         const match = serviciosDetalle.find((sd: any) => Number(sd?.id) === Number(servicio?.id))
 
+        const estadoResuelto = resolveServiceStateFromRcm(
+          servicio?.estado ?? match?.estado ?? 'CODIFICADO',
+          detalleRcm?.rcmType,
+          detalleRcm?.estadoOperativo
+        )
+
         return {
           ...servicio,
           norma: servicio?.norma ?? match?.producto?.norma ?? match?.norma ?? null,
           codigo: servicio?.codigo ?? match?.producto?.sku ?? match?.codigo ?? null,
           cantidad: servicio?.cantidad ?? match?.cantidad ?? 1,
-          estado: servicio?.estado ?? match?.estado ?? 'CODIFICADO'
+          estado: estadoResuelto
         }
       })
 
@@ -1883,12 +1960,19 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             const serviciosMuestra = Array.isArray(muestra.servicios) ? muestra.servicios : []
             const totalEnsayos = serviciosMuestra.reduce((acc: number, servicioItem: any) => acc + Number(servicioItem?.cantidad ?? 1), 0)
 
+            const rcmTypeNorm = String((r as any)?.rcmType ?? '').toUpperCase().trim()
+            const rcmEstadoNorm = String(r.estadoOperativo ?? '').toUpperCase().trim()
+            const rcmAutoCompletado =
+              (rcmTypeNorm === 'CONTROL' && rcmEstadoNorm === 'ENSAYADO') ||
+              (rcmTypeNorm === 'SERVICIO' && (rcmEstadoNorm === 'EJECUTADO' || rcmEstadoNorm === 'ENSAYADO'))
+
             const ensayados = serviciosMuestra.reduce((acc: number, servicioItem: any) => {
               const estadoServicio = String(servicioItem?.estado ?? '').toUpperCase().trim()
 
-
-              return acc + (estadoServicio === 'ENSAYADO' ? Number(servicioItem?.cantidad ?? 1) : 0)
+              return acc + ((estadoServicio === 'ENSAYADO' || estadoServicio === 'EJECUTADO') ? Number(servicioItem?.cantidad ?? 1) : 0)
             }, 0)
+
+            const ensayadosResueltos = rcmAutoCompletado ? totalEnsayos : ensayados
 
             const estadosServicios = serviciosMuestra
               .map((servicioItem: any) => String(servicioItem?.estado ?? '').toUpperCase().trim())
@@ -1900,7 +1984,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 ? 'CODIFICADO'
                 : estadosServicios.includes('ENSAYADO')
                   ? 'ENSAYADO'
-                  : (estadosServicios[0] ?? '')
+                  : estadosServicios.includes('EJECUTADO')
+                    ? 'EJECUTADO'
+                    : (estadosServicios[0] ?? '')
 
             const probetas = Array.isArray(muestra.probetas) ? muestra.probetas : []
 
@@ -1929,12 +2015,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
             const ensayador = ensayadorDesdeServicio ?? null
 
-            const estadoMuestraResuelto =
-              String(muestra.estado ?? '').trim() ||
-              String(servicioRCM?.estado ?? '').trim() ||
-              estadoDesdeEnsayo ||
-              String(r.estadoOperativo ?? '').trim() ||
-              ''
+            const estadoMuestraResuelto = rcmAutoCompletado
+              ? (rcmEstadoNorm ||
+                String(muestra.estado ?? '').trim() ||
+                String(servicioRCM?.estado ?? '').trim() ||
+                estadoDesdeEnsayo ||
+                '')
+              : (String(r.estadoOperativo ?? '').trim() ||
+                String(muestra.estado ?? '').trim() ||
+                String(servicioRCM?.estado ?? '').trim() ||
+                estadoDesdeEnsayo ||
+                '')
 
             // LOG (mantener solo para debug)
             console.group(`­ƒöì DEBUG Muestra ${r.id}-${idx}`)
@@ -1981,8 +2072,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               ensayador,
               ensayos: {
                 total: totalEnsayos,
-                ensayados,
-                pendientes: Math.max(0, totalEnsayos - ensayados)
+                ensayados: ensayadosResueltos,
+                pendientes: Math.max(0, totalEnsayos - ensayadosResueltos)
               },
               cliente: {
                 nombreCliente: clienteNombre ?? null,
@@ -3240,7 +3331,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                         ) : (
                           inlineServicios.map((servicio: any, idx: number) => {
                             const servicioId = servicio.id ?? servicio.servicioMuestraId ?? servicio.servicioId ?? servicio._id ?? idx
-                            const estadoRaw = servicio.estado ?? servicio.estadoServicio ?? 'CODIFICADO'
+                            const estadoRaw = resolveServiceStateFromRcm(
+                              servicio.estado ?? servicio.estadoServicio ?? 'CODIFICADO',
+                              rcmData?.rcmType,
+                              row?.estadoOperativo ?? rcmData?.estadoOperativo
+                            )
 
                             return (
                               <TableRow key={servicioId}>
@@ -3476,7 +3571,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                         ) : (
                           serviciosMuestra.map((servicio: any, idx: number) => {
                             const servicioId = servicio.id ?? servicio.servicioMuestraId ?? servicio.servicioId ?? servicio._id ?? null
-                            const estadoRaw = servicio.estado ?? servicio.estadoServicio ?? 'CODIFICADO'
+                            const estadoRaw = resolveServiceStateFromRcm(
+                              servicio.estado ?? servicio.estadoServicio ?? 'CODIFICADO',
+                              rcmData?.rcmType,
+                              row?.estadoOperativo ?? rcmData?.estadoOperativo
+                            )
                             const esPaquete = servicio.esPaquete === true
                             const subProductos: any[] = esPaquete && Array.isArray(servicio.productosEnPaquete) ? servicio.productosEnPaquete : []
 

@@ -34,7 +34,26 @@ type Servicio = {
   codigo?: string | null
   nombre?: string | null
   norma?: string | null
-  producto?: { sku?: string | null; nombre?: string | null; norma?: string | null } | null
+  esPaquete?: boolean | null
+  subProductos?: Array<{
+    sku?: string | null
+    nombre?: string | null
+    norma?: string | null
+    cantidad?: number | null
+    estadoOperativo?: string | null
+    estado?: string | null
+    producto?: { sku?: string | null; nombre?: string | null; norma?: string | null } | null
+  }> | null
+  producto?: {
+    sku?: string | null
+    nombre?: string | null
+    norma?: string | null
+    esPaquete?: boolean | null
+    productosEnPaquete?: Array<{
+      cantidad?: number | null
+      producto?: { sku?: string | null; nombre?: string | null; norma?: string | null } | null
+    }> | null
+  } | null
 }
 
 type HistoryEntry = {
@@ -141,21 +160,41 @@ const formatMaterialItemToma = (r: RcmRow) => {
   return parts.length ? parts.join(' - ') : '-'
 }
 
-const computeEnsayos = (servicios?: Servicio[]) => {
+const isAutoCompletedRcm = (rcmType?: string | null, estadoOperativo?: string | null) => {
+  const type = String(rcmType ?? '').trim().toUpperCase()
+  const estado = String(estadoOperativo ?? '').trim().toUpperCase()
+
+  if (type === 'CONTROL') return estado === 'ENSAYADO'
+  if (type === 'SERVICIO') return estado === 'EJECUTADO' || estado === 'ENSAYADO'
+
+  return false
+}
+
+const computeEnsayos = (servicios?: Servicio[], opts?: { rcmType?: string | null; estadoOperativo?: string | null }) => {
   let total = 0
   let ensayados = 0
+
+  const autoCompleted = isAutoCompletedRcm(opts?.rcmType, opts?.estadoOperativo)
+  const type = String(opts?.rcmType ?? '').trim().toUpperCase()
+  const rcmState = String(opts?.estadoOperativo ?? '').trim().toUpperCase()
 
   for (const s of servicios ?? []) {
     const qty = Number(s.cantidad ?? 0)
     total += qty
-    if (String(s.estadoOperativo ?? '').trim().toUpperCase() === 'ENSAYADO') ensayados += qty
+    if (autoCompleted || String(s.estadoOperativo ?? '').trim().toUpperCase() === 'ENSAYADO') ensayados += qty
+  }
+
+  // En MUESTRA, si el RCM padre ya fue movido explícitamente a ENSAYADO/EJECUTADO,
+  // el panel de Navegador debe reflejar ese avance aunque ServicioRCM no esté sincronizado.
+  if (type === 'MUESTRA' && total > 0 && (rcmState === 'ENSAYADO' || rcmState === 'EJECUTADO')) {
+    ensayados = total
   }
 
   return { total, ensayados }
 }
 
-const computeEnsayoStateKey = (servicios?: Servicio[]) => {
-  const { total, ensayados } = computeEnsayos(servicios)
+const computeEnsayoStateKey = (servicios?: Servicio[], opts?: { rcmType?: string | null; estadoOperativo?: string | null }) => {
+  const { total, ensayados } = computeEnsayos(servicios, opts)
   if (total <= 0) return null
   if (ensayados >= total) return 'ENSAYADO'
   if (ensayados > 0) return 'EN_PROCESO'
@@ -366,10 +405,8 @@ export default function CodigoProductoDetallePanel({
 
     const area = count(rcms.map(r => r.area?.nombre))
     const tipoServicio = count(rcms.map(r => r.familia?.nombre))
-    const descripcion = String(data?.descripcionServicio ?? '').trim() || null
-
-    return { area, tipoServicio, descripcion }
-  }, [data?.descripcionServicio, rcms])
+    return { area, tipoServicio }
+  }, [rcms])
 
   const headerStates = useMemo(() => {
     const opCounts: Record<string, number> = {}
@@ -500,7 +537,7 @@ export default function CodigoProductoDetallePanel({
       <CardHeader
         title={
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'nowrap' }}>
-            {/* Izquierda: ID + Área + Tipo + Descripción (1 línea) */}
+            {/* Izquierda: ID + Área + Tipo (1 línea) */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1, overflow: 'hidden' }}>
               <Chip
                 size='small'
@@ -514,22 +551,6 @@ export default function CodigoProductoDetallePanel({
 
               {headerMeta.tipoServicio ? (
                 <Chip size='small' label={headerMeta.tipoServicio} variant='outlined' sx={{ fontWeight: 800 }} />
-              ) : null}
-
-              {headerMeta.descripcion ? (
-                <Typography
-                  variant='body2'
-                  color='text.secondary'
-                  sx={{
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}
-                  title={headerMeta.descripcion}
-                >
-                  {headerMeta.descripcion}
-                </Typography>
               ) : null}
             </Box>
 
@@ -608,7 +629,7 @@ export default function CodigoProductoDetallePanel({
               </thead>
               <tbody>
                 {rcms.map(r => {
-                  const ens = computeEnsayos(r.servicios)
+                  const ens = computeEnsayos(r.servicios, { rcmType: r.rcmType, estadoOperativo: r.estadoOperativo })
                   const fecha = r.fechaServicio ?? r.fechaMuestreo
                   const sub = r.vencimiento ? Number(r.cantidadMuestras ?? 0) : 0
                   const serviceName =
@@ -999,7 +1020,7 @@ export default function CodigoProductoDetallePanel({
             .join(' - ')
 
           const servicios = (r?.servicios ?? []) as Servicio[]
-          const stateKey = (computeEnsayoStateKey(servicios) ?? normalizeStateKey(r?.estadoOperativo) ?? null) as any
+          const stateKey = (computeEnsayoStateKey(servicios, { rcmType: r?.rcmType, estadoOperativo: r?.estadoOperativo }) ?? normalizeStateKey(r?.estadoOperativo) ?? null) as any
 
           const informeFlags = (() => {
             const rows = (rcmDialogHistory ?? r?.RCMHistory ?? []) as any[]
@@ -1298,7 +1319,14 @@ export default function CodigoProductoDetallePanel({
                             const norma = String(s?.producto?.norma ?? s?.norma ?? '').trim()
                             const qty = Number(s?.cantidad ?? 0)
                             const stKey = normalizeStateKey(s?.estadoOperativo ?? s?.estado) ?? null
-                            const esPaquete = s?.esPaquete || Array.isArray(s?.hijos) || Array.isArray(s?.detalles) || Array.isArray(s?.componentes)
+                            const esPaquete =
+                              Boolean(s?.esPaquete) ||
+                              Boolean(s?.producto?.esPaquete) ||
+                              Array.isArray(s?.subProductos) ||
+                              Array.isArray(s?.producto?.productosEnPaquete) ||
+                              Array.isArray(s?.hijos) ||
+                              Array.isArray(s?.detalles) ||
+                              Array.isArray(s?.componentes)
                             // Fila principal (paquete o normal)
                             rows.push(
                               <tr key={String(s?.id ?? idx)} style={esPaquete ? { background: '#eaf4ff' } : {}}>
@@ -1335,7 +1363,18 @@ export default function CodigoProductoDetallePanel({
                               </tr>
                             )
                             // Si es paquete, mostrar hijos
-                            const hijos = s?.hijos || s?.detalles || s?.componentes || []
+                            const hijos =
+                              s?.hijos ||
+                              s?.detalles ||
+                              s?.componentes ||
+                              s?.subProductos ||
+                              (Array.isArray(s?.producto?.productosEnPaquete)
+                                ? s.producto.productosEnPaquete.map((pp: any) => ({
+                                  cantidad: pp?.cantidad,
+                                  producto: pp?.producto
+                                }))
+                                : []) ||
+                              []
                             if (esPaquete && Array.isArray(hijos)) {
                               hijos.forEach((h: any, hidx: number) => {
                                 const hsku = String(h?.producto?.sku ?? h?.codigo ?? h?.sku ?? '').trim() || '-'

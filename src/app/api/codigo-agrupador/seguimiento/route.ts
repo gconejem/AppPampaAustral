@@ -34,6 +34,16 @@ const isEnsayadoEstado = (estadoOperativo?: string | null) => {
   return String(estadoOperativo ?? '').trim().toUpperCase() === 'ENSAYADO'
 }
 
+const isControlOrServicioAutoCompletado = (rcm: { rcmType?: string | null; estadoOperativo?: string | null }) => {
+  const type = String(rcm?.rcmType ?? '').trim().toUpperCase()
+  const estado = String(rcm?.estadoOperativo ?? '').trim().toUpperCase()
+
+  if (type === 'CONTROL') return estado === 'ENSAYADO'
+  if (type === 'SERVICIO') return estado === 'EJECUTADO' || estado === 'ENSAYADO'
+
+  return false
+}
+
 const isEventoAbierto = (h: { tipo?: string | null; tipoEstado?: string | null } | null | undefined) => {
   const tipo = String(h?.tipo ?? '').trim()
   const tipoEstado = String(h?.tipoEstado ?? '').trim().toUpperCase()
@@ -143,6 +153,7 @@ export async function GET(request: Request) {
       select: {
         id: true,
         numeroRcm: true,
+        rcmType: true,
         sede: true,
         fechaCodificacion: true,
         fechaMuestreo: true,
@@ -306,10 +317,15 @@ export async function GET(request: Request) {
       let autoDensidad = false
       let autoHormigon = false
       for (const r of rcmsForAg) {
+        const rcmAutoCompletado = isControlOrServicioAutoCompletado(r)
+
         for (const s of r.servicios ?? []) {
           const qty = Number(s.cantidad ?? 0)
           ensayosTotal += qty
-          if (isEnsayadoEstado(s.estadoOperativo)) ensayosEnsayados += qty
+
+          // Regla negocio: en RCM tipo Control/Servicio (1:1) los ensayos parten completados
+          // según el estado operativo del RCM (ENSAYADO/EJECUTADO), aunque el servicio venga codificado.
+          if (isEnsayadoEstado(s.estadoOperativo) || rcmAutoCompletado) ensayosEnsayados += qty
 
           const sku = normSku((s as any)?.codigo)
           const nm = normalizeText((s as any)?.nombre ?? '')
