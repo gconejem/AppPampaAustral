@@ -109,7 +109,7 @@ export function useCodigoAgrupador({
 
         if (rcmsToAssign.length === 0) return
 
-        const allEnsayos: Array<{ productoId: number; sku: string; nombre: string }> = []
+        const allEnsayos: Array<{ productoId: number; sku: string; nombre: string; cantidad?: number }> = []
         const seenProductoIds = new Set<number>()
         const hasDialogSkus = dialogSkus.length > 0 || dialogSkuSearch.trim().length > 0
         if (hasDialogSkus) {
@@ -120,10 +120,10 @@ export function useCodigoAgrupador({
                 if (skuItem.productoId && !seenProductoIds.has(skuItem.productoId)) {
                     seenProductoIds.add(skuItem.productoId)
                 }
-                allEnsayos.push({ productoId: skuItem.productoId, sku: skuItem.sku, nombre: skuItem.nombre })
+                allEnsayos.push({ productoId: skuItem.productoId, sku: skuItem.sku, nombre: skuItem.nombre, cantidad: skuItem.cantidad })
             })
             if (dialogSkus.length === 0 && dialogSkuSearch.trim()) {
-                allEnsayos.push({ productoId: -1, sku: dialogSkuSearch.trim(), nombre: dialogSkuSearch.trim() })
+                allEnsayos.push({ productoId: -1, sku: dialogSkuSearch.trim(), nombre: dialogSkuSearch.trim(), cantidad: 1 })
             }
         } else {
             rcmsToAssign.forEach(rcmRef => {
@@ -132,7 +132,7 @@ export function useCodigoAgrupador({
                     fullRcm.ensayos.forEach(e => {
                         if (!seenProductoIds.has(e.productoId)) {
                             seenProductoIds.add(e.productoId)
-                            allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                            allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre, cantidad: e.cantidad ?? 1 })
                         }
                     })
                 }
@@ -141,7 +141,7 @@ export function useCodigoAgrupador({
                 ensayosAsociados.forEach(e => {
                     if (!seenProductoIds.has(e.productoId)) {
                         seenProductoIds.add(e.productoId)
-                        allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                        allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre, cantidad: e.cantidad ?? 1 })
                     }
                 })
             }
@@ -210,7 +210,7 @@ export function useCodigoAgrupador({
             const newRcms = rcmsToAdd.filter(r => !existingRcmIds.has(r.id))
 
             const existingEnsayoIds = new Set(ag.ensayos.map(e => e.productoId))
-            const newEnsayos: Array<{ productoId: number; sku: string; nombre: string }> = []
+            const newEnsayos: Array<{ productoId: number; sku: string; nombre: string; cantidad?: number }> = []
 
             newRcms.forEach(rcmRef => {
                 const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
@@ -218,7 +218,7 @@ export function useCodigoAgrupador({
                     fullRcm.ensayos.forEach(e => {
                         if (!existingEnsayoIds.has(e.productoId)) {
                             existingEnsayoIds.add(e.productoId)
-                            newEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                            newEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre, cantidad: e.cantidad ?? 1 })
                         }
                     })
                 }
@@ -280,7 +280,7 @@ export function useCodigoAgrupador({
             if (a.ensayos.some(e => e.productoId === idProducto)) return a
             return {
                 ...a,
-                ensayos: [...a.ensayos, { productoId: idProducto, sku: producto.sku, nombre: producto.nombre }]
+                ensayos: [...a.ensayos, { productoId: idProducto, sku: producto.sku, nombre: producto.nombre, cantidad: 1 }]
             }
         }))
         handleCloseAgrupadorSearch()
@@ -335,12 +335,12 @@ export function useCodigoAgrupador({
             temporaryCode: rcm.temporaryCode
         }
 
-        const allEnsayos: Array<{ productoId: number; sku: string; nombre: string }> = []
+        const allEnsayos: Array<{ productoId: number; sku: string; nombre: string; cantidad?: number }> = []
         const seenIds = new Set<number>()
         rcm.ensayos.forEach(e => {
             if (!seenIds.has(e.productoId)) {
                 seenIds.add(e.productoId)
-                allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre, cantidad: e.cantidad ?? 1 })
             }
         })
 
@@ -383,11 +383,11 @@ export function useCodigoAgrupador({
             if (!hasRcm) return ag
             if (ag.rcmsVinculados.length !== 1) return ag
             const seen = new Set<number>()
-            const ensayos: Array<{ productoId: number; sku: string; nombre: string }> = []
+            const ensayos: Array<{ productoId: number; sku: string; nombre: string; cantidad?: number }> = []
             rcm.ensayos.forEach(e => {
                 if (!seen.has(e.productoId)) {
                     seen.add(e.productoId)
-                    ensayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre })
+                    ensayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre, cantidad: e.cantidad ?? 1 })
                 }
             })
             const nextCantidad = (rcm.rcmType === 'Control' || rcm.rcmType === 'Servicio')

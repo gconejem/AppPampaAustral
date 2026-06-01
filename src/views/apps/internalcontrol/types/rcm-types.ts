@@ -92,7 +92,7 @@ export interface CodigoAgrupador {
     codigoId: string
     codigoNombre: string
     rcmsVinculados: Array<{ id: number; numeroTarjeta: string; rcmType: string; numeroRcm?: string; temporaryCode?: string }>
-    ensayos: Array<{ productoId: number; sku: string; nombre: string }>
+    ensayos: Array<{ productoId: number; sku: string; nombre: string; cantidad?: number }>
     descripcionServicio: string
     cantidad: number
     unidad: string

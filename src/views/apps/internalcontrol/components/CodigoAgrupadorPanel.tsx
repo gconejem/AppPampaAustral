@@ -33,6 +33,12 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
     onChangeDescripcion, onChangeCantidad, onChangeFacturacion,
     onDeleteAgrupador,
 }) => {
+    const isAgrupadorMuestra = (agrupador: CodigoAgrupador) =>
+        agrupador.rcmsVinculados.some(rcm => {
+            const fullRcm = savedRcms.find(savedRcm => savedRcm.id === rcm.id)
+            return (fullRcm?.rcmType || rcm.rcmType) === 'Muestra'
+        })
+
     return (
         <Box
             sx={{
@@ -142,18 +148,23 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                             {agrupador.ensayos.length > 0 && (
                                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                    {agrupador.ensayos.map((ensayo, idx) => (
-                                                        <Chip
-                                                            key={idx}
-                                                            label={`${ensayo.nombre} (${ensayo.sku})`}
-                                                            size='small'
-                                                            onDelete={() => onRemoveEnsayoFromAgrupador(agrupador.id, ensayo.productoId)}
-                                                            sx={{
-                                                                bgcolor: '#F0F7FF', color: '#1976D2', fontWeight: 500, fontSize: '0.7rem',
-                                                                '& .MuiChip-deleteIcon': { color: '#90CAF9', '&:hover': { color: '#1976D2' } }
-                                                            }}
-                                                        />
-                                                    ))}
+                                                    {agrupador.ensayos.map((ensayo, idx) => {
+                                                        const label = isAgrupadorMuestra(agrupador)
+                                                            ? `${ensayo.nombre} (${ensayo.sku}) x ${ensayo.cantidad ?? 1}`
+                                                            : `${ensayo.nombre} (${ensayo.sku})`
+                                                        return (
+                                                            <Chip
+                                                                key={idx}
+                                                                label={label}
+                                                                size='small'
+                                                                onDelete={() => onRemoveEnsayoFromAgrupador(agrupador.id, ensayo.productoId)}
+                                                                sx={{
+                                                                    bgcolor: '#F0F7FF', color: '#1976D2', fontWeight: 500, fontSize: '0.7rem',
+                                                                    '& .MuiChip-deleteIcon': { color: '#90CAF9', '&:hover': { color: '#1976D2' } }
+                                                                }}
+                                                            />
+                                                        )
+                                                    })}
                                                 </Box>
                                             )}
                                             <Button

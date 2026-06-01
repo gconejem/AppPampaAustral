@@ -72,6 +72,7 @@ interface AgrupadorEnsayo {
     productoId?: number
     sku: string
     nombre: string
+    cantidad?: number
 }
 
 interface AgrupadorInput {

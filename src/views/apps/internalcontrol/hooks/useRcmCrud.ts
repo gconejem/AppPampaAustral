@@ -501,7 +501,7 @@ export function useRcmCrud({
                     cantidad: ag.cantidad,
                     unidad: ag.unidad,
                     facturacion: ag.facturacion,
-                    ensayos: ag.ensayos.map((e: any) => ({ sku: e.sku, nombre: e.nombre })),
+                    ensayos: ag.ensayos.map((e: any) => ({ sku: e.sku, nombre: e.nombre, cantidad: e.cantidad })),
                     rcmsVinculados: ag.rcmsVinculados.map((r: any) => ({ id: r.id })),
                 })),
                 ordenTrabajoId: otData?.id ?? null,
