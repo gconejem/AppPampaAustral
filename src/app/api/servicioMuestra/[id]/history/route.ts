@@ -132,35 +132,71 @@ export async function POST(
             )
         }
 
-        // ✅ Crear registro de historial - servicioMuestraId viene del param, NO del body
-        const historyEntry = await prisma.servicioMuestraHistorial.create({
-            data: {
-                servicioMuestraId, // ← CORRECTO: usa el param de la URL
-                registro: new Date(),
-                funcionario: body.funcionario ?? 'Usuario',
-                aplicadoA: body.aplicadoA ?? null,
-                ensayoServicio: body.ensayoServicio ?? null,
-                tipo: body.tipo,
-                estAnterior: body.estAnterior ?? body.estPrev ?? null,
-                estNuevo: body.estNuevo,
-                fechaAccion: new Date(),
-                observacion: body.observacion ?? null,
-                motivo: body.motivo ?? null,
-                informe: body.informe ?? null
+        const estadoNuevo = String(body.estNuevo)
+
+        const { historyEntry, servicioRcmSyncCount } = await prisma.$transaction(async tx => {
+            // ✅ Crear registro de historial - servicioMuestraId viene del param, NO del body
+            const createdHistoryEntry = await tx.servicioMuestraHistorial.create({
+                data: {
+                    servicioMuestraId, // ← CORRECTO: usa el param de la URL
+                    registro: new Date(),
+                    funcionario: body.funcionario ?? 'Usuario',
+                    aplicadoA: body.aplicadoA ?? null,
+                    ensayoServicio: body.ensayoServicio ?? null,
+                    tipo: body.tipo,
+                    estAnterior: body.estAnterior ?? body.estPrev ?? null,
+                    estNuevo: estadoNuevo,
+                    fechaAccion: new Date(),
+                    observacion: body.observacion ?? null,
+                    motivo: body.motivo ?? null,
+                    informe: body.informe ?? null
+                }
+            })
+
+            // ✅ Actualizar estado del servicio de muestra
+            const servicioMuestra = await tx.servicioMuestra.update({
+                where: { id: servicioMuestraId },
+                data: { estado: estadoNuevo },
+                select: {
+                    id: true,
+                    productoId: true,
+                    muestra: {
+                        select: {
+                            rcmId: true
+                        }
+                    }
+                }
+            })
+
+            // ✅ Sincronizar también ServicioRCM para evitar desfase entre pantallas
+            const syncServicioRcm = await tx.servicioRCM.updateMany({
+                where: {
+                    rcmId: servicioMuestra.muestra.rcmId,
+                    productoId: servicioMuestra.productoId
+                },
+                data: {
+                    estadoOperativo: estadoNuevo,
+                    estado: estadoNuevo
+                }
+            })
+
+            return {
+                historyEntry: createdHistoryEntry,
+                servicioRcmSyncCount: syncServicioRcm.count
             }
         })
 
         console.log('✅ History entry created:', historyEntry)
+        console.log(`✅ Updated servicioMuestra ${servicioMuestraId} estado to ${estadoNuevo}`)
+        console.log(`✅ Synced ServicioRCM rows: ${servicioRcmSyncCount}`)
 
-        // ✅ Actualizar estado del servicio
-        await prisma.servicioMuestra.update({
-            where: { id: servicioMuestraId },
-            data: { estado: body.estNuevo }
-        })
-
-        console.log(`✅ Updated servicioMuestra ${servicioMuestraId} estado to ${body.estNuevo}`)
-
-        return NextResponse.json(historyEntry, { status: 201 })
+        return NextResponse.json(
+            {
+                ...historyEntry,
+                servicioRcmSyncCount
+            },
+            { status: 201 }
+        )
     } catch (error) {
         console.error('❌ Error creating servicioMuestra history:', error)
         return NextResponse.json(

@@ -63,10 +63,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     : (typeof estPrev === 'string' ? null : (estPrev ?? null)) ?? dbPrev?.estadoOperativo ?? null
 
             const explicitEstNuevo = (typeof estNuevo === 'string' && estNuevo.trim()) ? estNuevo.trim() : null
+            const tipoEstadoNorm = String(tipoEstado ?? '').trim().toUpperCase()
+            const isInformeEvent = tipoEstadoNorm === 'INFORME_AUTO' || tipoEstadoNorm === 'INFORME_MANUAL'
             // `RCMHistory.estNuevo` es obligatorio en Prisma. Para entradas que no cambian el estado (ej: INFORME_AUTO),
             // guardamos un valor informativo, pero NO actualizamos `RCM.estadoOperativo`.
             const finalEstNuevo =
                 explicitEstNuevo ??
+                (isInformeEvent ? (dbPrev?.estadoOperativo ?? 'SIN_CAMBIO') : null) ??
                 ((typeof tipoEstado === 'string' && tipoEstado.trim()) ? tipoEstado.trim() : null) ??
                 'SIN_CAMBIO'
 

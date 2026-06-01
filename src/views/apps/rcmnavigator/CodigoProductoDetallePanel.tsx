@@ -160,12 +160,29 @@ const formatMaterialItemToma = (r: RcmRow) => {
   return parts.length ? parts.join(' - ') : '-'
 }
 
+const isCompletedByRcmState = (estadoOperativo?: string | null) => {
+  const estado = normalizeStateKey(estadoOperativo)
+  if (!estado) return false
+
+  // Si el RCM ya avanzó a un estado igual o posterior a ENSAYADO,
+  // el panel debe reflejar ensayos completos aunque ServicioRCM esté desfasado.
+  return [
+    'ENSAYADO',
+    'EJECUTADO',
+    'ENVIADO_DIGITACION',
+    'DIGITADO',
+    'REVISADO',
+    'FIRMADO',
+    'ENVIADO'
+  ].includes(estado)
+}
+
 const isAutoCompletedRcm = (rcmType?: string | null, estadoOperativo?: string | null) => {
   const type = String(rcmType ?? '').trim().toUpperCase()
   const estado = String(estadoOperativo ?? '').trim().toUpperCase()
 
-  if (type === 'CONTROL') return estado === 'ENSAYADO'
-  if (type === 'SERVICIO') return estado === 'EJECUTADO' || estado === 'ENSAYADO'
+  if (type === 'CONTROL') return isCompletedByRcmState(estadoOperativo)
+  if (type === 'SERVICIO') return estado === 'EJECUTADO' || isCompletedByRcmState(estadoOperativo)
 
   return false
 }
@@ -176,7 +193,6 @@ const computeEnsayos = (servicios?: Servicio[], opts?: { rcmType?: string | null
 
   const autoCompleted = isAutoCompletedRcm(opts?.rcmType, opts?.estadoOperativo)
   const type = String(opts?.rcmType ?? '').trim().toUpperCase()
-  const rcmState = String(opts?.estadoOperativo ?? '').trim().toUpperCase()
 
   for (const s of servicios ?? []) {
     const qty = Number(s.cantidad ?? 0)
@@ -184,9 +200,9 @@ const computeEnsayos = (servicios?: Servicio[], opts?: { rcmType?: string | null
     if (autoCompleted || String(s.estadoOperativo ?? '').trim().toUpperCase() === 'ENSAYADO') ensayados += qty
   }
 
-  // En MUESTRA, si el RCM padre ya fue movido explícitamente a ENSAYADO/EJECUTADO,
-  // el panel de Navegador debe reflejar ese avance aunque ServicioRCM no esté sincronizado.
-  if (type === 'MUESTRA' && total > 0 && (rcmState === 'ENSAYADO' || rcmState === 'EJECUTADO')) {
+  // En MUESTRA, si el RCM padre ya fue movido a ENSAYADO o a estados posteriores,
+  // el panel debe reflejar ese avance aunque ServicioRCM no esté sincronizado.
+  if (type === 'MUESTRA' && total > 0 && isCompletedByRcmState(opts?.estadoOperativo)) {
     ensayados = total
   }
 

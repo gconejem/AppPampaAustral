@@ -577,12 +577,30 @@ const UserListTable2 = ({
   const [hideEnsayosByRcm, setHideEnsayosByRcm] = useState(false)
 
   const AUTO_TEMPLATES = [
-    { key: 'DENSIDAD', label: 'Informe Densidad' },
-    { key: 'HORMIGON', label: 'Informe Hormigón' }
+    { key: 'DENSIDAD', label: 'Control de Compactación — Método Nuclear' },
+    { key: 'HORMIGON', label: 'Ensayo Oficial Hormigón a la Compresión' }
   ] as const
 
   type AutoTemplateKey = (typeof AUTO_TEMPLATES)[number]['key']
-  const emptyDraft = { numero: '', refCliente: '', observaciones: '', anexoPrev: '' }
+  type AutoInformeDraft = {
+    numero: string
+    anexoPrev: string
+    fechaEmision: string
+    resultadoAnalisis: string
+    observacionGeneral: string
+    numeroMuestraLab: string
+    numeroMuestraCliente: string
+  }
+
+  const emptyAutoDraft: AutoInformeDraft = {
+    numero: '',
+    anexoPrev: '',
+    fechaEmision: '',
+    resultadoAnalisis: '',
+    observacionGeneral: '',
+    numeroMuestraLab: '',
+    numeroMuestraCliente: ''
+  }
 
   const getApplicableAutoTemplateKeys = (meta: any): AutoTemplateKey[] => {
     const flags = meta?.autoTemplates
@@ -607,9 +625,9 @@ const UserListTable2 = ({
     HORMIGON: null
   })
 
-  const [autoInformeDrafts, setAutoInformeDrafts] = useState<Record<AutoTemplateKey, typeof emptyDraft>>({
-    DENSIDAD: { ...emptyDraft },
-    HORMIGON: { ...emptyDraft }
+  const [autoInformeDrafts, setAutoInformeDrafts] = useState<Record<AutoTemplateKey, AutoInformeDraft>>({
+    DENSIDAD: { ...emptyAutoDraft },
+    HORMIGON: { ...emptyAutoDraft }
   })
 
   const [informeDrafts, setInformeDrafts] = useState<
@@ -677,7 +695,7 @@ const UserListTable2 = ({
     setInformeDialogHistory([])
     setInformeDrafts([])
     setAutoInformeExisting({ DENSIDAD: null, HORMIGON: null })
-    setAutoInformeDrafts({ DENSIDAD: { ...emptyDraft }, HORMIGON: { ...emptyDraft } })
+    setAutoInformeDrafts({ DENSIDAD: { ...emptyAutoDraft }, HORMIGON: { ...emptyAutoDraft } })
     setInformeDialogErrors({})
     setHideEnsayosByRcm(true)
     setInformeDialogOpen(true)
@@ -701,6 +719,8 @@ const UserListTable2 = ({
         : Promise.resolve(null)
 
       const historyPromise = (async () => {
+        historyCache.delete(representativeRcmId)
+
         const cached = historyCache.get(representativeRcmId)
 
         if (cached) return cached
@@ -721,7 +741,20 @@ const UserListTable2 = ({
       setInformeDialogHistory(Array.isArray(rows) ? rows : [])
 
       // detectar informes automáticos existentes (guardados en historial)
-      const norm = (v: any) => String(v ?? '').trim().toLowerCase()
+      const norm = (v: any) => {
+        try {
+          return String(v ?? '')
+            .replace(/\u00A0/g, ' ')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\w\s]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase()
+        } catch {
+          return String(v ?? '').trim().toLowerCase()
+        }
+      }
       const existing: Record<AutoTemplateKey, number | null> = { DENSIDAD: null, HORMIGON: null }
 
       for (const t of AUTO_TEMPLATES) {
@@ -730,7 +763,13 @@ const UserListTable2 = ({
 
           if (tipoEstado !== 'INFORME_AUTO') return false
 
-          return norm(h?.motivo).includes(norm(t.label))
+          const motivo = norm(h?.motivo)
+
+          if (t.key === 'DENSIDAD') {
+            return motivo.includes('densidad') || motivo.includes('compactacion') || motivo.includes('metodo nuclear')
+          }
+
+          return motivo.includes('hormigon') || motivo.includes('compresion') || motivo.includes('hf')
         })
 
         const max = hits
@@ -822,7 +861,7 @@ const UserListTable2 = ({
     setInformeDialogHistory([])
     setInformeDrafts([])
     setAutoInformeExisting({ DENSIDAD: null, HORMIGON: null })
-    setAutoInformeDrafts({ DENSIDAD: { ...emptyDraft }, HORMIGON: { ...emptyDraft } })
+    setAutoInformeDrafts({ DENSIDAD: { ...emptyAutoDraft }, HORMIGON: { ...emptyAutoDraft } })
     setInformeDialogErrors({})
     setHideEnsayosByRcm(true)
   }
@@ -1087,6 +1126,26 @@ const UserListTable2 = ({
     const applicableAutoKeys = getApplicableAutoTemplateKeys(informeDialogMeta)
     const requiresAutos = applicableAutoKeys.length > 0
 
+    const getAutoDraft = (key: AutoTemplateKey): AutoInformeDraft => {
+      const draft = autoInformeDrafts?.[key]
+      return draft ? draft : { ...emptyAutoDraft }
+    }
+
+    const isAutoDraftComplete = (key: AutoTemplateKey) => {
+      const draft = getAutoDraft(key)
+      const numero = parseInformeNumber(draft.numero)
+      const fechaEmision = String(draft.fechaEmision ?? '').trim()
+
+      if (numero == null) return false
+      if (!fechaEmision) return false
+
+      if (key === 'DENSIDAD') {
+        return Boolean(String(draft.resultadoAnalisis ?? '').trim())
+      }
+
+      return Boolean(String(draft.numeroMuestraLab ?? '').trim())
+    }
+
     const autoCreates = AUTO_TEMPLATES.flatMap(t => {
       const applies = applicableAutoKeys.includes(t.key)
 
@@ -1096,9 +1155,11 @@ const UserListTable2 = ({
 
       if (existing != null) return []
 
-      const n = parseInformeNumber(autoInformeDrafts?.[t.key]?.numero)
+      const draft = getAutoDraft(t.key)
+      const n = parseInformeNumber(draft.numero)
 
       if (n == null) return []
+      if (!isAutoDraftComplete(t.key)) return []
 
       // sólo se puede subir automático si ya finalizaron todos los ensayos
       if (pendientes > 0) return []
@@ -1108,9 +1169,12 @@ const UserListTable2 = ({
           key: t.key,
           label: t.label,
           numero: n,
-          refCliente: String(autoInformeDrafts?.[t.key]?.refCliente ?? '').trim(),
-          observaciones: String(autoInformeDrafts?.[t.key]?.observaciones ?? '').trim(),
-          anexoPrev: String(autoInformeDrafts?.[t.key]?.anexoPrev ?? '').trim()
+          anexoPrev: String(draft.anexoPrev ?? '').trim(),
+          fechaEmision: String(draft.fechaEmision ?? '').trim(),
+          resultadoAnalisis: String(draft.resultadoAnalisis ?? '').trim(),
+          observacionGeneral: String(draft.observacionGeneral ?? '').trim(),
+          numeroMuestraLab: String(draft.numeroMuestraLab ?? '').trim(),
+          numeroMuestraCliente: String(draft.numeroMuestraCliente ?? '').trim()
         }
       ]
     })
@@ -1164,9 +1228,7 @@ const UserListTable2 = ({
 
         if (existing != null) return false
 
-        const n = parseInformeNumber(autoInformeDrafts?.[k]?.numero)
-
-        if (n == null) return true
+        if (!isAutoDraftComplete(k)) return true
 
         // aunque esté el número, no se considera completo si aún hay ensayos pendientes (no se puede subir)
         return pendientes > 0
@@ -1339,7 +1401,7 @@ const UserListTable2 = ({
       const funcionario = getCurrentUserName() ?? 'Usuario'
       const aplicadoA = getAppliedAForRow(rcmId)
 
-      const buildObservacion = (
+      const buildManualObservacion = (
         tipoInforme: string,
         fechaEmision: string,
         refCliente: string,
@@ -1356,6 +1418,42 @@ const UserListTable2 = ({
           (rcms ?? []).length ? `RCMs: ${(rcms ?? []).join(', ')}` : ''
         ].filter(Boolean)
 
+
+        return parts.length ? parts.join(' | ') : null
+      }
+
+      const buildAutoObservacion = (
+        key: AutoTemplateKey,
+        draft: {
+          anexoPrev: string
+          fechaEmision: string
+          resultadoAnalisis: string
+          observacionGeneral: string
+          numeroMuestraLab: string
+          numeroMuestraCliente: string
+        },
+        rcms?: string[]
+      ) => {
+        if (key === 'DENSIDAD') {
+          const parts = [
+            draft.fechaEmision ? `Fecha Emisión: ${draft.fechaEmision}` : '',
+            draft.resultadoAnalisis ? `Resultado Análisis: ${draft.resultadoAnalisis}` : '',
+            draft.observacionGeneral ? `Observación General: ${draft.observacionGeneral}` : '',
+            draft.anexoPrev ? `Anexo Prev: ${draft.anexoPrev}` : '',
+            (rcms ?? []).length ? `RCMs: ${(rcms ?? []).join(', ')}` : ''
+          ].filter(Boolean)
+
+          return parts.length ? parts.join(' | ') : null
+        }
+
+        const parts = [
+          draft.fechaEmision ? `Fecha Emisión: ${draft.fechaEmision}` : '',
+          draft.numeroMuestraLab ? `N° Muestra Lab: ${draft.numeroMuestraLab}` : '',
+          draft.numeroMuestraCliente ? `N° Muestra Cliente: ${draft.numeroMuestraCliente}` : '',
+          draft.observacionGeneral ? `Observación General: ${draft.observacionGeneral}` : '',
+          draft.anexoPrev ? `Anexo Prev: ${draft.anexoPrev}` : '',
+          (rcms ?? []).length ? `RCMs: ${(rcms ?? []).join(', ')}` : ''
+        ].filter(Boolean)
 
         return parts.length ? parts.join(' | ') : null
       }
@@ -1390,7 +1488,18 @@ const UserListTable2 = ({
           tipo: 'Ope',
           tipoEstado: 'INFORME_AUTO',
           motivo: a.label,
-          observacion: buildObservacion('', '', a.refCliente, a.observaciones, a.anexoPrev, metaRcms),
+          observacion: buildAutoObservacion(
+            a.key,
+            {
+              anexoPrev: a.anexoPrev,
+              fechaEmision: a.fechaEmision,
+              resultadoAnalisis: a.resultadoAnalisis,
+              observacionGeneral: a.observacionGeneral,
+              numeroMuestraLab: a.numeroMuestraLab,
+              numeroMuestraCliente: a.numeroMuestraCliente
+            },
+            metaRcms
+          ),
           funcionario,
           estPrev: null,
           estNuevo: null,
@@ -1428,7 +1537,7 @@ const UserListTable2 = ({
           tipo: 'Ope',
           tipoEstado: 'INFORME_MANUAL',
           motivo: null,
-          observacion: buildObservacion(m.tipoInforme, m.fechaEmision, m.refCliente, m.observaciones, m.anexoPrev, m.rcms),
+          observacion: buildManualObservacion(m.tipoInforme, m.fechaEmision, m.refCliente, m.observaciones, m.anexoPrev, m.rcms),
           funcionario,
           estPrev: null,
           estNuevo: null,
@@ -5029,7 +5138,7 @@ const UserListTable2 = ({
                   {AUTO_TEMPLATES.filter(t => applicableKeys.includes(t.key)).map(t => {
                     const existing = autoInformeExisting?.[t.key]
                     const blocked = existing == null && pendientes > 0
-                    const draft = autoInformeDrafts?.[t.key] ?? emptyDraft
+                    const draft = autoInformeDrafts?.[t.key] ?? emptyAutoDraft
 
                     return (
                       <Paper
@@ -5118,61 +5227,112 @@ const UserListTable2 = ({
 
                         {existing != null || blocked ? null : (
                           <>
-                            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                            {/* Fila 1: N° Informe · Anexo · Fecha de Emisión */}
+                            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
                               <TextField
                                 label='N° INFORME *'
-                                placeholder='Ej: INF-2026-045'
+                                placeholder={t.key === 'DENSIDAD' ? 'Ej: 8990-001' : 'Ej: 7874-001'}
                                 value={draft.numero}
                                 onChange={e => {
                                   const v = e.target.value
 
-                                  setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyDraft), numero: v } }))
+                                  setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyAutoDraft), numero: v } }))
                                   if (informeDialogErrors.numero) setInformeDialogErrors(prev => ({ ...prev, numero: undefined }))
                                 }}
                                 size='small'
                                 fullWidth
+                                InputLabelProps={{ shrink: true }}
                               />
                               <TextField
-                                label='REF. CLIENTE'
-                                placeholder='Ej: SOL-1234'
-                                value={draft.refCliente}
-                                onChange={e => {
-                                  const v = e.target.value
-
-                                  setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyDraft), refCliente: v } }))
-                                }}
-                                size='small'
-                                fullWidth
-                              />
-                            </Box>
-
-                            <Box sx={{ mt: 2 }}>
-                              <TextField
-                                label='OBSERVACIONES'
-                                placeholder='Ej: Informe de suelo — Calicata Cal-1'
-                                value={draft.observaciones}
-                                onChange={e => {
-                                  const v = e.target.value
-
-                                  setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyDraft), observaciones: v } }))
-                                }}
-                                size='small'
-                                fullWidth
-                              />
-                            </Box>
-
-                            <Box sx={{ mt: 2 }}>
-                              <TextField
-                                label='ANEXO — N° DE VERSIÓN ANTERIOR (OPCIONAL)'
-                                placeholder='Si este informe reemplaza a otro, indica el N° anterior (ej: INF-2026-040)'
+                                label='ANEXO'
+                                placeholder='N° versión anterior'
                                 value={draft.anexoPrev}
                                 onChange={e => {
                                   const v = e.target.value
 
-                                  setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyDraft), anexoPrev: v } }))
+                                  setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyAutoDraft), anexoPrev: v } }))
                                 }}
                                 size='small'
                                 fullWidth
+                                InputLabelProps={{ shrink: true }}
+                              />
+                              <TextField
+                                label='FECHA DE EMISIÓN *'
+                                placeholder='dd-mm-aaaa'
+                                value={draft.fechaEmision}
+                                onChange={e => {
+                                  const v = e.target.value
+
+                                  setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyAutoDraft), fechaEmision: v } }))
+                                }}
+                                size='small'
+                                fullWidth
+                                InputLabelProps={{ shrink: true }}
+                              />
+                            </Box>
+
+                            {/* Fila 2 específica por plantilla */}
+                            {t.key === 'DENSIDAD' ? (
+                              <Box sx={{ mt: 2 }}>
+                                <TextField
+                                  label='RESULTADO ANÁLISIS *'
+                                  placeholder='Ej: D.M.C.S 2160 Según Informe de Ensayo R-L-004-6/N° 0006/2026'
+                                  value={draft.resultadoAnalisis}
+                                  onChange={e => {
+                                    const v = e.target.value
+
+                                    setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyAutoDraft), resultadoAnalisis: v } }))
+                                  }}
+                                  size='small'
+                                  fullWidth
+                                  InputLabelProps={{ shrink: true }}
+                                />
+                              </Box>
+                            ) : (
+                              <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                                <TextField
+                                  label='N° MUESTRA LAB. *'
+                                  placeholder='Ej: M-01'
+                                  value={draft.numeroMuestraLab}
+                                  onChange={e => {
+                                    const v = e.target.value
+
+                                    setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyAutoDraft), numeroMuestraLab: v } }))
+                                  }}
+                                  size='small'
+                                  fullWidth
+                                  InputLabelProps={{ shrink: true }}
+                                />
+                                <TextField
+                                  label='N° MUESTRA CLIENTE'
+                                  placeholder='---'
+                                  value={draft.numeroMuestraCliente}
+                                  onChange={e => {
+                                    const v = e.target.value
+
+                                    setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyAutoDraft), numeroMuestraCliente: v } }))
+                                  }}
+                                  size='small'
+                                  fullWidth
+                                  InputLabelProps={{ shrink: true }}
+                                />
+                              </Box>
+                            )}
+
+                            {/* Fila 3: Observación General */}
+                            <Box sx={{ mt: 2 }}>
+                              <TextField
+                                label='OBSERVACIÓN GENERAL'
+                                placeholder=' '
+                                value={draft.observacionGeneral}
+                                onChange={e => {
+                                  const v = e.target.value
+
+                                  setAutoInformeDrafts(prev => ({ ...prev, [t.key]: { ...(prev?.[t.key] ?? emptyAutoDraft), observacionGeneral: v } }))
+                                }}
+                                size='small'
+                                fullWidth
+                                InputLabelProps={{ shrink: true }}
                               />
                             </Box>
                           </>

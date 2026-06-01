@@ -108,32 +108,32 @@ function renderInformeDensidadHTML(input: {
 
   const controlRowsHtml = controles.length
     ? controles
-        .map((c: any, idx: number) => {
-          const get = (...keys: string[]) => {
-            for (const k of keys) {
-              if (c && c[k] != null && String(c[k]).trim() !== '') return String(c[k])
-            }
-            return ''
+      .map((c: any, idx: number) => {
+        const get = (...keys: string[]) => {
+          for (const k of keys) {
+            if (c && c[k] != null && String(c[k]).trim() !== '') return String(c[k])
           }
+          return ''
+        }
 
-          const isTrue = (v: unknown) => v === true || v === 'true' || v === 1 || v === '1'
+        const isTrue = (v: unknown) => v === true || v === 'true' || v === 1 || v === '1'
 
-          const numero = get('numero', 'nro', 'NRO') || String(idx + 1)
+        const numero = get('numero', 'nro', 'NRO') || String(idx + 1)
 
-          const ubicacion = get('ubicacion', 'UBICACION', 'calle_pasaje', 'callePasaje', 'ubica', 'UBICA')
+        const ubicacion = get('ubicacion', 'UBICACION', 'calle_pasaje', 'callePasaje', 'ubica', 'UBICA')
 
-          const frenteA = get('frenteA', 'frente_a', 'frentea', 'FRENTEA')
+        const frenteA = get('frenteA', 'frente_a', 'frentea', 'FRENTEA')
 
-          const entreDirecto = get('entre', 'ENTRE')
-          const entre1 = get('entre_1', 'entre1')
-          const entre2 = get('entre_2', 'entre2')
-          const entreNa = get('entre_na', 'entreNA')
-          const entre =
-            entreDirecto || (entreNa && isTrue(entreNa) ? 'No Aplica' : (entre2 || entre1 || ''))
+        const entreDirecto = get('entre', 'ENTRE')
+        const entre1 = get('entre_1', 'entre1')
+        const entre2 = get('entre_2', 'entre2')
+        const entreNa = get('entre_na', 'entreNA')
+        const entre =
+          entreDirecto || (entreNa && isTrue(entreNa) ? 'No Aplica' : (entre2 || entre1 || ''))
 
-          const fajaOLado = get('faja', 'lado', 'faja_lado', 'fajaLado', 'FAJA', 'LADO')
+        const fajaOLado = get('faja', 'lado', 'faja_lado', 'fajaLado', 'FAJA', 'LADO')
 
-          return `
+        return `
             <tr>
               <td class="tc">${escapeHtml(numero)}</td>
               <td>${escapeHtml(ubicacion)}</td>
@@ -150,8 +150,8 @@ function renderInformeDensidadHTML(input: {
               <td class="tr">${escapeHtml(get('exig', 'EXIG'))}</td>
             </tr>
           `.trim()
-        })
-        .join('')
+      })
+      .join('')
     : `<tr><td colspan="13" class="empty">Sin datos de controles</td></tr>`
 
   const ensayosHtml = (input.ensayos ?? []).length
@@ -165,10 +165,10 @@ function renderInformeDensidadHTML(input: {
         </thead>
         <tbody>
           ${input.ensayos
-            .map(e => {
-              return `<tr><td>${escapeHtml(e.sku)}</td><td>${escapeHtml(e.nombre)}</td></tr>`
-            })
-            .join('')}
+      .map(e => {
+        return `<tr><td>${escapeHtml(e.sku)}</td><td>${escapeHtml(e.nombre)}</td></tr>`
+      })
+      .join('')}
         </tbody>
       </table>
     `
@@ -240,12 +240,12 @@ function renderInformeDensidadHTML(input: {
         <div class="box">
           <table class="kv">
             ${antecedentesRows
-              .map(r => {
-                const value = String(r.value ?? '').trim()
-                const sep = value ? ':' : ''
-                return `<tr><td class="k">${escapeHtml(r.label)}</td><td class="sep">${escapeHtml(sep)}</td><td class="v">${escapeHtml(value)}</td></tr>`
-              })
-              .join('')}
+      .map(r => {
+        const value = String(r.value ?? '').trim()
+        const sep = value ? ':' : ''
+        return `<tr><td class="k">${escapeHtml(r.label)}</td><td class="sep">${escapeHtml(sep)}</td><td class="v">${escapeHtml(value)}</td></tr>`
+      })
+      .join('')}
           </table>
         </div>
 
@@ -301,15 +301,16 @@ export async function GET(request: Request) {
 
     const rcm = rcmId
       ? await prisma.rCM.findUnique({
-          where: { id: rcmId },
-          select: {
-            id: true,
-            numeroRcm: true,
-            fechaMuestreo: true,
-            fechaIngreso: true,
-            fechaCodificacion: true
-          }
-        })
+        where: { id: rcmId },
+        select: {
+          id: true,
+          numeroRcm: true,
+          estadoOperativo: true,
+          fechaMuestreo: true,
+          fechaIngreso: true,
+          fechaCodificacion: true
+        }
+      })
       : null
 
     const codigo = await prisma.codigoAgrupador.findFirst({
@@ -319,6 +320,13 @@ export async function GET(request: Request) {
         codigoNombre: true,
         descripcionServicio: true,
         ensayos: { select: { sku: true, nombre: true } },
+        rcms: {
+          select: {
+            id: true
+          },
+          take: 1,
+          orderBy: { id: 'asc' }
+        },
         ordenTrabajo: {
           select: {
             clave: true,
@@ -449,7 +457,7 @@ export async function GET(request: Request) {
       const page = await browser.newPage()
       await page.setContent(html, { waitUntil: 'networkidle0' })
 
-      // Esperar fuentes
+      // Esperar a que carguen las fuentes web antes de renderizar PDF.
       await page.evaluateHandle('document.fonts.ready')
 
       const pdfBuffer = await page.pdf({
@@ -477,6 +485,38 @@ export async function GET(request: Request) {
           </div>
         `
       })
+
+      const historyRcmId = rcm?.id ?? codigo.rcms?.[0]?.id ?? null
+      const informeParsed = Number.parseInt(informeNumero.replace(/[^\d]/g, '').trim(), 10)
+
+      if (historyRcmId && Number.isFinite(informeParsed) && informeParsed > 0) {
+        const existingAuto = await prisma.rCMHistory.findFirst({
+          where: {
+            rcmId: historyRcmId,
+            tipoEstado: 'INFORME_AUTO',
+            informe: informeParsed
+          },
+          select: { id: true }
+        })
+
+        if (!existingAuto) {
+          await prisma.rCMHistory.create({
+            data: {
+              rcm: { connect: { id: historyRcmId } },
+              tipo: 'Ope',
+              funcionario: 'Sistema',
+              fechaAccion: new Date(),
+              estAnterior: rcm?.estadoOperativo ?? null,
+              estNuevo: rcm?.estadoOperativo ?? 'SIN_CAMBIO',
+              observacion: 'Control de Compactación — Método Nuclear',
+              informe: informeParsed,
+              aplicadoA: 'CP',
+              tipoEstado: 'INFORME_AUTO',
+              motivo: 'Control de Compactación — Método Nuclear'
+            }
+          })
+        }
+      }
 
       const filename = `informe-densidad${informeNumero ? `-${informeNumero}` : ''}.pdf`
 
