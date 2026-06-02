@@ -224,6 +224,9 @@ interface RCM {
   cliente?: {
     nombreCliente?: string
     comuna?: string
+    ciudad?: string
+    region?: string
+    rut?: string
     raw?: any
   }
   area?: string
@@ -231,6 +234,9 @@ interface RCM {
   obra?: {
     numeroObra?: string
     nombreObra?: string
+    comuna?: string
+    region?: string
+    mandante?: string
   }
   muestra?: {
     id?: number
@@ -527,10 +533,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [gestionarMuestra, setGestionarMuestra] = useState<any>(null)
   const [gestionarRcmData, setGestionarRcmData] = useState<any>(null)
   const [gestionarEnsayadorGlobal, setGestionarEnsayadorGlobal] = useState('')
-  const [gestionarEnsayadores, setGestionarEnsayadores] = useState<Record<number, string>>({})
-  const [gestionarEstados, setGestionarEstados] = useState<Record<number, string>>({})
+  const [gestionarEnsayadores, setGestionarEnsayadores] = useState<Record<string, string>>({})
+  const [gestionarEstados, setGestionarEstados] = useState<Record<string, string>>({})
   const [gestionarSaving, setGestionarSaving] = useState(false)
-  const [gestionarObservaciones, setGestionarObservaciones] = useState<Record<number, string>>({})
+  const [gestionarObservaciones, setGestionarObservaciones] = useState<Record<string, string>>({})
   const [ensayadorOptions, setEnsayadorOptions] = useState<string[]>([])
 
   useEffect(() => {
@@ -595,24 +601,86 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
       })
 
+      // Expand package services into individual sub-item rows for independent execution
+      const expandedCombined: any[] = []
+
+      for (const svc of combined) {
+        if (svc.esPaquete && Array.isArray(svc.productosEnPaquete) && svc.productosEnPaquete.length > 0) {
+          expandedCombined.push({ ...svc, _isPaqueteHeader: true })
+          svc.productosEnPaquete.forEach((sub: any, idx: number) => {
+            expandedCombined.push({
+              _syntheticKey: `paq_${svc.id}_${idx}`,
+              _paqueteParentId: svc.id,
+              _isPaqueteSubItem: true,
+              id: `paq_${svc.id}_${idx}`,
+              codigo: sub.sku ?? String(sub.id ?? idx),
+              nombre: sub.nombre ?? '-',
+              norma: sub.norma ?? null,
+              estado: svc.estado,
+              ensayador: svc.ensayador ?? null,
+              observacion: null,
+              cantidad: sub.cantidad ?? 1
+            })
+          })
+        } else {
+          expandedCombined.push(svc)
+        }
+      }
+
+      const packageServices = combined.filter((svc: any) => svc.esPaquete && Array.isArray(svc.productosEnPaquete) && svc.productosEnPaquete.length > 0)
+      const packageHistoryRows = await Promise.all(
+        packageServices.map(async (svc: any) => {
+          try {
+            const response = await fetch(`/api/servicioMuestra/${svc.id}/history?ts=${Date.now()}`, {
+              cache: 'no-store',
+              headers: { 'Cache-Control': 'no-cache' }
+            })
+
+            const rows = response.ok ? await response.json() : []
+
+            return [svc.id, Array.isArray(rows) ? rows : []] as const
+          } catch {
+            return [svc.id, []] as const
+          }
+        })
+      )
+
+      const packageHistoryMap = new Map<number, any[]>(packageHistoryRows)
+      const hydratedExpandedCombined = expandedCombined.map((item: any) => {
+        if (!item._isPaqueteSubItem) return item
+
+        const historyRows = packageHistoryMap.get(item._paqueteParentId) ?? []
+        const historyMatch = historyRows.find((historyRow: any) => normalizeText(historyRow?.ensayoServicio) === normalizeText(item.nombre))
+
+        if (!historyMatch) return item
+
+        return {
+          ...item,
+          estado: historyMatch.estNuevo ?? item.estado,
+          ensayador: historyMatch.aplicadoA ?? item.ensayador,
+          observacion: historyMatch.observacion ?? item.observacion
+        }
+      })
+
       const probetas = Array.isArray(muestraFromRcm?.probetas) ? muestraFromRcm.probetas : []
 
-      setGestionarServicios(combined)
+      setGestionarServicios(hydratedExpandedCombined)
       setGestionarProbetas(probetas)
       setGestionarMuestra({ ...(dataServ.muestra ?? {}), probetas })
       setGestionarRcmData(detalleRcm)
 
       // inicializar estado y ensayador local con los valores actuales de cada servicio
-      const estadosInit: Record<number, string> = {}
-      const ensayadoresInit: Record<number, string> = {}
-      const observacionesInit: Record<number, string> = {}
+      const estadosInit: Record<string, string> = {}
+      const ensayadoresInit: Record<string, string> = {}
+      const observacionesInit: Record<string, string> = {}
 
-      combined.forEach((s: any) => {
-        estadosInit[s.id] = s.estado ?? 'CODIFICADO'
-        if (s.ensayador) ensayadoresInit[s.id] = s.ensayador
+      hydratedExpandedCombined.forEach((s: any) => {
+        const key = String(s._syntheticKey ?? s.id)
+        estadosInit[key] = s.estado ?? 'CODIFICADO'
+        if (s.ensayador) ensayadoresInit[key] = s.ensayador
 
         if (typeof s.observacion === 'string' && s.observacion.trim()) {
-          observacionesInit[s.id] = s.observacion
+          observacionesInit[key] = s.observacion
         }
       })
       setGestionarEstados(estadosInit)
@@ -632,36 +700,92 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     try {
       const user = getCurrentUserName() ?? 'Usuario'
 
+      const getEstadoDerivedFromSubs = (parentId: number): string => {
+        const subItems = gestionarServicios.filter((sub: any) => sub._paqueteParentId === parentId)
+
+        if (subItems.length === 0) return gestionarEstados[String(parentId)] ?? 'CODIFICADO'
+
+        const subStates = subItems.map((sub: any) => gestionarEstados[String(sub._syntheticKey ?? sub.id)] ?? 'CODIFICADO')
+
+        if (subStates.every(e => String(e).toUpperCase().includes('ENSAYADO'))) return 'ENSAYADO'
+        if (subStates.some(e => String(e).toUpperCase().includes('PROCESO'))) return 'EN_PROCESO'
+
+        return 'CODIFICADO'
+      }
+
+      const subItemsParaGuardar = gestionarServicios.filter((s: any) => s._isPaqueteSubItem)
+      const serviciosParaGuardar = gestionarServicios.filter((s: any) => !s._isPaqueteSubItem)
+
       await Promise.all(
-        gestionarServicios.map(async (s: any) => {
-          const estadoNuevo = gestionarEstados[s.id] ?? s.estado ?? 'CODIFICADO'
-          const estadoPrev = s.estado ?? 'CODIFICADO'
-          const ensayadorNuevo = gestionarEnsayadores[s.id] ?? ''
-          const ensayadorPrev = s.ensayador ?? ''
-          const observacionNueva = (gestionarObservaciones[s.id] ?? '').trim()
-          const observacionPrev = String(s.observacion ?? '').trim()
+        [
+          ...subItemsParaGuardar.map(async (s: any) => {
+            const sKey = String(s._syntheticKey ?? s.id)
+            const parentId = Number(s._paqueteParentId)
 
-          // Guardar si cambió estado, ensayador u observación
-          if (estadoNuevo === estadoPrev && ensayadorNuevo === ensayadorPrev && observacionNueva === observacionPrev) return
+            if (!parentId) return
 
-          await fetch(`/api/servicioMuestra/${s.id}/history`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tipo: 'Ens',
-              estAnterior: estadoPrev,
-              estNuevo: estadoNuevo,
-              funcionario: user,
-              aplicadoA: ensayadorNuevo || null,
-              ensayoServicio: s.nombre,
-              observacion: observacionNueva || null
+            const estadoNuevo = gestionarEstados[sKey] ?? s.estado ?? 'CODIFICADO'
+            const estadoPrev = s.estado ?? 'CODIFICADO'
+            const ensayadorNuevo = gestionarEnsayadores[sKey] ?? ''
+            const ensayadorPrev = s.ensayador ?? ''
+            const observacionNueva = (gestionarObservaciones[sKey] ?? '').trim()
+            const observacionPrev = String(s.observacion ?? '').trim()
+
+            if (estadoNuevo === estadoPrev && ensayadorNuevo === ensayadorPrev && observacionNueva === observacionPrev) return
+
+            await fetch(`/api/servicioMuestra/${parentId}/history`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tipo: 'Ens',
+                estAnterior: estadoPrev,
+                estNuevo: estadoNuevo,
+                funcionario: user,
+                aplicadoA: ensayadorNuevo || null,
+                ensayoServicio: s.nombre,
+                observacion: observacionNueva || null,
+                skipServicioEstadoUpdate: true
+              })
+            })
+          }),
+          ...serviciosParaGuardar.map(async (s: any) => {
+            const sKey = String(s._syntheticKey ?? s.id)
+            const estadoNuevo = s._isPaqueteHeader
+              ? getEstadoDerivedFromSubs(s.id)
+              : (gestionarEstados[sKey] ?? s.estado ?? 'CODIFICADO')
+            const estadoPrev = s.estado ?? 'CODIFICADO'
+            const ensayadorNuevo = gestionarEnsayadores[sKey] ?? ''
+            const ensayadorPrev = s.ensayador ?? ''
+            const observacionNueva = (gestionarObservaciones[sKey] ?? '').trim()
+            const observacionPrev = String(s.observacion ?? '').trim()
+
+            // Guardar si cambió estado, ensayador u observación
+            if (estadoNuevo === estadoPrev && ensayadorNuevo === ensayadorPrev && observacionNueva === observacionPrev) return
+
+            await fetch(`/api/servicioMuestra/${s.id}/history`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tipo: 'Ens',
+                estAnterior: estadoPrev,
+                estNuevo: estadoNuevo,
+                funcionario: user,
+                aplicadoA: ensayadorNuevo || null,
+                ensayoServicio: s.nombre,
+                observacion: observacionNueva || null
+              })
             })
           })
-        })
+        ]
       )
 
       // Actualizar tabla principal: recalcular estado operativo del RCM
-      const todosEstados = gestionarServicios.map((s: any) => gestionarEstados[s.id] ?? s.estado ?? 'CODIFICADO')
+      const subItemsYRegulares = gestionarServicios.filter((s: any) => !s._isPaqueteHeader)
+      const todosEstados = subItemsYRegulares.map((s: any) => {
+        const key = String(s._syntheticKey ?? s.id)
+
+        return gestionarEstados[key] ?? s.estado ?? 'CODIFICADO'
+      })
 
       const estadoFinal = todosEstados.every(e => String(e).toUpperCase().includes('ENSAYADO'))
         ? 'ENSAYADO'
@@ -692,8 +816,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       // Ensayador predominante (del primer servicio con ensayador asignado)
       const ensayadorFinal =
-        gestionarServicios
-          .map((s: any) => gestionarEnsayadores[s.id] ?? s.ensayador ?? '')
+        subItemsYRegulares
+          .map((s: any) => gestionarEnsayadores[String(s._syntheticKey ?? s.id)] ?? s.ensayador ?? '')
           .find((e: string) => Boolean(e.trim())) ?? (gestionarRow?.ensayador ?? '')
 
       setData(prev => prev.map(row => {
@@ -716,7 +840,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       if (selectedInlineRowId && gestionarRow?.id === selectedInlineRowId) {
         setInlineServicios(prev => prev.map((servicio: any) => {
           const servicioId = servicio.id ?? servicio.servicioMuestraId ?? servicio.servicioId ?? servicio._id
-          const nuevoEstado = gestionarEstados[servicioId] ?? servicio.estado ?? 'CODIFICADO'
+          const nuevoEstado = gestionarEstados[String(servicioId)] ?? servicio.estado ?? 'CODIFICADO'
 
           return { ...servicio, estado: nuevoEstado }
         }))
@@ -1827,6 +1951,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
           let clienteNombre: string | undefined = undefined
           let clienteComuna: string | undefined = undefined
+          let clienteCiudad: string | undefined = undefined
+          let clienteRegion: string | undefined = undefined
+          let clienteRut: string | undefined = undefined
 
           if (rawCliente) {
             if (typeof rawCliente === 'string') {
@@ -1834,6 +1961,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             } else if (typeof rawCliente === 'object') {
               clienteNombre = rawCliente.nombreCliente ?? rawCliente.nombre ?? rawCliente.name ?? rawCliente.razonSocial ?? rawCliente.razon_social ?? rawCliente.nombre_cliente
               clienteComuna = rawCliente.comuna ?? rawCliente.comunaName ?? rawCliente.comuna_nombre ?? rawCliente.city ?? rawCliente.localidad
+              clienteCiudad = rawCliente.ciudad ?? rawCliente.city ?? rawCliente.localidad ?? undefined
+              clienteRegion = rawCliente.region ?? rawCliente.regionNombre ?? undefined
+              clienteRut = rawCliente.rut ?? rawCliente.rutCliente ?? rawCliente.rut_cliente ?? undefined
             }
           }
 
@@ -1841,6 +1971,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           // fallback a campos en ra├¡z si existen
           clienteNombre = clienteNombre ?? r.clienteNombre ?? r.nombreCliente ?? r.cliente_name ?? r.cliente_nombre ?? r.nombre
           clienteComuna = clienteComuna ?? r.clienteComuna ?? r.comuna ?? r.comunaCliente ?? null
+          clienteCiudad = clienteCiudad ?? r.ciudadCliente ?? r.ciudad ?? null
+          clienteRegion = clienteRegion ?? r.regionCliente ?? r.region ?? null
+          clienteRut = clienteRut ?? r.rutCliente ?? r.rut ?? null
 
           // DEBUG: logear informaci├│n para investigar por qu├® cliente/comuna quedan vac├¡os
           // eslint-disable-next-line no-console
@@ -1893,6 +2026,24 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             clienteComuna ??
             clienteFromOrder?.comuna ??
             obraObj?.comuna ??
+            null
+
+          clienteCiudad =
+            clienteCiudad ??
+            clienteFromOrder?.ciudad ??
+            obraObj?.comuna ??
+            null
+
+          clienteRegion =
+            clienteRegion ??
+            clienteFromOrder?.region ??
+            obraObj?.region ??
+            null
+
+          clienteRut =
+            clienteRut ??
+            clienteFromOrder?.rut ??
+            obraObj?.rut ??
             null
 
           // Ô£à CORRECCI├ôN: priorizar 'correlativ' (sin 'o')
@@ -2136,11 +2287,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               cliente: {
                 nombreCliente: clienteNombre ?? null,
                 comuna: clienteComuna ?? null,
+                ciudad: clienteCiudad ?? null,
+                region: clienteRegion ?? null,
+                rut: clienteRut ?? null,
                 raw: rawCliente ?? null
               },
               obra: {
                 numeroObra: numeroObra ?? undefined,
-                nombreObra: obraObj?.nombreObra ?? obraFromOrder?.nombreObra ?? undefined
+                nombreObra: obraObj?.nombreObra ?? obraFromOrder?.nombreObra ?? undefined,
+                comuna: obraObj?.comuna ?? obraFromOrder?.comuna ?? undefined,
+                region: obraObj?.region ?? obraFromOrder?.region ?? undefined,
+                mandante: obraObj?.mandante ?? obraFromOrder?.mandante ?? undefined
               },
               area: areaFinal,
               familia: familiaFinal,
@@ -3425,6 +3582,25 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         const cantidad = muestra?.cantidadMuestras ?? rcmData?.cantidadMuestras ?? muestra?.cantidad ?? '-'
         const vencimiento = muestra?.vencimiento ?? rcmData?.vencimiento ?? false
         const informeEnsayo = rcmData?.informeEnsayo ?? true
+        const areaNorm = normalizeText(area)
+        const esHormigon = areaNorm === 'hormigon'
+        const esElementosComponentes = areaNorm === 'elementos y componentes'
+        const esAsfalto = areaNorm === 'asfalto'
+        const esSuelo = areaNorm === 'suelo'
+        const esOtros = areaNorm === 'otros'
+        const mostrarFechaConfeccion = esHormigon || esElementosComponentes || esAsfalto || esOtros
+        const mostrarElemento = esHormigon || esElementosComponentes
+        const mostrarGrado = esHormigon || esElementosComponentes
+        const mostrarCotas = esSuelo
+
+        const fechaConfeccionRaw = muestra?.fechaConfeccion ?? rcmData?.fechaConfeccion ?? null
+        const elementoDinamico = muestra?.elemento ?? rcmData?.elemento ?? '-'
+        const gradoDinamico = muestra?.grado ?? rcmData?.grado ?? '-'
+        const cotasRaw = typeof muestra?.cotas === 'string' ? muestra.cotas : ''
+        const cota1DesdeCotas = cotasRaw ? String(cotasRaw).split('-')?.[0]?.trim() : null
+        const cota2DesdeCotas = cotasRaw ? String(cotasRaw).split('-')?.[1]?.trim() : null
+        const cota1Dinamica = rcmData?.cota1 ?? cota1DesdeCotas ?? '-'
+        const cota2Dinamica = rcmData?.cota2 ?? cota2DesdeCotas ?? '-'
 
         const inlineEstadoPillSx = (raw?: string) => {
           const key = String(raw ?? '').toUpperCase().trim()
@@ -3534,8 +3710,36 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
                     <Box sx={{ mb: 1.7, border: '1px solid #f2b93c', borderRadius: 1.1, bgcolor: '#fdf8e8', px: 1.4, py: 1.05, display: 'flex', gap: 2.25, alignItems: 'center', flexWrap: 'wrap' }}>
                       <Typography sx={{ fontSize: '0.73rem', fontWeight: 800, color: '#8a5a00' }}>{String(area).toUpperCase()}</Typography>
-                      <Typography sx={{ fontSize: '0.88rem', color: '#374151' }}><b>Elemento:</b> {muestra?.elemento ?? rcmData?.elemento ?? '-'}</Typography>
-                      <Typography sx={{ fontSize: '0.88rem', color: '#374151' }}><b>Grado:</b> {muestra?.grado ?? rcmData?.grado ?? '-'}</Typography>
+                      {mostrarFechaConfeccion && (
+                        <Box>
+                          <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>FECHA CONFECCIÓN</Typography>
+                          <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#374151' }}>{formatDateDDMMYYYYDateOnlyDash(fechaConfeccionRaw)}</Typography>
+                        </Box>
+                      )}
+                      {mostrarElemento && (
+                        <Box>
+                          <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>ELEMENTO</Typography>
+                          <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#374151' }}>{elementoDinamico}</Typography>
+                        </Box>
+                      )}
+                      {mostrarGrado && (
+                        <Box>
+                          <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>GRADO</Typography>
+                          <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#374151' }}>{gradoDinamico}</Typography>
+                        </Box>
+                      )}
+                      {mostrarCotas && (
+                        <Box>
+                          <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>COTA 1</Typography>
+                          <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#374151' }}>{cota1Dinamica}</Typography>
+                        </Box>
+                      )}
+                      {mostrarCotas && (
+                        <Box>
+                          <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>COTA 2</Typography>
+                          <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#374151' }}>{cota2Dinamica}</Typography>
+                        </Box>
+                      )}
                     </Box>
 
                     {probetas.length > 0 && (
@@ -3697,15 +3901,55 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             row?.tipoServicio ??
             (rcmData as any)?.tipoServicio ??
             '-'
-          const agrupador = rcmData?.codigoAgrupador?.codigo ?? row?.ss ?? '-'
-          const nombreObra = rcmData?.obra?.nombreObra ?? rcmData?.obra?.nombre ?? '-'
+          const agendaObra = (rcmData as any)?.ordenTrabajo?.agenda?.obra ?? null
+          const agendaCliente = (rcmData as any)?.ordenTrabajo?.agenda?.cliente ?? null
+          const agrupador = (rcmData?.codigoAgrupador as any)?.codigoId ?? row?.ss ?? '-'
+          const codigoProductoCodigo = rcmData?.codigoProducto ?? (rcmData?.codigoAgrupador as any)?.codigoId ?? (row as any)?.codigoProducto ?? null
+          const descripcionCP = (rcmData?.codigoAgrupador as any)?.codigoNombre ?? (rcmData?.codigoAgrupador as any)?.descripcionServicio ?? null
+          const nombreObra =
+            rcmData?.obra?.nombreObra ??
+            rcmData?.obra?.nombre ??
+            agendaObra?.nombreObra ??
+            agendaObra?.nombre ??
+            row?.obra?.nombreObra ??
+            '-'
 
-          const clienteNombre = rcmData?.cliente?.nombreCliente ?? row?.cliente?.nombreCliente ?? '-'
-          const clienteRut = rcmData?.cliente?.rut ?? '-'
-          const obraNumero = rcmData?.obra?.numeroObra ?? row?.obra?.numeroObra ?? '-'
-          const ciudad = rcmData?.obra?.comuna ?? rcmData?.cliente?.ciudad ?? '-'
-          const region = rcmData?.obra?.region ?? rcmData?.cliente?.region ?? '-'
-          const mandante = rcmData?.obra?.mandante ?? '-'
+          const clienteNombre =
+            rcmData?.cliente?.nombreCliente ??
+            agendaCliente?.nombreCliente ??
+            row?.cliente?.nombreCliente ??
+            '-'
+          const clienteRut =
+            rcmData?.cliente?.rut ??
+            agendaCliente?.rut ??
+            row?.cliente?.rut ??
+            '-'
+          const obraNumero =
+            rcmData?.obra?.numeroObra ??
+            agendaObra?.numeroObra ??
+            row?.obra?.numeroObra ??
+            '-'
+          const ciudad =
+            rcmData?.obra?.comuna ??
+            agendaObra?.comuna ??
+            rcmData?.cliente?.ciudad ??
+            agendaCliente?.ciudad ??
+            row?.obra?.comuna ??
+            row?.cliente?.ciudad ??
+            '-'
+          const region =
+            rcmData?.obra?.region ??
+            agendaObra?.region ??
+            rcmData?.cliente?.region ??
+            agendaCliente?.region ??
+            row?.obra?.region ??
+            row?.cliente?.region ??
+            '-'
+          const mandante =
+            rcmData?.obra?.mandante ??
+            agendaObra?.mandante ??
+            row?.obra?.mandante ??
+            '-'
 
           const nroOt = rcmData?.ordenTrabajo?.correlativo || rcmData?.ordenTrabajo?.correlativ || row?.ot || '-'
           const muestreadoPor = rcmData?.tomaMuestra || row?.ensayador || '-'
@@ -3725,6 +3969,32 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const ensayosCount = serviciosMuestra.length
           const submuestrasCount = probetas.length
           const observaciones = muestra?.observaciones ?? rcmData?.observaciones ?? '-'
+          const areaNorm = normalizeText(area)
+          const esHormigon = areaNorm === 'hormigon'
+          const esElementosComponentes = areaNorm === 'elementos y componentes'
+          const esAsfalto = areaNorm === 'asfalto'
+          const esSuelo = areaNorm === 'suelo'
+          const esOtros = areaNorm === 'otros'
+          const mostrarFechaConfeccion = esHormigon || esElementosComponentes || esAsfalto || esOtros
+          const mostrarElemento = esHormigon || esElementosComponentes
+          const mostrarGrado = esHormigon || esElementosComponentes
+          const mostrarCotas = esSuelo
+          const areaChipSx = esHormigon
+            ? { color: '#065f46', borderColor: 'rgba(4,120,87,0.38)', bgcolor: 'rgba(4,120,87,0.08)' }
+            : esSuelo
+              ? { color: '#b26a00', borderColor: 'rgba(237,168,32,0.55)', bgcolor: 'rgba(255,196,84,0.14)' }
+              : esAsfalto
+                ? { color: '#4b5563', borderColor: 'rgba(75,85,99,0.35)', bgcolor: 'rgba(75,85,99,0.07)' }
+                : esElementosComponentes
+                  ? { color: '#1e40af', borderColor: 'rgba(30,64,175,0.35)', bgcolor: 'rgba(219,234,254,0.5)' }
+                  : { color: '#7c4dff', borderColor: 'rgba(124,77,255,0.38)', bgcolor: 'rgba(124,77,255,0.08)' }
+
+          const fechaConfeccionRaw = muestra?.fechaConfeccion ?? rcmData?.fechaConfeccion ?? null
+          const cotasRaw = typeof muestra?.cotas === 'string' ? muestra.cotas : ''
+          const cota1DesdeCotas = cotasRaw ? String(cotasRaw).split('-')?.[0]?.trim() : null
+          const cota2DesdeCotas = cotasRaw ? String(cotasRaw).split('-')?.[1]?.trim() : null
+          const cota1Dinamica = rcmData?.cota1 ?? cota1DesdeCotas ?? '-'
+          const cota2Dinamica = rcmData?.cota2 ?? cota2DesdeCotas ?? '-'
 
           return (
             <>
@@ -3745,10 +4015,31 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                   <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, color: '#7b8498', letterSpacing: 0.6, mb: 0.8 }}>PERTENECE A</Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, flexWrap: 'wrap' }}>
                     <Typography sx={{ fontWeight: 700, color: '#1f2937', fontSize: '0.9rem' }}>{rcmData?.sede ?? row?.sede ?? '-'}</Typography>
-                    <Chip label={familia} size='small' variant='outlined' sx={{ height: 22, fontSize: '0.78rem', fontWeight: 700, color: '#6d28d9', borderColor: 'rgba(124, 58, 237, .35)', bgcolor: 'rgba(124, 58, 237, .08)' }} />
-                    <Typography sx={{ color: '#374151', fontSize: '0.9rem' }}>{tipoServicio}</Typography>
-                    <Chip label={agrupador} size='small' variant='outlined' sx={{ height: 22, fontSize: '0.78rem', fontWeight: 700, color: '#1e40af', borderColor: '#93c5fd', bgcolor: '#eff6ff' }} />
-                    <Typography sx={{ color: '#9ca3af', fontSize: '0.9rem', fontStyle: 'italic' }}>{nombreObra}</Typography>
+                    {area && area !== '-' && (
+                      <Chip label={area} size='small' variant='outlined' sx={{ height: 22, fontSize: '0.78rem', fontWeight: 700, ...areaChipSx }} />
+                    )}
+                    {familia && familia !== '-' && (
+                      <Typography sx={{ color: '#374151', fontSize: '0.9rem' }}>{familia}</Typography>
+                    )}
+                    {codigoProductoCodigo && (
+                      <Chip label={codigoProductoCodigo} size='small' variant='outlined' sx={{ height: 22, fontSize: '0.78rem', fontWeight: 700, color: '#1e40af', borderColor: '#93c5fd', bgcolor: '#eff6ff' }} />
+                    )}
+                    {descripcionCP && (
+                      <Typography
+                        title={descripcionCP}
+                        sx={{
+                          color: '#9ca3af',
+                          fontSize: '0.9rem',
+                          fontStyle: 'italic',
+                          maxWidth: 380,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        {descripcionCP}
+                      </Typography>
+                    )}
                   </Box>
 
                   <Box sx={{ mt: 1.2, display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1.2 }}>
@@ -3760,7 +4051,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                     <Box>
                       <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7', letterSpacing: 0.4 }}>OBRA</Typography>
                       <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>{obraNumero}</Typography>
-                      <Typography sx={{ fontSize: '0.74rem', color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombreObra}</Typography>
+                      <Typography
+                        title={nombreObra}
+                        sx={{
+                          fontSize: '0.74rem',
+                          color: '#9ca3af',
+                          display: 'block',
+                          maxWidth: 220,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        {nombreObra}
+                      </Typography>
                     </Box>
                     <Box>
                       <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7', letterSpacing: 0.4 }}>CIUDAD / REGION</Typography>
@@ -3802,14 +4106,36 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
                 <Box sx={{ mb: 1.6, border: '1px solid #f2b93c', borderRadius: 1.1, bgcolor: '#fdf8e8', px: 1.3, py: 1.05, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
                   <Typography sx={{ fontSize: '0.74rem', fontWeight: 800, color: '#8a5a00' }}>{String(area).toUpperCase()}</Typography>
-                  <Box>
-                    <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>ELEMENTO</Typography>
-                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>{elemento}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>GRADO</Typography>
-                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>{grado}</Typography>
-                  </Box>
+                  {mostrarFechaConfeccion && (
+                    <Box>
+                      <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>FECHA CONFECCIÓN</Typography>
+                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>{formatDateDDMMYYYYDateOnlyDash(fechaConfeccionRaw)}</Typography>
+                    </Box>
+                  )}
+                  {mostrarElemento && (
+                    <Box>
+                      <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>ELEMENTO</Typography>
+                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>{elemento}</Typography>
+                    </Box>
+                  )}
+                  {mostrarGrado && (
+                    <Box>
+                      <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>GRADO</Typography>
+                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>{grado}</Typography>
+                    </Box>
+                  )}
+                  {mostrarCotas && (
+                    <Box>
+                      <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>COTA 1</Typography>
+                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>{cota1Dinamica}</Typography>
+                    </Box>
+                  )}
+                  {mostrarCotas && (
+                    <Box>
+                      <Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#b7791f' }}>COTA 2</Typography>
+                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#374151' }}>{cota2Dinamica}</Typography>
+                    </Box>
+                  )}
                 </Box>
 
                 <Typography sx={{ mb: 0.8, fontSize: '0.95rem', fontWeight: 800, color: '#374151', letterSpacing: 0.35 }}>{`ENSAYOS (${ensayosCount})`}</Typography>
@@ -4036,8 +4362,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             return { color: '#475569', borderColor: 'rgba(100,116,139,.4)', bgcolor: 'rgba(148,163,184,.14)' }
           }
 
-          const totalServicios = gestionarServicios.length
-          const completados = gestionarServicios.filter((s: any) => String(gestionarEstados[s.id] ?? s.estado ?? '').toUpperCase().includes('ENSAYADO')).length
+          const countableServices = gestionarServicios.filter((s: any) => !s._isPaqueteHeader)
+          const totalServicios = countableServices.length
+          const completados = countableServices.filter((s: any) => {
+            const key = String(s._syntheticKey ?? s.id)
+
+            return String(gestionarEstados[key] ?? s.estado ?? '').toUpperCase().includes('ENSAYADO')
+          }).length
 
           return (
             <>
@@ -4112,9 +4443,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                           size='small'
                           disabled={!gestionarEnsayadorGlobal}
                           onClick={() => {
-                            const map: Record<number, string> = {}
+                            const map: Record<string, string> = {}
 
-                            gestionarServicios.forEach((s: any) => { map[s.id] = gestionarEnsayadorGlobal })
+                            gestionarServicios
+                              .filter((s: any) => !s._isPaqueteHeader)
+                              .forEach((s: any) => { map[String(s._syntheticKey ?? s.id)] = gestionarEnsayadorGlobal })
                             setGestionarEnsayadores(map)
                           }}
                           sx={{ whiteSpace: 'nowrap', fontWeight: 700, textTransform: 'none', bgcolor: '#1e40af', '&:hover': { bgcolor: '#1d3a9b' }, height: 36, mt: '20px', flexShrink: 0 }}
@@ -4129,9 +4462,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                               variant='outlined'
                               startIcon={<i className='ri-play-fill' style={{ fontSize: 11 }} />}
                               onClick={() => {
-                                const map: Record<number, string> = {}
+                                const map: Record<string, string> = {}
 
-                                gestionarServicios.forEach((s: any) => { map[s.id] = 'EN_PROCESO' })
+                                gestionarServicios
+                                  .filter((s: any) => !s._isPaqueteHeader)
+                                  .forEach((s: any) => { map[String(s._syntheticKey ?? s.id)] = 'EN_PROCESO' })
                                 setGestionarEstados(map)
                               }}
                               sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.75rem', borderColor: '#93c5fd', color: '#1d4ed8', bgcolor: '#eff6ff', '&:hover': { bgcolor: '#dbeafe' }, px: 1 }}
@@ -4143,9 +4478,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                               variant='outlined'
                               startIcon={<i className='ri-check-line' style={{ fontSize: 11 }} />}
                               onClick={() => {
-                                const map: Record<number, string> = {}
+                                const map: Record<string, string> = {}
 
-                                gestionarServicios.forEach((s: any) => { map[s.id] = 'ENSAYADO' })
+                                gestionarServicios
+                                  .filter((s: any) => !s._isPaqueteHeader)
+                                  .forEach((s: any) => { map[String(s._syntheticKey ?? s.id)] = 'ENSAYADO' })
                                 setGestionarEstados(map)
                               }}
                               sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.75rem', borderColor: '#6ee7b7', color: '#065f46', bgcolor: '#ecfdf5', '&:hover': { bgcolor: '#d1fae5' }, px: 1 }}
@@ -4180,21 +4517,45 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                             </TableRow>
                           ) : (
                             gestionarServicios.map((s: any) => {
-                              const estadoActualServicio = gestionarEstados[s.id] ?? s.estado ?? 'CODIFICADO'
-                              const ensayadorActual = gestionarEnsayadores[s.id] ?? ''
+                              const sKey = String(s._syntheticKey ?? s.id)
+
+                              if (s._isPaqueteHeader) {
+                                const subCount = gestionarServicios.filter((sub: any) => sub._paqueteParentId === s.id).length
+
+                                return (
+                                  <TableRow key={`paq_header_${s.id}`} sx={{ bgcolor: '#eff6ff' }}>
+                                    <TableCell>
+                                      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 0.9, py: 0.2, borderRadius: 0.8, bgcolor: '#dbeafe', fontSize: '0.76rem', fontWeight: 700, color: '#1e40af' }}>
+                                        <i className='ri-stack-line' style={{ fontSize: 11 }} />
+                                        {s.codigo ?? s.id}
+                                      </Box>
+                                    </TableCell>
+                                    <TableCell colSpan={5}>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography sx={{ fontSize: '0.86rem', fontWeight: 700, color: '#1e40af', lineHeight: 1.3 }}>{s.nombre}</Typography>
+                                        <Chip label={`PAQUETE · ${subCount} ensayos`} size='small' sx={{ height: 18, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#dbeafe', color: '#1e40af' }} />
+                                      </Box>
+                                      {s.norma && <Typography sx={{ fontSize: '0.71rem', color: '#9ca3af' }}>{s.norma}</Typography>}
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                              }
+
+                              const estadoActualServicio = gestionarEstados[sKey] ?? s.estado ?? 'CODIFICADO'
+                              const ensayadorActual = gestionarEnsayadores[sKey] ?? ''
                               const esEnsayado = String(estadoActualServicio).toUpperCase().includes('ENSAYADO')
                               const esEnProceso = String(estadoActualServicio).toUpperCase().includes('PROCESO')
                               const esCodificado = !esEnsayado && !esEnProceso
 
 
                               return (
-                                <TableRow key={s.id}>
+                                <TableRow key={sKey} sx={{ bgcolor: s._isPaqueteSubItem ? '#f8faff' : 'inherit' }}>
                                   <TableCell>
-                                    <Box sx={{ display: 'inline-flex', px: 0.9, py: 0.2, borderRadius: 0.8, bgcolor: '#f1f5f9', fontSize: '0.76rem', fontWeight: 700, color: '#374151' }}>
+                                    <Box sx={{ display: 'inline-flex', px: 0.9, py: 0.2, borderRadius: 0.8, bgcolor: s._isPaqueteSubItem ? '#f0f4ff' : '#f1f5f9', fontSize: '0.76rem', fontWeight: 700, color: s._isPaqueteSubItem ? '#3730a3' : '#374151', ml: s._isPaqueteSubItem ? 1.5 : 0 }}>
                                       {s.codigo ?? s.id}
                                     </Box>
                                   </TableCell>
-                                  <TableCell>
+                                  <TableCell sx={{ pl: s._isPaqueteSubItem ? 3 : undefined }}>
                                     <Typography sx={{ fontSize: '0.86rem', fontWeight: 600, color: '#111827', lineHeight: 1.3 }}>{s.nombre}</Typography>
                                     {s.norma && <Typography sx={{ fontSize: '0.71rem', color: '#9ca3af' }}>{s.norma}</Typography>}
                                   </TableCell>
@@ -4203,7 +4564,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                       size='small'
                                       displayEmpty
                                       value={ensayadorActual}
-                                      onChange={e => setGestionarEnsayadores(prev => ({ ...prev, [s.id]: String(e.target.value) }))}
+                                      onChange={e => setGestionarEnsayadores(prev => ({ ...prev, [sKey]: String(e.target.value) }))}
                                       sx={{ width: '100%', fontSize: '0.82rem' }}
                                     >
                                       <MenuItem value=''><em style={{ color: '#9ca3af' }}>—</em></MenuItem>
@@ -4230,7 +4591,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                       <Button
                                         size='small'
                                         variant='outlined'
-                                        onClick={() => setGestionarEstados(prev => ({ ...prev, [s.id]: 'EN_PROCESO' }))}
+                                        onClick={() => setGestionarEstados(prev => ({ ...prev, [sKey]: 'EN_PROCESO' }))}
                                         sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1, textTransform: 'none', borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff', minWidth: 0 }}
                                       >
                                         <i className='ri-play-fill' style={{ fontSize: 12, marginRight: 3 }} />Iniciar
@@ -4239,7 +4600,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                       <Button
                                         size='small'
                                         variant='outlined'
-                                        onClick={() => setGestionarEstados(prev => ({ ...prev, [s.id]: 'ENSAYADO' }))}
+                                        onClick={() => setGestionarEstados(prev => ({ ...prev, [sKey]: 'ENSAYADO' }))}
                                         sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1, textTransform: 'none', borderColor: '#bbf7d0', color: '#16a34a', bgcolor: '#f0fdf4', minWidth: 0 }}
                                       >
                                         <i className='ri-check-line' style={{ fontSize: 12, marginRight: 3 }} />Finalizar
@@ -4252,8 +4613,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                     <TextField
                                       size='small'
                                       placeholder='Obs...'
-                                      value={gestionarObservaciones[s.id] ?? s.observacion ?? ''}
-                                      onChange={e => setGestionarObservaciones(prev => ({ ...prev, [s.id]: e.target.value }))}
+                                      value={gestionarObservaciones[sKey] ?? s.observacion ?? ''}
+                                      onChange={e => setGestionarObservaciones(prev => ({ ...prev, [sKey]: e.target.value }))}
                                       inputProps={{ maxLength: 120 }}
                                       sx={{ width: 110, '& .MuiInputBase-input': { py: 0.55, fontSize: '0.74rem' } }}
                                     />

@@ -133,6 +133,7 @@ export async function POST(
         }
 
         const estadoNuevo = String(body.estNuevo)
+        const skipServicioEstadoUpdate = Boolean(body.skipServicioEstadoUpdate)
 
         const { historyEntry, servicioRcmSyncCount } = await prisma.$transaction(async tx => {
             // ✅ Crear registro de historial - servicioMuestraId viene del param, NO del body
@@ -152,6 +153,13 @@ export async function POST(
                     informe: body.informe ?? null
                 }
             })
+
+            if (skipServicioEstadoUpdate) {
+                return {
+                    historyEntry: createdHistoryEntry,
+                    servicioRcmSyncCount: 0
+                }
+            }
 
             // ✅ Actualizar estado del servicio de muestra
             const servicioMuestra = await tx.servicioMuestra.update({
@@ -187,8 +195,12 @@ export async function POST(
         })
 
         console.log('✅ History entry created:', historyEntry)
-        console.log(`✅ Updated servicioMuestra ${servicioMuestraId} estado to ${estadoNuevo}`)
-        console.log(`✅ Synced ServicioRCM rows: ${servicioRcmSyncCount}`)
+        if (skipServicioEstadoUpdate) {
+            console.log(`✅ Saved subitem history for servicioMuestra ${servicioMuestraId} without updating parent state`)
+        } else {
+            console.log(`✅ Updated servicioMuestra ${servicioMuestraId} estado to ${estadoNuevo}`)
+            console.log(`✅ Synced ServicioRCM rows: ${servicioRcmSyncCount}`)
+        }
 
         return NextResponse.json(
             {

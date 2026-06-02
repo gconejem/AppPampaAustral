@@ -80,7 +80,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     },
                     cliente: true,
                     obra: true,
-                    ordenTrabajo: true,
+                    ordenTrabajo: {
+                        include: {
+                            agenda: {
+                                include: {
+                                    cliente: true,
+                                    obra: true,
+                                },
+                            },
+                        },
+                    },
                     area: true,
                     familia: true,
                     codigoAgrupador: true,
