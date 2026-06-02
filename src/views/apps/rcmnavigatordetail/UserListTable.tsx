@@ -230,6 +230,7 @@ interface RCM {
   familia?: string
   obra?: {
     numeroObra?: string
+    nombreObra?: string
   }
   muestra?: {
     id?: number
@@ -1102,7 +1103,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   }
 
   const handleSelectInlineDetail = async (row: RCM | null) => {
-    if (!row?.muestra?.id) return
+    if (!row) return
 
     if (selectedInlineRowId === row.id) {
       resetInlineDetail()
@@ -1120,6 +1121,42 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     try {
       const muestraId = row.muestra.id
       const rcmId = row.rcmOriginalId ?? null
+
+      if (!rcmId) throw new Error('RCM sin id para cargar detalle')
+
+      if (!muestraId) {
+        const responseRcm = await fetch(`/api/rcm/${rcmId}?ts=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' }
+        })
+
+        if (!responseRcm.ok) throw new Error(`HTTP ${responseRcm.status}`)
+
+        const detalleRcm = await responseRcm.json()
+        const serviciosRcm = Array.isArray(detalleRcm?.servicios) ? detalleRcm.servicios : []
+
+        const serviciosCombinados = serviciosRcm.map((servicio: any) => {
+          const estadoResuelto = resolveServiceStateFromRcm(
+            servicio?.estadoOperativo ?? servicio?.estado ?? 'CODIFICADO',
+            detalleRcm?.rcmType,
+            detalleRcm?.estadoOperativo
+          )
+
+          return {
+            ...servicio,
+            norma: servicio?.norma ?? servicio?.producto?.norma ?? null,
+            codigo: servicio?.codigo ?? servicio?.producto?.sku ?? null,
+            cantidad: servicio?.cantidad ?? 1,
+            estado: estadoResuelto
+          }
+        })
+
+        setInlineMuestraDetalle({ ...(row.muestra ?? {}), probetas: [] })
+        setInlineServicios(serviciosCombinados)
+        setInlineRcmDetalle(detalleRcm)
+
+        return
+      }
 
       const [responseServicios, responseRcm] = await Promise.all([
         fetch(`/api/muestra/${muestraId}/servicios`, {
@@ -1175,22 +1212,6 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       setLoadingInlineDetalle(false)
     }
   }
-
-  useEffect(() => {
-    if (!selectedInlineRowId) return
-
-    const handleOutsideClick = (event: MouseEvent) => {
-      const target = event.target as Node
-
-      if (inlineDetailRef.current && !inlineDetailRef.current.contains(target)) {
-        resetInlineDetail()
-      }
-    }
-
-    document.addEventListener('mousedown', handleOutsideClick)
-
-    return () => document.removeEventListener('mousedown', handleOutsideClick)
-  }, [selectedInlineRowId])
 
   // Igual que handleEdit pero abre en modo solo lectura (readonly=1)
   const handleView = async (row: RCM | null) => {
@@ -1782,9 +1803,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
         // normalizar y enriquecer - EXPANDIR POR MUESTRAS
         const normalized = raw.flatMap((r: any) => {
-          const obraObj = r.obra ?? obraMap[r.obraId] ?? obraMap[r.obra?.id] ?? null
+          let obraObj = r.obra ?? obraMap[r.obraId] ?? obraMap[r.obra?.obraId] ?? null
 
-          const numeroObra =
+          let numeroObra =
             obraObj?.numeroObra ??
             obraObj?.numero_obra ??
             obraObj?.numero ??
@@ -1797,7 +1818,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
           // si no hay objeto cliente, intentar resolver desde clienteMap usando clienteId
           if (!rawCliente) {
-            const cid = r.clienteId ?? r.clienteid ?? r.cliente_id ?? r.cliente?.id ?? null
+            const cid = r.clienteId ?? r.clienteid ?? r.cliente_id ?? r.cliente?.clienteId ?? null
 
             if (cid != null) {
               rawCliente = clienteMap[String(cid)] ?? rawCliente
@@ -1839,6 +1860,40 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           // --- CORRECCI├ôN: NORMALIZAR ORDEN DE TRABAJO ---
           const orderKey = r.ordenTrabajoId ?? r.ordenTrabajo?.id ?? r.ordenTrabajo?._id ?? ''
           const orderObj = orderKey ? (ordenMap[String(orderKey)] ?? null) : null
+          const obraFromOrder = orderObj?.agenda?.obra ?? orderObj?.obra ?? null
+          const clienteFromOrder = orderObj?.agenda?.cliente ?? orderObj?.cliente ?? null
+
+          if (!obraObj && obraFromOrder) {
+            obraObj = obraFromOrder
+          }
+
+          if (!numeroObra) {
+            numeroObra =
+              obraFromOrder?.numeroObra ??
+              obraFromOrder?.numero_obra ??
+              obraFromOrder?.numero ??
+              obraFromOrder?.numeroobra ??
+              obraFromOrder?.nombreObra ??
+              undefined
+          }
+
+          if (!rawCliente && clienteFromOrder) {
+            rawCliente = clienteFromOrder
+          }
+
+          clienteNombre =
+            clienteNombre ??
+            clienteFromOrder?.nombreCliente ??
+            clienteFromOrder?.nombre ??
+            clienteFromOrder?.razonSocial ??
+            obraObj?.nombreCliente ??
+            undefined
+
+          clienteComuna =
+            clienteComuna ??
+            clienteFromOrder?.comuna ??
+            obraObj?.comuna ??
+            null
 
           // Ô£à CORRECCI├ôN: priorizar 'correlativ' (sin 'o')
           const orderCorrel =
@@ -1999,10 +2054,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               .sort((left: any, right: any) => compareDateOnly(left.fechaVencimiento, right.fechaVencimiento))[0] ?? null
 
             const tipoServicio =
+              familiaFinal ??
+              r.tipoServicio ??
+              muestra?.tipoServicio ??
               servicio?.nombre ??
               servicioRCM?.nombre ??
               serviciosMuestra[0]?.nombre ??
-              r.tipoServicio ??
               null
 
             const ss = r.ss ?? orderObj?.clave ?? r.ordenTrabajo?.clave ?? null
@@ -2062,6 +2119,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               fechaCodificacion: r.fechaCodificacion,
               fechaMuestreo: r.fechaMuestreo,
               fechaIngreso: r.fechaIngreso ?? null,
+              tipoMaterial: muestra.tipoMaterial ?? r.tipoMaterial ?? null,
               estadoMuestra: estadoMuestraResuelto,
               estadoOperativo: estadoMuestraResuelto,
               estadoAdministrativo: r.estadoAdministrativo ?? r.estado_administrativo ?? '',
@@ -2081,7 +2139,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 raw: rawCliente ?? null
               },
               obra: {
-                numeroObra: numeroObra ?? undefined
+                numeroObra: numeroObra ?? undefined,
+                nombreObra: obraObj?.nombreObra ?? obraFromOrder?.nombreObra ?? undefined
               },
               area: areaFinal,
               familia: familiaFinal,
@@ -2272,7 +2331,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const getVencimientoMeta = (raw?: string | null, cantidadProbetas = 0) => {
     const formatted = formatDateLikeDDMMYYYYDash(raw)
     const days = diffDaysFromToday(raw)
-    const unit = cantidadProbetas === 1 ? 'probeta' : 'probetas'
+    const unit = cantidadProbetas === 1 ? 'submuestra' : 'submuestras'
 
     let suffix = ''
     let colors = {
@@ -2282,7 +2341,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     }
 
     if (days !== null) {
-      if (days <= 0) {
+      if (days < 0) {
+        suffix = `(${Math.abs(days)}d ATRASO)`
+        colors = {
+          color: '#d84f2a',
+          borderColor: 'rgba(255, 112, 67, 0.7)',
+          backgroundColor: 'rgba(255, 138, 101, 0.12)'
+        }
+      } else if (days === 0) {
         suffix = '(HOY)'
         colors = {
           color: '#d84f2a',
@@ -2298,7 +2364,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
     return {
       label: formatted ? `${formatted} ${suffix}`.trim() : '-',
-      helper: cantidadProbetas > 0 ? `${cantidadProbetas} ${unit}` : 'Sin probetas',
+      helper: cantidadProbetas > 0 ? `${cantidadProbetas} ${unit}` : 'Sin submuestras',
       colors
     }
   }
@@ -2607,6 +2673,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           row.ot,
           row.obra?.numeroObra,
           row.area,
+          row.familia,
           row.tipoServicio,
           row.cliente?.nombreCliente
         ].filter(Boolean).join(' '),
@@ -2669,17 +2736,38 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       {
         id: 'obraCliente',
         header: 'Obra / Cliente',
-        accessorFn: row => `${row.obra?.numeroObra ?? ''} ${row.cliente?.nombreCliente ?? ''}`.trim(),
+        accessorFn: row => `${row.obra?.numeroObra ?? row.obra?.nombreObra ?? ''} ${row.cliente?.nombreCliente ?? ''}`.trim(),
         cell: ({ row }) => {
-          const obra = row.original.obra?.numeroObra ?? '-'
+          const obra = row.original.obra?.numeroObra ?? row.original.obra?.nombreObra ?? '-'
           const cliente = row.original.cliente?.nombreCliente ?? '-'
 
           return (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.2 }}>
-              <Typography variant='body2' sx={{ fontWeight: 700 }}>
+              <Typography
+                variant='body2'
+                sx={{
+                  fontWeight: 700,
+                  maxWidth: 130,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+                title={obra}
+              >
                 {obra}
               </Typography>
-              <Typography variant='caption' color='text.secondary' sx={{ fontSize: '0.82rem' }}>
+              <Typography
+                variant='caption'
+                color='text.secondary'
+                sx={{
+                  fontSize: '0.82rem',
+                  maxWidth: 130,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+                title={cliente}
+              >
                 {cliente}
               </Typography>
             </Box>
@@ -2689,10 +2777,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       {
         id: 'areaTipoServicio',
         header: 'Área / Servicio',
-        accessorFn: row => `${row.area ?? ''} ${row.tipoServicio ?? ''}`.trim(),
+        accessorFn: row => `${row.area ?? ''} ${row.familia ?? row.tipoServicio ?? ''}`.trim(),
         cell: ({ row }) => {
           const area = row.original.area
-          const tipoServicio = row.original.tipoServicio
+          const tipoServicio = row.original.familia ?? row.original.tipoServicio
 
           return (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.4 }}>
@@ -2717,7 +2805,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 title={tipoServicio ?? '-'}
                 sx={{
                   textAlign: 'left',
-                  maxWidth: 220,
+                  maxWidth: 170,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis'
@@ -2743,7 +2831,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           if (!row.original.proximoVencimiento) {
             return (
               <Typography variant='body2' color='text.disabled' sx={{ fontWeight: 500, textAlign: 'center', width: '100%' }}>
-                FIFO
+                -
               </Typography>
             )
           }
@@ -2777,8 +2865,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         cell: ({ row }) => {
           const material = row.original.tipoMaterial ?? '-'
 
-
-          return <Typography variant='body2'>{material}</Typography>
+          return (
+            <Typography
+              variant='body2'
+              sx={{
+                maxWidth: 130,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+              title={material}
+            >
+              {material}
+            </Typography>
+          )
         }
       },
       {
@@ -2909,6 +3009,84 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     maxLeafRowFilterDepth: 0 // ÔåÉ AGREGAR esto
   })
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+
+      // No navegar mientras hay diálogos secundarios abiertos.
+      if (markDialogOpen || histDialogOpen || gestionarOpen || histServicioDialogOpen) return
+
+      const target = event.target as HTMLElement | null
+      const tag = String(target?.tagName ?? '').toLowerCase()
+      const isTypingTarget = Boolean(
+        target?.isContentEditable ||
+        tag === 'input' ||
+        tag === 'textarea' ||
+        tag === 'select'
+      )
+
+      if (isTypingTarget) return
+
+      const visibleRows = table.getRowModel().rows
+        .map(r => r.original)
+        .filter((r: RCM | null | undefined) => Boolean(r)) as RCM[]
+
+      if (!visibleRows.length) return
+
+      event.preventDefault()
+
+      const isModalDetailOpen = Boolean(selectedRowId)
+      const navigableRows = isModalDetailOpen
+        ? visibleRows.filter((r: RCM | null | undefined) => Boolean(r?.muestra?.id))
+        : visibleRows
+
+      if (!navigableRows.length) return
+
+      const activeRowId = isModalDetailOpen ? selectedRowId : selectedInlineRowId
+      const currentIndex = navigableRows.findIndex(r => Number(r.id) === Number(activeRowId))
+      const isDown = event.key === 'ArrowDown'
+
+      let nextIndex = currentIndex
+
+      if (currentIndex === -1) {
+        nextIndex = isDown ? 0 : navigableRows.length - 1
+      } else {
+        nextIndex = isDown
+          ? Math.min(currentIndex + 1, navigableRows.length - 1)
+          : Math.max(currentIndex - 1, 0)
+      }
+
+      const nextRow = navigableRows[nextIndex]
+
+      if (!nextRow) return
+
+      if (isModalDetailOpen) {
+        if (Number(nextRow.id) === Number(selectedRowId)) return
+
+        void handleView(nextRow)
+        return
+      }
+
+      if (Number(nextRow.id) === Number(selectedInlineRowId)) return
+
+      void handleSelectInlineDetail(nextRow)
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [
+    table,
+    selectedInlineRowId,
+    selectedRowId,
+    markDialogOpen,
+    histDialogOpen,
+    gestionarOpen,
+    histServicioDialogOpen,
+    handleView,
+    handleSelectInlineDetail
+  ])
+
   // <-- a├▒adir: conteo de filas seleccionadas
   const selectedCount = useMemo(() => {
     return Object.values(rowSelection as any).filter(Boolean).length
@@ -2945,7 +3123,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         row.numeroTarjeta ?? '-',
         row.ot ?? '-',
         row.area ?? '-',
-        row.tipoServicio ?? '-',
+        row.familia ?? row.tipoServicio ?? '-',
         row.fechaCodificacion ? formatDateDDMMYYYYDateOnlyDash(row.fechaCodificacion) : '-',
         row.proximoVencimiento ? formatDateDDMMYYYYDateOnlyDash(row.proximoVencimiento) : '-',
         getEnsayosMeta(row.ensayos).total,
@@ -3099,13 +3277,15 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         className='overflow-x-auto'
         sx={{
           '& table': {
+            tableLayout: 'fixed',
+            width: '100%',
             whiteSpace: 'normal'
           },
           '& th, & td': {
             whiteSpace: 'normal'
           },
           '& td': {
-            overflowWrap: 'anywhere'
+            overflowWrap: 'normal'
           }
         }}
       >
@@ -3114,7 +3294,24 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map(header => (
-                  <th key={header.id} style={{ textAlign: 'center' }}>
+                  <th
+                    key={header.id}
+                    style={{
+                      textAlign: 'center',
+                      ...(header.column.id === 'select' ? { width: 44 } : {}),
+                      ...(header.column.id === 'rcm' ? { width: 110 } : {}),
+                      ...(header.column.id === 'numeroTarjeta' ? { width: 90 } : {}),
+                      ...(header.column.id === 'ot' ? { width: 70 } : {}),
+                      ...(header.column.id === 'obraCliente' ? { width: 180 } : {}),
+                      ...(header.column.id === 'areaTipoServicio' ? { width: 195 } : {}),
+                      ...(header.column.id === 'fechaCod' ? { width: 100 } : {}),
+                      ...(header.column.id === 'proximoVencimiento' ? { width: 150 } : {}),
+                      ...(header.column.id === 'material' ? { width: 140 } : {}),
+                      ...(header.column.id === 'ensayos' ? { width: 70 } : {}),
+                      ...(header.column.id === 'estOp' ? { width: 130 } : {}),
+                      ...(header.column.id === 'acciones' ? { width: 120 } : {})
+                    }}
+                  >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
@@ -3137,7 +3334,25 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 }}
               >
                 {row.getVisibleCells().map(cell => (
-                  <td key={cell.id} style={{ verticalAlign: 'middle', textAlign: cell.column.id === 'acciones' || cell.column.id === 'select' || cell.column.id === 'proximoVencimiento' ? 'center' : 'left' }}>
+                  <td
+                    key={cell.id}
+                    style={{
+                      verticalAlign: 'middle',
+                      textAlign: cell.column.id === 'acciones' || cell.column.id === 'select' || cell.column.id === 'proximoVencimiento' ? 'center' : 'left',
+                      ...(cell.column.id === 'select' ? { width: 44 } : {}),
+                      ...(cell.column.id === 'rcm' ? { width: 110 } : {}),
+                      ...(cell.column.id === 'numeroTarjeta' ? { width: 90, whiteSpace: 'nowrap' } : {}),
+                      ...(cell.column.id === 'ot' ? { width: 70, whiteSpace: 'nowrap' } : {}),
+                      ...(cell.column.id === 'obraCliente' ? { width: 180 } : {}),
+                      ...(cell.column.id === 'areaTipoServicio' ? { width: 195 } : {}),
+                      ...(cell.column.id === 'fechaCod' ? { width: 100, whiteSpace: 'nowrap' } : {}),
+                      ...(cell.column.id === 'proximoVencimiento' ? { width: 150, whiteSpace: 'nowrap' } : {}),
+                      ...(cell.column.id === 'material' ? { width: 140 } : {}),
+                      ...(cell.column.id === 'ensayos' ? { width: 70, whiteSpace: 'nowrap' } : {}),
+                      ...(cell.column.id === 'estOp' ? { width: 130, whiteSpace: 'nowrap' } : {}),
+                      ...(cell.column.id === 'acciones' ? { width: 120, whiteSpace: 'nowrap' } : {})
+                    }}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -3157,8 +3372,36 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
       />
 
-      {selectedInlineRowId && (() => {
+      {(() => {
+        const inlinePanelFixedHeight = 336
         const row = findRowById(selectedInlineRowId)
+
+        if (!row) {
+          return (
+            <Paper
+              ref={inlineDetailRef}
+              variant='outlined'
+              sx={{
+                mt: 2,
+                borderRadius: 1.5,
+                borderColor: '#d9deea',
+                boxShadow: '0 6px 20px rgba(15, 23, 42, 0.06)',
+                height: inlinePanelFixedHeight,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                px: 2,
+                textAlign: 'center',
+                bgcolor: '#f8f9fc'
+              }}
+            >
+              <Typography sx={{ color: '#6b7280', fontWeight: 700 }}>
+                Selecciona un RCM para ver el detalle
+              </Typography>
+            </Paper>
+          )
+        }
+
         const rcmData = inlineRcmDetalle ?? null
 
         const muestraFromRcm = Array.isArray(rcmData?.muestras)
@@ -3194,13 +3437,26 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
 
         return (
-          <Paper ref={inlineDetailRef} variant='outlined' sx={{ mt: 2, borderRadius: 1.5, overflow: 'hidden', borderColor: '#d9deea', boxShadow: '0 6px 20px rgba(15, 23, 42, 0.06)' }}>
+          <Paper
+            ref={inlineDetailRef}
+            variant='outlined'
+            sx={{
+              mt: 2,
+              borderRadius: 1.5,
+              overflow: 'hidden',
+              borderColor: '#d9deea',
+              boxShadow: '0 6px 20px rgba(15, 23, 42, 0.06)',
+              height: inlinePanelFixedHeight,
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
             <Box sx={{ px: 2, py: 1.15, bgcolor: '#f8f9fc', borderBottom: '1px solid #d9deea', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.25 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                 <Typography sx={{ color: '#0f1fb0', fontWeight: 800, fontSize: '1.25rem', lineHeight: 1 }}>{row?.numeroRcm ?? '-'}</Typography>
                 <Typography sx={{ color: '#9aa3b4', fontSize: '0.78rem' }}>{String(tarjeta).startsWith('T-') ? tarjeta : `T-${tarjeta}`}</Typography>
                 <Chip size='small' label={area} variant='outlined' sx={{ height: 22, fontWeight: 700 }} />
-                <Typography sx={{ color: '#374151', fontSize: '0.9rem' }}>{row?.tipoServicio ?? '-'}</Typography>
+                <Typography sx={{ color: '#374151', fontSize: '0.9rem' }}>{row?.familia ?? row?.tipoServicio ?? '-'}</Typography>
                 <Chip size='small' label={getOperationalLabel(estadoActual)} variant='outlined' sx={{ height: 22, fontWeight: 700 }} />
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -3253,7 +3509,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               </Box>
             </Box>
 
-            <Box sx={{ p: 2, bgcolor: '#f5f6f8' }}>
+            <Box sx={{ p: 2, bgcolor: '#f5f6f8', flex: 1, overflowY: 'auto' }}>
               {loadingInlineDetalle ? (
                 <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}><CircularProgress size={24} /></Box>
               ) : (
@@ -3294,14 +3550,23 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                               const safeDays = daysToDue ?? 0
                               const isToday = safeDays === 0
                               const isTomorrow = safeDays === 1
-                              const alertLabel = isToday ? 'Hoy' : isTomorrow ? 'Mañana' : `en ${Math.max(safeDays, 0)}d`
+                              const estadoSubmuestra = p?.estado ?? 'CODIFICADO'
+                              const restantesLabel = isToday
+                                ? 'en 0d'
+                                : isTomorrow
+                                  ? 'en 1d'
+                                  : safeDays < 0
+                                    ? `vencido ${Math.abs(safeDays)}d`
+                                    : `en ${safeDays}d`
 
                               return (
                                 <Box key={p?.id ?? i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.8, py: 0.45, borderRadius: 1, border: '1px solid #d0d7e2', bgcolor: '#fff' }}>
                                   <Box sx={{ width: 16, height: 16, borderRadius: '999px', bgcolor: '#0b2acc', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 700 }}>{p?.numero ?? i + 1}</Box>
                                   <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#111827' }}>{p?.dias ?? '-'}d</Typography>
                                   <Typography sx={{ fontSize: '0.75rem', color: '#8b95a7' }}>{formatDateDDMMYYYYDateOnlyDash(p?.fechaVencimiento)}</Typography>
-                                  <Typography sx={{ fontSize: '0.75rem', color: '#374151', fontWeight: 700 }}>{alertLabel}</Typography>
+                                  <Typography sx={{ fontSize: '0.75rem', color: '#374151' }}>{`cant. ${p?.cantidad ?? '-'}`}</Typography>
+                                  <Chip label={getOperationalLabel(estadoSubmuestra)} size='small' variant='outlined' sx={{ height: 20, fontWeight: 700, fontSize: '0.7rem', ...inlineEstadoPillSx(String(estadoSubmuestra)) }} />
+                                  <Typography sx={{ fontSize: '0.75rem', color: '#374151', fontWeight: 700 }}>{restantesLabel}</Typography>
                                 </Box>
                               )
                             })}
@@ -3426,7 +3691,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
           const area = rcmData?.area?.nombre ?? row?.area ?? '-'
           const familia = rcmData?.familia?.nombre ?? row?.familia ?? '-'
-          const tipoServicio = row?.tipoServicio ?? serviciosMuestra?.[0]?.nombre ?? '-'
+          const tipoServicio =
+            row?.familia ??
+            ((rcmData as any)?.familia?.nombre ?? (rcmData as any)?.familia) ??
+            row?.tipoServicio ??
+            (rcmData as any)?.tipoServicio ??
+            '-'
           const agrupador = rcmData?.codigoAgrupador?.codigo ?? row?.ss ?? '-'
           const nombreObra = rcmData?.obra?.nombreObra ?? rcmData?.obra?.nombre ?? '-'
 
@@ -3742,7 +4012,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               : { bgcolor: '#dcfce7', color: '#166534', borderColor: '#bbf7d0' }
 
           const areaLabel = rcmData?.area?.nombre ?? row?.area ?? '-'
-          const tipoServicioLabel = row?.tipoServicio ?? gestionarServicios?.[0]?.nombre ?? '-'
+          const tipoServicioLabel =
+            row?.familia ??
+            ((rcmData as any)?.familia?.nombre ?? (rcmData as any)?.familia) ??
+            row?.tipoServicio ??
+            (rcmData as any)?.tipoServicio ??
+            '-'
 
           const materialLabel = gestionarMuestra?.tipoMaterial || gestionarMuestra?.item
             ? [gestionarMuestra?.tipoMaterial, gestionarMuestra?.item].filter(Boolean).join(' · ')
