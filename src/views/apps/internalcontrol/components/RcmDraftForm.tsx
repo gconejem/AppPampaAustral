@@ -85,7 +85,8 @@ interface EnsayoHandlers {
     handleConfirmEnsayo: (id: number) => void
     handleCancelEnsayo: (id: number) => void
     handleChangeCantidad: (id: number, cantidad: number) => void
-    handleKeyPressQuantity: (e: React.KeyboardEvent, id: number) => void
+    handleKeyDownQuantity: (e: React.KeyboardEvent, id: number) => void
+    handleKeyDownSubProductoQuantity: (e: React.KeyboardEvent, ensayoId: number, subProductoId: number) => void
     handleChangeObservacion: (id: number, obs: string) => void
 }
 
@@ -154,7 +155,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
         handleToggleEditSubProducto, handleChangeSubProductoCantidad,
         handleChangeSubProductoObservacion, handleToggleEditEnsayo,
         handleConfirmEnsayo, handleCancelEnsayo,
-        handleChangeCantidad, handleKeyPressQuantity, handleChangeObservacion,
+        handleChangeCantidad, handleKeyDownQuantity, handleKeyDownSubProductoQuantity, handleChangeObservacion,
     } = ensayoHandlers
 
     const [showSearch, setShowSearch] = React.useState(false)
@@ -660,6 +661,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                                                     {sub.isEditing ? (
                                                                         <TextField size='small' value={sub.cantidad}
                                                                             onChange={(e) => handleChangeSubProductoCantidad(ensayo.id, sub.id, parseInt(e.target.value) || 0)}
+                                                                            onKeyDown={(e) => handleKeyDownSubProductoQuantity(e, ensayo.id, sub.id)}
                                                                             type='number' sx={{ width: '80px' }} inputProps={{ min: 1 }} />
                                                                     ) : (
                                                                         <Typography variant='body2'>{sub.cantidad}</Typography>
@@ -705,7 +707,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                                                     ref={index === ensayosAsociados.length - 1 ? lastEnsayoCantidadRef : null}
                                                                     size='small' value={ensayo.cantidad}
                                                                     onChange={(e) => handleChangeCantidad(ensayo.id, parseInt(e.target.value) || 0)}
-                                                                    onKeyPress={(e) => handleKeyPressQuantity(e, ensayo.id)}
+                                                                    onKeyDown={(e) => handleKeyDownQuantity(e, ensayo.id)}
                                                                     type='number' sx={{ width: '80px' }} inputProps={{ min: 1 }} />
                                                             ) : (
                                                                 <Typography variant='body2'>{ensayo.cantidad}</Typography>

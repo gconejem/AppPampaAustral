@@ -12,6 +12,11 @@ export function useEnsayos({ ensayosAsociados, setEnsayosAsociados }: UseEnsayos
     const [statusMenuAnchor, setStatusMenuAnchor] = useState<HTMLElement | null>(null)
     const [selectedEnsayoId, setSelectedEnsayoId] = useState<number | null>(null)
 
+    const blurActiveElement = () => {
+        if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur()
+        }
+    }
 
     const handleSelectProduct = async (producto: ProductoType) => {
         const idProducto = (producto as any).productoId || producto.id
@@ -135,9 +140,7 @@ export function useEnsayos({ ensayosAsociados, setEnsayosAsociados }: UseEnsayos
             newSet.delete(ensayoId)
             return newSet
         })
-        if (document.activeElement instanceof HTMLElement) {
-            document.activeElement.blur()
-        }
+        blurActiveElement()
     }
 
     const handleCancelEnsayo = (ensayoId: number) => {
@@ -150,10 +153,35 @@ export function useEnsayos({ ensayosAsociados, setEnsayosAsociados }: UseEnsayos
         ))
     }
 
-    const handleKeyPressQuantity = (e: React.KeyboardEvent, ensayoId: number) => {
+    const handleKeyDownQuantity = (e: React.KeyboardEvent, ensayoId: number) => {
         if (e.key === 'Enter') {
             e.preventDefault()
-            handleConfirmEnsayo(ensayoId)
+            setEnsayosPendientes(prev => {
+                const newSet = new Set(prev)
+                newSet.delete(ensayoId)
+                return newSet
+            })
+            setEnsayosAsociados(prev => prev.map(ensayo =>
+                ensayo.id === ensayoId ? { ...ensayo, isEditing: false } : ensayo
+            ))
+            blurActiveElement()
+        }
+    }
+
+    const handleKeyDownSubProductoQuantity = (e: React.KeyboardEvent, ensayoId: number, subProductoId: number) => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            setEnsayosAsociados(prev => prev.map(ensayo => {
+                if (ensayo.id !== ensayoId || !ensayo.subProductos) return ensayo
+
+                return {
+                    ...ensayo,
+                    subProductos: ensayo.subProductos.map(subProducto =>
+                        subProducto.id === subProductoId ? { ...subProducto, isEditing: false } : subProducto
+                    )
+                }
+            }))
+            blurActiveElement()
         }
     }
 
@@ -206,7 +234,8 @@ export function useEnsayos({ ensayosAsociados, setEnsayosAsociados }: UseEnsayos
         handleConfirmEnsayo,
         handleCancelEnsayo,
         handleChangeCantidad,
-        handleKeyPressQuantity,
+        handleKeyDownQuantity,
+        handleKeyDownSubProductoQuantity,
         handleChangeObservacion,
         handleChangeEstadoOperativo,
         handleOpenStatusMenu,
