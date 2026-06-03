@@ -434,7 +434,7 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                                 <Box sx={{ px: 1.5, py: 1.25, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                                     {rcmCodes.map((rcmInfo, rIdx) => {
                                                         const typeLabel = rcmInfo.type === 'Muestra' ? 'MUE' : rcmInfo.type === 'Control' ? 'CTR' : 'SRV'
-                                                        const typeColor = rcmInfo.type === 'Muestra' ? '#16A34A' : rcmInfo.type === 'Control' ? '#2563EB' : '#9333EA'
+                                                        const typeColor = rcmInfo.type === 'Muestra' ? '#16A34A' : rcmInfo.type === 'Control' ? '#FF0096' : '#3b3b3b'
                                                         return (
                                                             <Box key={rIdx}>
                                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
