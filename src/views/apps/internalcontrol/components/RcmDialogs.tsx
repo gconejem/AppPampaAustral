@@ -60,6 +60,7 @@ interface RcmDialogsProps {
     isSaving: boolean
     codigosAgrupadores: CodigoAgrupador[]
     savedRcms: RCMData[]
+    cardRect?: { left: number; width: number }
 }
 
 const RcmDialogs: React.FC<RcmDialogsProps> = ({
@@ -72,12 +73,15 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
     showDeleteConfirm, handleConfirmDelete, handleDismissDeleteConfirm,
     showPreFinalizacion, setShowPreFinalizacion,
     computeValidaciones, handleGuardarTodo, isSaving,
-    codigosAgrupadores, savedRcms,
+    codigosAgrupadores, savedRcms, cardRect,
 }) => {
     const router = useRouter()
     const params = useParams()
     const lang = (params?.lang as string) || 'es'
     const [showFinalizadoSuccess, setShowFinalizadoSuccess] = useState(false)
+    const dialogCenterX = cardRect?.width ? cardRect.left + (cardRect.width / 2) : '50%'
+    const dialogMaxWidth = cardRect?.width ? Math.min(1080, Math.max(320, cardRect.width - 48)) : 1080
+
     return (
         <>
             {/* Snackbar flotante para mensajes de error */}
@@ -280,9 +284,20 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                             setShowPreFinalizacion(false)
                         }}
                         disableEscapeKeyDown={isSaving}
-                        maxWidth='md'
+                        maxWidth='lg'
                         fullWidth
-                        PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden' } }}
+                        PaperProps={{
+                            sx: {
+                                position: 'fixed',
+                                left: dialogCenterX,
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                m: 0,
+                                borderRadius: '12px',
+                                overflow: 'hidden',
+                                maxWidth: `${dialogMaxWidth}px`,
+                            }
+                        }}
                     >
                         <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem', pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             Revisar y Finalizar Codificación
@@ -336,7 +351,7 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                 <Box sx={{ border: '1px solid #E5E7EB', borderRadius: '8px', overflow: 'hidden' }}>
                                     {/* Header */}
                                     <Box sx={{
-                                        display: 'grid', gridTemplateColumns: '110px 120px 160px 1fr 200px',
+                                        display: 'grid', gridTemplateColumns: '110px 120px 160px 180px minmax(300px, 1fr)',
                                         bgcolor: 'primary.main', borderBottom: '1px solid #E5E7EB',
                                     }}>
                                         {['Código', 'Área · Tipo', 'SKU(s) × Cant.', 'Descripción', 'RCMs'].map(h => (
@@ -367,7 +382,7 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                             <Box
                                                 key={ag.id}
                                                 sx={{
-                                                    display: 'grid', gridTemplateColumns: '110px 120px 160px 1fr 200px',
+                                                    display: 'grid', gridTemplateColumns: '110px 120px 160px 180px minmax(300px, 1fr)',
                                                     borderBottom: agIdx < codigosAgrupadores.length - 1 ? '1px solid #E5E7EB' : 'none',
                                                     '&:hover': { bgcolor: '#FAFAFA' },
                                                 }}
@@ -410,7 +425,7 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                                     )}
                                                 </Box>
                                                 {/* Descripción */}
-                                                <Box sx={{ px: 1.5, py: 1.25, width: 180 }}>
+                                                <Box sx={{ px: 1.5, py: 1.25 }}>
                                                     <Typography variant='body2' sx={{ fontSize: '0.82rem', color: 'text.primary', wordBreak: 'break-word', whiteSpace: 'normal' }}>
                                                         {descripcion}
                                                     </Typography>
@@ -432,7 +447,7 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                                                         ~{rcmInfo.code}
                                                                     </Typography>
                                                                 </Box>
-                                                                <Typography variant='caption' sx={{ color: '#9CA3AF', fontSize: '0.68rem', display: 'block', pl: 0.5 }} noWrap>
+                                                                <Typography variant='caption' sx={{ color: '#9CA3AF', fontSize: '0.68rem', display: 'block', pl: 0.5, whiteSpace: 'normal', wordBreak: 'break-word' }}>
                                                                     {rcmInfo.type === 'Muestra' && rcmInfo.tarjeta ? `T:${rcmInfo.tarjeta}` : ''}{rcmInfo.type === 'Muestra' && rcmInfo.tarjeta && rcmInfo.area ? ` · ` : ''}{rcmInfo.area ? rcmInfo.area : ''}{rcmInfo.tipoServicio ? ` · ${rcmInfo.tipoServicio}` : ''}
                                                                 </Typography>
                                                             </Box>

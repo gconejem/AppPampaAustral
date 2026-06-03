@@ -4,6 +4,7 @@ import {
     Typography,
     Button,
     Card,
+    IconButton,
     Menu,
     MenuItem,
 } from '@mui/material'
@@ -11,6 +12,8 @@ import AddIcon from '@mui/icons-material/Add'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import CloseIcon from '@mui/icons-material/Close'
 
 // Types
 import type { Step2CreateRcmsProps, RCMData } from './types/rcm-types'
@@ -43,6 +46,7 @@ const Step2CreateRcms = ({
     // ═══════════════════════════════════════
     const form = useRcmForm({ otData })
     const ensayoHooks = useEnsayos({ ensayosAsociados, setEnsayosAsociados })
+    const [showAutoCodigoProductoMessage, setShowAutoCodigoProductoMessage] = useState(false)
 
     // Lifted anchor states to break circular dependency between useCodigoAgrupador & useProductSearch
     const [agrupadorSearchAnchor, setAgrupadorSearchAnchor] = useState<HTMLElement | null>(null)
@@ -66,6 +70,7 @@ const Step2CreateRcms = ({
         setAgrupadorSearchAnchor,
         skuSearchAnchor,
         setSkuSearchAnchor,
+        onAutoCodigoProductoCreated: () => setShowAutoCodigoProductoMessage(true),
     })
 
     const isRcmLinkedToCodigoProducto = useCallback((rcmId: number) => {
@@ -179,6 +184,16 @@ const Step2CreateRcms = ({
         onIsSavingChange?.(crud.isSaving)
     }, [crud.isSaving])
 
+    useEffect(() => {
+        if (!showAutoCodigoProductoMessage) return
+
+        const timeoutId = window.setTimeout(() => {
+            setShowAutoCodigoProductoMessage(false)
+        }, 10000)
+
+        return () => window.clearTimeout(timeoutId)
+    }, [showAutoCodigoProductoMessage])
+
     // Registrar la función de finalizar en el padre al montar
     useEffect(() => {
         onRegisterFinalizar?.(() => codigoReal.setShowPreFinalizacion(true))
@@ -290,23 +305,25 @@ const Step2CreateRcms = ({
             <Card ref={cardRef}>
                 <Box sx={{ p: 6, pb: codigoReal.codigosAgrupadores.length === 0 ? 'calc(12vh + 48px)' : '348px' }}>
                     {/* Title row */}
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 4 }}>
-                        <Box>
-                            <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 1 }}>
-                                RCMs creados{' '}
-                                <Typography component='span' sx={{ color: 'text.secondary', fontWeight: 'normal' }}>
-                                    {savedRcms.length} {savedRcms.length === 1 ? 'registro' : 'registros'}
+                    <Box sx={{ mb: 4 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+                            <Box>
+                                <Typography variant='h5' sx={{ fontWeight: 'bold', mb: 1 }}>
+                                    RCMs creados{' '}
+                                    <Typography component='span' sx={{ color: 'text.secondary', fontWeight: 'normal' }}>
+                                        {savedRcms.length} {savedRcms.length === 1 ? 'registro' : 'registros'}
+                                    </Typography>
                                 </Typography>
-                            </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                            {!form.showRcmCard && (
-                                <Button variant='contained' color='primary' startIcon={<AddIcon />}
-                                    onClick={crud.handleNewRcmClick}
-                                    sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}>
-                                    Nuevo RCM
-                                </Button>
-                            )}
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                {!form.showRcmCard && (
+                                    <Button variant='contained' color='primary' startIcon={<AddIcon />}
+                                        onClick={crud.handleNewRcmClick}
+                                        sx={{ borderRadius: '8px', textTransform: 'none', px: 3 }}>
+                                        Nuevo RCM
+                                    </Button>
+                                )}
+                            </Box>
                             <Menu
                                 anchorEl={crud.newRcmMenuAnchor}
                                 open={Boolean(crud.newRcmMenuAnchor)}
@@ -320,6 +337,21 @@ const Step2CreateRcms = ({
                                 <MenuItem onClick={() => crud.handleSelectRcmType('Servicio')}>Servicio</MenuItem>
                             </Menu>
                         </Box>
+                        {showAutoCodigoProductoMessage && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, mt: 1.5, width: '100%', borderRadius: '8px', bgcolor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                                <CheckCircleIcon sx={{ color: '#16A34A', fontSize: 28, flexShrink: 0 }} />
+                                <Typography variant='body2' sx={{ fontWeight: 600, color: '#15803D', flex: 1 }}>
+                                    Código Producto creado automáticamente
+                                </Typography>
+                                <IconButton
+                                    size='small'
+                                    onClick={() => setShowAutoCodigoProductoMessage(false)}
+                                    sx={{ color: '#15803D', p: 0.5, '&:hover': { bgcolor: '#DCFCE7' } }}
+                                >
+                                    <CloseIcon fontSize='small' />
+                                </IconButton>
+                            </Box>
+                        )}
                     </Box>
 
                     {/* Draft form */}
@@ -474,6 +506,7 @@ const Step2CreateRcms = ({
                 isSaving={crud.isSaving}
                 codigosAgrupadores={codigoReal.codigosAgrupadores}
                 savedRcms={savedRcms}
+                cardRect={cardRect}
             />
 
             {/* Código Producto creation dialog */}

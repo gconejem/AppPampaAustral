@@ -12,6 +12,7 @@ interface UseCodigoAgrupadorParams {
     setAgrupadorSearchAnchor: (el: HTMLElement | null) => void
     skuSearchAnchor: HTMLElement | null
     setSkuSearchAnchor: (el: HTMLElement | null) => void
+    onAutoCodigoProductoCreated?: () => void
 }
 
 export function useCodigoAgrupador({
@@ -24,6 +25,7 @@ export function useCodigoAgrupador({
     setAgrupadorSearchAnchor,
     skuSearchAnchor,
     setSkuSearchAnchor,
+    onAutoCodigoProductoCreated,
 }: UseCodigoAgrupadorParams) {
     // Códigos Agrupadores
     const [codigosAgrupadores, setCodigosAgrupadores] = useState<CodigoAgrupador[]>([])
@@ -472,6 +474,7 @@ export function useCodigoAgrupador({
 
             setCodigosAgrupadores(prev => [...prev, newAgrupador])
             setSelectedRcmIds([])
+            onAutoCodigoProductoCreated?.()
         } catch (err) {
             console.error('Error al crear código 1:1:', err)
             setErrorVencimiento(err instanceof Error ? err.message : 'Error al crear código de producto')
