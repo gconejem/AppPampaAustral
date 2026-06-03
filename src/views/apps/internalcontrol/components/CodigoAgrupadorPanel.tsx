@@ -8,6 +8,7 @@ import {
     TextField,
 } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
+import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import type { CodigoAgrupador, RCMData } from '../types/rcm-types'
@@ -23,6 +24,7 @@ interface CodigoAgrupadorPanelProps {
     onChangeDescripcion: (agrupadorId: string, value: string) => void
     onChangeCantidad: (agrupadorId: string, value: number) => void
     onChangeFacturacion: (agrupadorId: string, facturacion: 'Unitario' | 'Fijo') => void
+    onEditAgrupador: (agrupadorId: string) => void
     onDeleteAgrupador: (agrupadorId: string) => void
 }
 
@@ -31,6 +33,7 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
     isSaving, onFinalizarCodificacion,
     onOpenAgrupadorSearch, onRemoveEnsayoFromAgrupador,
     onChangeDescripcion, onChangeCantidad, onChangeFacturacion,
+    onEditAgrupador,
     onDeleteAgrupador,
 }) => {
     const isAgrupadorMuestra = (agrupador: CodigoAgrupador) =>
@@ -167,19 +170,21 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
                                                     })}
                                                 </Box>
                                             )}
-                                            <Button
-                                                startIcon={<SearchIcon />}
-                                                size='small'
-                                                variant='outlined'
-                                                onClick={(e) => onOpenAgrupadorSearch(e, agrupador.id)}
-                                                sx={{
-                                                    textTransform: 'none', borderRadius: '6px', fontSize: '0.75rem',
-                                                    borderColor: '#E0E0E0', color: '#666',
-                                                    '&:hover': { borderColor: '#1976D2', color: '#1976D2' }
-                                                }}
-                                            >
-                                                Buscar ensayo
-                                            </Button>
+                                            {false && (
+                                                <Button
+                                                    startIcon={<SearchIcon />}
+                                                    size='small'
+                                                    variant='outlined'
+                                                    onClick={(e) => onOpenAgrupadorSearch(e, agrupador.id)}
+                                                    sx={{
+                                                        textTransform: 'none', borderRadius: '6px', fontSize: '0.75rem',
+                                                        borderColor: '#E0E0E0', color: '#666',
+                                                        '&:hover': { borderColor: '#1976D2', color: '#1976D2' }
+                                                    }}
+                                                >
+                                                    Buscar ensayo
+                                                </Button>
+                                            )}
                                         </Box>
                                     </td>
 
@@ -223,14 +228,23 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
                                     </td>
 
                                     {/* Acciones */}
-                                    <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'top' }}>
-                                        <IconButton
-                                            size='small'
-                                            onClick={() => onDeleteAgrupador(agrupador.id)}
-                                            sx={{ color: '#9CA3AF', '&:hover': { color: '#EF4444' } }}
-                                        >
-                                            <DeleteIcon fontSize='small' />
-                                        </IconButton>
+                                    <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'top', minWidth: 96 }}>
+                                        <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 0.75, flexWrap: 'nowrap' }}>
+                                            <IconButton
+                                                size='small'
+                                                onClick={() => onEditAgrupador(agrupador.id)}
+                                                sx={{ color: '#1976D2', flexShrink: 0, '&:hover': { color: '#1565C0' } }}
+                                            >
+                                                <EditIcon fontSize='small' />
+                                            </IconButton>
+                                            <IconButton
+                                                size='small'
+                                                onClick={() => onDeleteAgrupador(agrupador.id)}
+                                                sx={{ color: '#9CA3AF', flexShrink: 0, '&:hover': { color: '#EF4444' } }}
+                                            >
+                                                <DeleteIcon fontSize='small' />
+                                            </IconButton>
+                                        </Box>
                                     </td>
                                 </tr>
                             ))}

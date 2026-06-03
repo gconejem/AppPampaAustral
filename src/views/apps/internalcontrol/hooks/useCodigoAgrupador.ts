@@ -29,6 +29,7 @@ export function useCodigoAgrupador({
     const [codigosAgrupadores, setCodigosAgrupadores] = useState<CodigoAgrupador[]>([])
     const [selectedRcmIds, setSelectedRcmIds] = useState<number[]>([])
     const [editingAgrupadorId, setEditingAgrupadorId] = useState<string | null>(null)
+    const [editingCodigoAgrupadorId, setEditingCodigoAgrupadorId] = useState<string | null>(null)
     const [agrupadorSearchTerm, setAgrupadorSearchTerm] = useState('')
     const [isCreatingCodigo, setIsCreatingCodigo] = useState(false)
 
@@ -43,7 +44,8 @@ export function useCodigoAgrupador({
     const [dialogSkus, setDialogSkus] = useState<Array<{ sku: string; nombre: string; productoId: number; cantidad: number }>>([])
     const [dialogDescripcionServicio, setDialogDescripcionServicio] = useState('')
     const [dialogCantidad, setDialogCantidad] = useState<number>(1)
-    const [dialogMode, setDialogMode] = useState<'nuevo' | 'existente'>('nuevo')
+    const [dialogFacturacion, setDialogFacturacion] = useState<'Unitario' | 'Fijo'>('Unitario')
+    const [dialogMode, setDialogMode] = useState<'nuevo' | 'existente' | 'editar'>('nuevo')
     const [selectedExistingAgrupadorId, setSelectedExistingAgrupadorId] = useState<string>('')
     const [showPreFinalizacion, setShowPreFinalizacion] = useState(false)
 
@@ -53,6 +55,28 @@ export function useCodigoAgrupador({
         { id: 'COD-002', nombre: 'Suelo Base', tipo: 'Control', descripcion: 'Control de compactación base estabilizada' },
         { id: 'COD-003', nombre: 'Asfalto CA-24', tipo: 'Muestra', descripcion: 'Muestras de carpeta asfáltica' },
     ])
+
+    const buildEnsayosFromRcmIds = (rcmIds: number[]) => {
+        const ensayos: Array<{ productoId: number; sku: string; nombre: string; cantidad?: number }> = []
+        const seenProductoIds = new Set<number>()
+
+        rcmIds.forEach(rcmId => {
+            const fullRcm = savedRcms.find(r => r.id === rcmId)
+            fullRcm?.ensayos.forEach(e => {
+                if (seenProductoIds.has(e.productoId)) return
+                seenProductoIds.add(e.productoId)
+                ensayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre, cantidad: e.cantidad ?? 1 })
+            })
+        })
+
+        return ensayos
+    }
+
+    useEffect(() => {
+        if (dialogMode === 'editar' && dialogFacturacion === 'Fijo' && dialogSkus.length === 0) {
+            setDialogFacturacion('Unitario')
+        }
+    }, [dialogFacturacion, dialogMode, dialogSkus.length])
 
     const handleToggleRcmSelection = (rcmId: number) => {
         setSelectedRcmIds(prev =>
@@ -67,13 +91,44 @@ export function useCodigoAgrupador({
         setShowNewCodigoForm(false)
         setSelectedCodigo('')
         setDialogSkuSearch('')
+        setDialogSkus([])
         setDialogDescripcionServicio('')
         setDialogCantidad(1)
+        setDialogFacturacion('Unitario')
         setDialogMode('nuevo')
+        setEditingCodigoAgrupadorId(null)
         setSelectedExistingAgrupadorId(codigosAgrupadores.length > 0 ? codigosAgrupadores[0].id : '')
     }
 
+    const handleOpenEditAgrupador = (agrupadorId: string) => {
+        const agrupador = codigosAgrupadores.find(ag => ag.id === agrupadorId)
+        if (!agrupador) return
+
+        setOpenCodigoDialog(true)
+        setShowNewCodigoForm(false)
+        setSelectedCodigo('')
+        setEditingCodigoAgrupadorId(agrupadorId)
+        setDialogMode('editar')
+        setSelectedExistingAgrupadorId('')
+        setSelectedRcmIds(agrupador.rcmsVinculados.map(rcm => rcm.id))
+        setDialogSkuSearch('')
+        const facturacion = agrupador.facturacion === 'Fijo' ? 'Fijo' : 'Unitario'
+        setDialogSkus(facturacion === 'Fijo'
+            ? agrupador.ensayos.map(ensayo => ({
+                sku: ensayo.sku,
+                nombre: ensayo.nombre,
+                productoId: ensayo.productoId,
+                cantidad: ensayo.cantidad ?? 1
+            }))
+            : []
+        )
+        setDialogDescripcionServicio(agrupador.descripcionServicio ?? '')
+        setDialogCantidad(agrupador.cantidad || 1)
+        setDialogFacturacion(facturacion)
+    }
+
     const handleCloseCodigoPopup = () => {
+        const wasEditing = dialogMode === 'editar'
         setOpenCodigoDialog(false)
         setShowNewCodigoForm(false)
         setSelectedCodigo('')
@@ -83,7 +138,12 @@ export function useCodigoAgrupador({
         setDialogSkuSearch('')
         setDialogSkus([])
         setDialogDescripcionServicio('')
+        setDialogCantidad(1)
+        setDialogFacturacion('Unitario')
+        setDialogMode('nuevo')
+        setEditingCodigoAgrupadorId(null)
         setSelectedExistingAgrupadorId('')
+        if (wasEditing) setSelectedRcmIds([])
     }
 
     const handleSelectCodigo = (codigoId: string) => {
@@ -305,6 +365,7 @@ export function useCodigoAgrupador({
         const sku = producto.sku || producto.nombre
         const idProducto = (producto as any).productoId || producto.id
         setDialogSkus(prev => prev.some(s => s.sku === sku) ? prev : [...prev, { sku, nombre: producto.nombre, productoId: idProducto, cantidad: 1 }])
+        if (dialogMode === 'editar') setDialogFacturacion('Fijo')
         setDialogSkuSearch('')
         handleCloseSkuSearch()
     }
@@ -315,6 +376,49 @@ export function useCodigoAgrupador({
                 ? { ...a, ensayos: a.ensayos.filter(e => e.productoId !== productoId) }
                 : a
         ))
+    }
+
+    const handleRemoveRcmFromEditingAgrupador = (rcmId: number) => {
+        setSelectedRcmIds(prev => prev.filter(id => id !== rcmId))
+    }
+
+    const handleSaveEditedAgrupador = () => {
+        if (!editingCodigoAgrupadorId || selectedRcmIds.length === 0) return
+
+        const nextRcms = selectedRcmIds.map(id => {
+            const fullRcm = savedRcms.find(r => r.id === id)
+            return {
+                id,
+                numeroTarjeta: fullRcm?.numeroTarjeta || fullRcm?.numeroRcm || `T-${id}`,
+                rcmType: fullRcm?.rcmType || 'Muestra',
+                numeroRcm: fullRcm?.numeroRcm,
+                temporaryCode: fullRcm?.temporaryCode
+            }
+        })
+
+        const nextFacturacion = dialogFacturacion === 'Fijo' && dialogSkus.length > 0 ? 'Fijo' : 'Unitario'
+        const nextEnsayos = nextFacturacion === 'Fijo'
+            ? dialogSkus.map(skuItem => ({
+                productoId: skuItem.productoId,
+                sku: skuItem.sku,
+                nombre: skuItem.nombre,
+                cantidad: skuItem.cantidad
+            }))
+            : buildEnsayosFromRcmIds(selectedRcmIds)
+
+        setCodigosAgrupadores(prev => prev.map(ag =>
+            ag.id === editingCodigoAgrupadorId
+                ? {
+                    ...ag,
+                    rcmsVinculados: nextRcms,
+                    ensayos: nextEnsayos,
+                    descripcionServicio: dialogDescripcionServicio,
+                    cantidad: dialogCantidad,
+                    facturacion: nextFacturacion
+                }
+                : ag
+        ))
+        handleCloseCodigoPopup()
     }
 
     /** Agrupar un RCM directamente en un código nuevo sin pasar por la modal (relación 1:1) */
@@ -451,6 +555,7 @@ export function useCodigoAgrupador({
         agrupadorSearchAnchor,
         skuSearchAnchor,
         editingAgrupadorId,
+        editingCodigoAgrupadorId,
         agrupadorSearchTerm, setAgrupadorSearchTerm,
         isCreatingCodigo,
         // Dialog state
@@ -464,6 +569,7 @@ export function useCodigoAgrupador({
         dialogSkus, setDialogSkus,
         dialogDescripcionServicio, setDialogDescripcionServicio,
         dialogCantidad, setDialogCantidad,
+        dialogFacturacion, setDialogFacturacion,
         dialogMode, setDialogMode,
         selectedExistingAgrupadorId, setSelectedExistingAgrupadorId,
         showPreFinalizacion, setShowPreFinalizacion,
@@ -472,6 +578,7 @@ export function useCodigoAgrupador({
         handleToggleRcmSelection,
         handleOpenCodigoPopup,
         handleCloseCodigoPopup,
+        handleOpenEditAgrupador,
         handleSelectCodigo,
         handleConfirmCodigo,
         handleAddToExistingAgrupador,
@@ -486,6 +593,8 @@ export function useCodigoAgrupador({
         handleCloseSkuSearch,
         handleSelectProductForSku,
         handleRemoveEnsayoFromAgrupador,
+        handleRemoveRcmFromEditingAgrupador,
+        handleSaveEditedAgrupador,
         handleCrearNuevoCodigo,
         handleCodigoUnoAUno,
         handleUpdateAgrupadorForRcm,

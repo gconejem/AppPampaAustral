@@ -383,6 +383,7 @@ const Step2CreateRcms = ({
                 onChangeDescripcion={codigoReal.handleChangeAgrupadorDescripcion}
                 onChangeCantidad={codigoReal.handleChangeAgrupadorCantidad}
                 onChangeFacturacion={codigoReal.handleChangeAgrupadorFacturacion}
+                onEditAgrupador={codigoReal.handleOpenEditAgrupador}
                 onDeleteAgrupador={codigoReal.handleDeleteAgrupador}
             />
 
@@ -495,6 +496,8 @@ const Step2CreateRcms = ({
                 setDialogDescripcionServicio={codigoReal.setDialogDescripcionServicio}
                 dialogCantidad={codigoReal.dialogCantidad}
                 setDialogCantidad={codigoReal.setDialogCantidad}
+                dialogFacturacion={codigoReal.dialogFacturacion}
+                setDialogFacturacion={codigoReal.setDialogFacturacion}
                 onOpenSkuSearch={(e) => codigoReal.handleOpenSkuSearch(e, productSearch.setSelectedAreaId)}
                 onConfirmCodigo={() => codigoReal.handleConfirmCodigo(
                     form.rcmType,
@@ -503,6 +506,8 @@ const Step2CreateRcms = ({
                     form.setErrorVencimiento,
                 )}
                 onAddToExisting={codigoReal.handleAddToExistingAgrupador}
+                onRemoveRcmFromEditing={codigoReal.handleRemoveRcmFromEditingAgrupador}
+                onSaveEditedCodigo={codigoReal.handleSaveEditedAgrupador}
                 isCreatingCodigo={codigoReal.isCreatingCodigo}
             />
         </>

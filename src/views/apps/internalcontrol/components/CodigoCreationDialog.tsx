@@ -26,8 +26,8 @@ interface CodigoCreationDialogProps {
     selectedRcmIds: number[]
     savedRcms: RCMData[]
     // Dialog mode
-    dialogMode: 'nuevo' | 'existente'
-    setDialogMode: (mode: 'nuevo' | 'existente') => void
+    dialogMode: 'nuevo' | 'existente' | 'editar'
+    setDialogMode: (mode: 'nuevo' | 'existente' | 'editar') => void
     // Existing agrupadores
     codigosAgrupadores: CodigoAgrupador[]
     selectedExistingAgrupadorId: string
@@ -42,11 +42,15 @@ interface CodigoCreationDialogProps {
     setDialogDescripcionServicio: (val: string) => void
     dialogCantidad: number
     setDialogCantidad: (val: number) => void
+    dialogFacturacion: 'Unitario' | 'Fijo'
+    setDialogFacturacion: (val: 'Unitario' | 'Fijo') => void
     // SKU search
     onOpenSkuSearch: (event: React.MouseEvent<HTMLElement>) => void
     // Actions
     onConfirmCodigo: () => void
     onAddToExisting: () => void
+    onRemoveRcmFromEditing: (rcmId: number) => void
+    onSaveEditedCodigo: () => void
     isCreatingCodigo: boolean
 }
 
@@ -60,9 +64,12 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
     dialogSkus, setDialogSkus,
     dialogDescripcionServicio, setDialogDescripcionServicio,
     dialogCantidad, setDialogCantidad,
+    dialogFacturacion, setDialogFacturacion,
     onOpenSkuSearch,
-    onConfirmCodigo, onAddToExisting, isCreatingCodigo,
+    onConfirmCodigo, onAddToExisting, onRemoveRcmFromEditing, onSaveEditedCodigo, isCreatingCodigo,
 }) => {
+    const isEditMode = dialogMode === 'editar'
+
     return (
         <Dialog
             open={open}
@@ -72,7 +79,7 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
             PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden', maxWidth: '690px' } }}
         >
             <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem', pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                Agrupar en Código Producto
+                {isEditMode ? 'Editar Código Producto' : 'Agrupar en Código Producto'}
                 <IconButton size='small' onClick={onClose} sx={{ color: 'text.secondary' }}>
                     <CloseIcon fontSize='small' />
                 </IconButton>
@@ -82,13 +89,17 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
 
                     {/* Sección RCMs a agrupar */}
-                    {selectedRcmIds.length > 0 && (
+                    {(selectedRcmIds.length > 0 || isEditMode) && (
                         <Box sx={{ bgcolor: '#EFF6FF', border: '1px solid', borderColor: '#DBEAFE', borderRadius: '8px', p: 2 }}>
                             <Typography variant='caption' sx={{ fontWeight: 700, color: 'primary.main', display: 'block', mb: 1 }}>
-                                RCMs a agrupar en este código
+                                {isEditMode ? 'RCMs vinculados a este código' : 'RCMs a agrupar en este código'}
                             </Typography>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                {selectedRcmIds.map((id, idx) => {
+                                {selectedRcmIds.length === 0 ? (
+                                    <Typography variant='body2' color='error' sx={{ fontWeight: 600 }}>
+                                        Debe quedar al menos un RCM vinculado para guardar.
+                                    </Typography>
+                                ) : selectedRcmIds.map((id, idx) => {
                                     const rcm = savedRcms.find(r => r.id === id)
                                     const rcmNum = rcm?.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
                                     const tipoMaterial = rcm?.tipoMaterial || '-'
@@ -113,6 +124,16 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                                 {rcm?.tipoServicio ? ` ${rcm.tipoServicio}` : ''}
                                                 {` | ${tipoMaterial} | ${item} | #${tomaMuestra}`}
                                             </Typography>
+                                            {isEditMode && (
+                                                <IconButton
+                                                    size='small'
+                                                    onClick={() => onRemoveRcmFromEditing(id)}
+                                                    disableRipple
+                                                    sx={{ width: 28, height: 28, ml: 'auto', color: '#EF4444', '&:hover': { bgcolor: 'transparent' } }}
+                                                >
+                                                    <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, lineHeight: 1, color: '#EF4444' }}>×</Typography>
+                                                </IconButton>
+                                            )}
                                         </Box>
                                     )
                                 })}
@@ -121,7 +142,7 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                     )}
 
                     {/* Selector de modo */}
-                    <Box sx={{ display: 'flex', bgcolor: '#F3F4F6', borderRadius: '8px', p: 0.5, gap: 0.5 }}>
+                    {!isEditMode && <Box sx={{ display: 'flex', bgcolor: '#F3F4F6', borderRadius: '8px', p: 0.5, gap: 0.5 }}>
                         <Button
                             fullWidth size='small'
                             variant={dialogMode === 'nuevo' ? 'contained' : 'text'}
@@ -153,7 +174,7 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                         >
                             Añadir a código existente
                         </Button>
-                    </Box>
+                    </Box>}
 
                     {/* MODO: Añadir a existente - vacío */}
                     {dialogMode === 'existente' && codigosAgrupadores.length === 0 && (
@@ -218,8 +239,8 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                         </Box>
                     )}
 
-                    {/* MODO: Crear nuevo código */}
-                    {dialogMode === 'nuevo' && (
+                    {/* MODO: Crear nuevo código / editar código */}
+                    {(dialogMode === 'nuevo' || isEditMode) && (
                         <>
                             {/* Área + Descripción del Servicio */}
                             <Box sx={{ display: 'flex', gap: 2 }}>
@@ -242,8 +263,50 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                 </Box>
                             </Box>
 
+                            {isEditMode && (
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
+                                            Cantidad
+                                        </Typography>
+                                        <TextField
+                                            fullWidth
+                                            size='small'
+                                            type='number'
+                                            value={dialogCantidad}
+                                            onChange={(e) => setDialogCantidad(Math.max(1, parseInt(e.target.value) || 1))}
+                                            inputProps={{ min: 1 }}
+                                        />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant='caption' sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.75 }}>
+                                            Facturación
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', bgcolor: '#F3F4F6', borderRadius: '8px', p: 0.5, gap: 0.5 }}>
+                                            {(['Unitario', 'Fijo'] as const).map(option => (
+                                                <Button
+                                                    key={option}
+                                                    fullWidth
+                                                    size='small'
+                                                    variant={dialogFacturacion === option ? 'contained' : 'text'}
+                                                    onClick={() => setDialogFacturacion(option)}
+                                                    sx={{
+                                                        textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.82rem',
+                                                        ...(dialogFacturacion === option
+                                                            ? { bgcolor: 'white', color: 'primary.main', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', '&:hover': { bgcolor: 'white' } }
+                                                            : { color: 'text.secondary', '&:hover': { bgcolor: 'transparent', color: 'text.primary' } })
+                                                    }}
+                                                >
+                                                    {option}
+                                                </Button>
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            )}
+
                             {/* Lista de SKUs agregados - Tabla */}
-                            {dialogSkus.length > 0 && (
+                            {(!isEditMode || dialogFacturacion === 'Fijo') && dialogSkus.length > 0 && (
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                                     {/* Encabezado */}
                                     <Box sx={{ display: 'flex', gap: 1, px: 1, pb: 0.5, borderBottom: '1px solid', borderColor: 'divider' }}>
@@ -287,7 +350,11 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                             />
                                             <IconButton
                                                 size='small'
-                                                onClick={() => setDialogSkus(prev => prev.filter((_, i) => i !== idx))}
+                                                onClick={() => {
+                                                    const nextSkus = dialogSkus.filter((_, i) => i !== idx)
+                                                    setDialogSkus(nextSkus)
+                                                    if (isEditMode && nextSkus.length === 0) setDialogFacturacion('Unitario')
+                                                }}
                                                 disableRipple
                                                 sx={{ width: 32, height: 32, color: '#EF4444', p: 0.25, '&:hover': { bgcolor: 'transparent' } }}
                                             >
@@ -324,7 +391,7 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                             </Box>
 
                             {/* Mensaje informativo según modo */}
-                            {dialogSkus.length > 0 ? (
+                            {(isEditMode ? dialogFacturacion === 'Fijo' : dialogSkus.length > 0) ? (
                                 <Box sx={{ bgcolor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', p: 1.5 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                                         <Chip
@@ -369,11 +436,11 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                 <Button
                     variant='contained'
                     startIcon={<CheckCircleIcon />}
-                    disabled={(dialogMode === 'existente' && !selectedExistingAgrupadorId) || isCreatingCodigo}
-                    onClick={dialogMode === 'existente' ? onAddToExisting : onConfirmCodigo}
+                    disabled={(dialogMode === 'existente' && !selectedExistingAgrupadorId) || (isEditMode && selectedRcmIds.length === 0) || isCreatingCodigo}
+                    onClick={dialogMode === 'existente' ? onAddToExisting : isEditMode ? onSaveEditedCodigo : onConfirmCodigo}
                     sx={{ textTransform: 'none', borderRadius: '8px', fontWeight: 700, px: 3, bgcolor: 'primary.main', '&:hover': { bgcolor: 'primary.dark' } }}
                 >
-                    {dialogMode === 'existente' ? '✓ Agregar al código' : isCreatingCodigo ? 'Generando código...' : '✓ Crear Código Producto'}
+                    {dialogMode === 'existente' ? '✓ Agregar al código' : isEditMode ? 'Guardar cambios' : isCreatingCodigo ? 'Generando código...' : '✓ Crear Código Producto'}
                 </Button>
             </DialogActions>
         </Dialog>
