@@ -507,7 +507,10 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
             {/* Dialog: Codificación Finalizada (éxito) */}
             <Dialog
                 open={showFinalizadoSuccess}
-                onClose={() => setShowFinalizadoSuccess(false)}
+                onClose={(_e, reason) => {
+                    if (reason === 'backdropClick') return
+                    setShowFinalizadoSuccess(false)
+                }}
                 maxWidth='xs'
                 fullWidth
                 PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden' } }}
