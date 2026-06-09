@@ -373,6 +373,9 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                                 tarjeta: rv.numeroTarjeta,
                                                 area: rcm?.area || '',
                                                 tipoServicio: rcm?.tipoServicio || '',
+                                                tipoMaterial: rcm?.tipoMaterial || '',
+                                                item: rcm?.item || '',
+                                                tomaMuestra: rcm?.tomaMuestra || '',
                                             }
                                         })
                                         const skuItems = ag.ensayos || []
@@ -435,6 +438,14 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                                     {rcmCodes.map((rcmInfo, rIdx) => {
                                                         const typeLabel = rcmInfo.type === 'Muestra' ? 'MUE' : rcmInfo.type === 'Control' ? 'CTR' : 'SRV'
                                                         const typeColor = rcmInfo.type === 'Muestra' ? '#16A34A' : rcmInfo.type === 'Control' ? '#FF0096' : '#3b3b3b'
+                                                        const detailParts = [
+                                                            rcmInfo.type === 'Muestra' && rcmInfo.tarjeta ? `T:${rcmInfo.tarjeta}` : '',
+                                                            rcmInfo.area,
+                                                            rcmInfo.tipoServicio,
+                                                            rcmInfo.tipoMaterial,
+                                                            rcmInfo.item,
+                                                            rcmInfo.tomaMuestra ? `#${rcmInfo.tomaMuestra}` : '',
+                                                        ].filter(Boolean)
                                                         return (
                                                             <Box key={rIdx}>
                                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
@@ -448,7 +459,7 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                                                     </Typography>
                                                                 </Box>
                                                                 <Typography variant='caption' sx={{ color: '#9CA3AF', fontSize: '0.68rem', display: 'block', pl: 0.5, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                                                                    {rcmInfo.type === 'Muestra' && rcmInfo.tarjeta ? `T:${rcmInfo.tarjeta}` : ''}{rcmInfo.type === 'Muestra' && rcmInfo.tarjeta && rcmInfo.area ? ` · ` : ''}{rcmInfo.area ? rcmInfo.area : ''}{rcmInfo.tipoServicio ? ` · ${rcmInfo.tipoServicio}` : ''}
+                                                                    {detailParts.join(' \u00B7 ')}
                                                                 </Typography>
                                                             </Box>
                                                         )
