@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
+import { normalizeOrdenTrabajoTarjetas } from '@/lib/orden-trabajo-tarjetas'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -88,6 +89,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const data = await request.json()
+    const numeroTarjeta = normalizeOrdenTrabajoTarjetas(data.numeroTarjeta)
 
     // Verificar que la OT existe
     const existingOT = await prisma.ordenTrabajo.findUnique({
@@ -100,7 +102,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     const ordenTrabajo = await prisma.ordenTrabajo.update({
       where: { id: params.id },
-      data,
+      data: {
+        ...data,
+        numeroTarjeta
+      },
       include: {
         aceptacionVisita: true,
         densidad: true,
@@ -166,6 +171,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const data = await request.json()
+    const numeroTarjeta = normalizeOrdenTrabajoTarjetas(data.numeroTarjeta)
 
     // Verificar que la OT existe
     const existingOT = await prisma.ordenTrabajo.findUnique({
@@ -181,6 +187,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       where: { id: params.id },
       data: {
         ...data,
+        numeroTarjeta,
         updatedAt: new Date()
       }
     })

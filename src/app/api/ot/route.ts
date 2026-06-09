@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import { prisma } from '@/lib/prisma'
+import { normalizeOrdenTrabajoTarjetas } from '@/lib/orden-trabajo-tarjetas'
 
 // Función para obtener el tipo de OT basado en el código de documento
 const getTipoOTFromDocCode = async (fklbdocver: string): Promise<number> => {
@@ -225,11 +226,7 @@ export async function POST(request: Request) {
     }>) {
       const tipoOTId = await getTipoOTFromDocCode(ot.FKLBDOCVER || '')
 
-      // Extraer nTarjetaArray de RESPUESTA si existe
-      let numeroTarjeta: string | undefined = undefined
-      if (ot.RESPUESTA?.nTarjetaArray && Array.isArray(ot.RESPUESTA.nTarjetaArray)) {
-        numeroTarjeta = ot.RESPUESTA.nTarjetaArray.join(',')
-      }
+      const numeroTarjeta = normalizeOrdenTrabajoTarjetas(ot.RESPUESTA?.nTarjetaArray)
 
       // Asignar correlativo global de forma atómica (solo si la OT es nueva)
       const created = await prisma.$transaction(async tx => {

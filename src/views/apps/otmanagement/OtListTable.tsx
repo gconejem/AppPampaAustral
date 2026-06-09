@@ -334,7 +334,7 @@ const OtListTable = ({
           // Campos directos de la OT
           ot.estado, // Ahora ya viene mapeado desde la API
           ot.estadoOriginal, // También buscar en el estado original (código)
-          ot.numeroTarjeta,
+          ...ot.numeroTarjeta,
           ot.numeroCorrelativo != null ? String(ot.numeroCorrelativo).padStart(6, '0') : undefined,
           ot.numeroCorrelativo != null ? String(ot.numeroCorrelativo) : undefined,
           ot.clave,
@@ -588,7 +588,7 @@ const OtListTable = ({
 
       // 🔍 Determinar qué campo usar para el correlativo
       // Probar en este orden de prioridad:
-      const correlativo = ot.numeroTarjeta ||           // 1. numeroTarjeta (más común)
+      const correlativo = ot.numeroTarjeta[0] ||        // 1. primera numeroTarjeta (más común)
         ot.correlativ ||               // 2. correlativ (sin 'o')
         (ot as any).correlativo ||     // 3. correlativo (con 'o')
         ot.clave ||                    // 4. clave
@@ -722,10 +722,8 @@ const OtListTable = ({
         id: 'numeroTarjeta',
         header: 'N° TARJETA',
         cell: info => {
-          const numeroTarjeta = info.getValue()
-          if (!numeroTarjeta) return <Typography>-</Typography>
-
-          const tarjetas = numeroTarjeta.split(',').map(t => t.trim())
+          const tarjetas = info.getValue()
+          if (tarjetas.length === 0) return <Typography>-</Typography>
 
           if (tarjetas.length <= 2) {
             return (
@@ -740,8 +738,6 @@ const OtListTable = ({
           }
 
           // Si hay más de 2 tarjetas, mostrar las primeras 2 y "...ver más"
-          const todasLasTarjetas = tarjetas.join('\n')
-
           return (
             <Box>
               <Typography variant='body2'>{tarjetas[0]}</Typography>

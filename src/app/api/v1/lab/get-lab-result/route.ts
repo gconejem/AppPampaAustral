@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { ordenTrabajoTarjetasToLegacyString } from '@/lib/orden-trabajo-tarjetas'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -126,7 +127,7 @@ export async function GET(request: Request) {
     ordenesConDensidad.forEach((orden, idx) => {
       process.stdout.write(`\n  [${idx + 1}] Orden ID: ${orden.id}\n`)
       process.stdout.write(`      - clave: ${orden.clave}\n`)
-      process.stdout.write(`      - numeroTarjeta: ${orden.numeroTarjeta || 'N/A'}\n`)
+      process.stdout.write(`      - numeroTarjeta: ${ordenTrabajoTarjetasToLegacyString(orden.numeroTarjeta) || 'N/A'}\n`)
       process.stdout.write(`      - densidad ID: ${orden.densidad?.id || 'N/A'}\n`)
       process.stdout.write(`      - obra: ${orden.agenda?.obra?.numeroObra || 'N/A'}\n`)
     })
@@ -155,8 +156,10 @@ export async function GET(request: Request) {
         }
       }
 
+      const numeroTarjeta = ordenTrabajoTarjetasToLegacyString(orden.numeroTarjeta)
+
       return {
-        CODIGO: orden.clave || orden.numeroTarjeta || `OT-${orden.id}`,
+        CODIGO: orden.clave || numeroTarjeta || `OT-${orden.id}`,
         FECHA: orden.createdAt,
         FECHATXT: '', // Se formatea en el frontend con moment
         ITEMM: densidad?.item || '',

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
+import { normalizeOrdenTrabajoTarjetas } from '@/lib/orden-trabajo-tarjetas'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -244,10 +245,7 @@ export async function POST(request: Request) {
         }) => {
           const tipoOTId = await getTipoOTFromDocCode(ot.FKLBDOCVER || '')
 
-          let numeroTarjeta: string | undefined = undefined
-          if (ot.RESPUESTA?.nTarjetaArray && Array.isArray(ot.RESPUESTA.nTarjetaArray)) {
-            numeroTarjeta = ot.RESPUESTA.nTarjetaArray.join(',')
-          }
+          const numeroTarjeta = normalizeOrdenTrabajoTarjetas(ot.RESPUESTA?.nTarjetaArray)
 
           const agendaId = Number.parseInt(String(ot.FKLBRUTAS ?? ''), 10)
           const agendaConnect = Number.isFinite(agendaId) && agendaId > 0

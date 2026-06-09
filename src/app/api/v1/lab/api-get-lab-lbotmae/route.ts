@@ -56,7 +56,7 @@ export async function GET(request: Request) {
           },
           {
             numeroTarjeta: {
-              in: codigos
+              hasSome: codigos
             }
           }
         ]

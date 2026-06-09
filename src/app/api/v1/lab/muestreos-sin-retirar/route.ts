@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { ordenTrabajoTarjetasToLegacyString } from '@/lib/orden-trabajo-tarjetas'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -76,7 +77,7 @@ export async function GET(request: Request) {
       process.stdout.write('\n📦 MUESTREOS SIN RETIRAR:\n')
       muestreosSinRetirar.forEach((m, idx) => {
         const tipo = m.hormigonFresco ? 'Hormigón Fresco' : 'Testigos'
-        const tarjeta = m.numeroTarjeta || 'Sin tarjeta'
+        const tarjeta = ordenTrabajoTarjetasToLegacyString(m.numeroTarjeta) || 'Sin tarjeta'
         process.stdout.write(`  [${idx + 1}] OT: ${m.clave} | Tipo: ${tipo} | Tarjeta: ${tarjeta} | Fecha: ${m.createdAt.toISOString().split('T')[0]}\n`)
       })
     }
@@ -92,10 +93,12 @@ export async function GET(request: Request) {
         ? `${testigo.grado || ''} - ${testigo.elemento || ''}`.trim()
         : ''
 
+      const numeroTarjeta = ordenTrabajoTarjetasToLegacyString(orden.numeroTarjeta)
+
       return {
         OTNUMERO: orden.clave,
         FECHA: orden.createdAt,
-        num_tarjeta: orden.numeroTarjeta || '',
+        num_tarjeta: numeroTarjeta,
         descrip_tipo_probeta: tipo,
         descripcion: descripcion,
         tipo_hormigon: hormigon?.tipoHormigon || testigo?.grado || '',

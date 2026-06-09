@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { LAB_FORMULARIOS } from '@/lib/lab-formularios'
+import { ordenTrabajoTarjetasToLegacyString } from '@/lib/orden-trabajo-tarjetas'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -91,7 +92,7 @@ export async function GET(request: Request) {
         FKLBRUTAS: ot.fklbrutas || String(agendaId),
         CORRELATIV: ot.correlativ,
         FKLBDOCVER: ot.fklbdocver,
-        OTNUMERO: ot.numeroTarjeta ?? null,
+        OTNUMERO: ordenTrabajoTarjetasToLegacyString(ot.numeroTarjeta) || null,
         DATOS: ot.jsonOT ?? null,
         OPCIONES: formulario?.OPCIONES ?? null,
         RESPUESTA: [],

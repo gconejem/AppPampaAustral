@@ -568,7 +568,7 @@ model OrdenTrabajo {
   correlativ          String
   fklbdocver          String
   fklbrutser          String
-  numeroTarjeta       String?
+  numeroTarjeta       String[]             @default([])
   numeroCorrelativo   Int?                 @unique
   jsonOT              Json?
   createdAt           DateTime             @default(now())

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { ordenTrabajoTarjetasToLegacyString } from '@/lib/orden-trabajo-tarjetas'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -133,10 +134,12 @@ export async function GET(request: Request) {
       const testigo = orden.testigos
       const tipo = hormigon ? 'Hormigón Fresco' : testigo ? 'Testigos' : 'Muestreo'
       
+      const numeroTarjeta = ordenTrabajoTarjetasToLegacyString(orden.numeroTarjeta)
+
       return {
-        CODIGO: orden.clave || orden.numeroTarjeta || `OT-${orden.id}`,
-        OTNUMERO: orden.clave || orden.numeroTarjeta || `OT-${orden.id}`, // Para el combobox de retiro
-        num_tarjeta: orden.numeroTarjeta || '', // Para el combobox de retiro
+        CODIGO: orden.clave || numeroTarjeta || `OT-${orden.id}`,
+        OTNUMERO: orden.clave || numeroTarjeta || `OT-${orden.id}`, // Para el combobox de retiro
+        num_tarjeta: numeroTarjeta, // Para el combobox de retiro
         descrip_tipo_probeta: tipo, // Para el combobox de retiro
         FECHA: orden.createdAt,
         FECHATXT: '',
