@@ -552,21 +552,24 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                         </Typography>
                                         <Chip label='Agrupado' size='small' sx={{ fontWeight: 600, bgcolor: '#C8E6C9', color: '#2E7D32', border: '1px solid #81C784' }} />
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                                            {rcm.area && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.area}</Typography></>}
-                                            {rcm.tipoServicio && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.tipoServicio}</Typography></>}
-                                            {rcm.numeroTarjeta && (
-                                                <><Typography variant='body2' color='text.secondary'>|</Typography>
-                                                    <Chip label={`T:${rcm.numeroTarjeta}`} size='small' sx={{ bgcolor: '#1976d2', color: '#ffffff', fontWeight: 600, fontSize: '0.75rem' }} /></>
+                                            {rcm.rcmType === 'Muestra' ? renderRcmHeaderFields(rcm) : (
+                                                <>
+                                                    {rcm.area && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.area}</Typography></>}
+                                                    {rcm.tipoServicio && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.tipoServicio}</Typography></>}
+                                                    {rcm.numeroTarjeta && (
+                                                        <><Typography variant='body2' color='text.secondary'>|</Typography>
+                                                            <Chip label={`T:${rcm.numeroTarjeta}`} size='small' sx={{ bgcolor: '#1976d2', color: '#ffffff', fontWeight: 600, fontSize: '0.75rem' }} /></>
+                                                    )}
+                                                    {rcm.ensayos.length > 0 && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography></>}
+                                                    {rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 && (
+                                                        <><Typography variant='body2' color='text.secondary'>|</Typography>{renderVencimientoPill(rcm)}</>
+                                                    )}
+                                                    {rcm.rcmType === 'Control' && rcm.sede && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.sede}</Typography></>}
+                                                    {rcm.rcmType === 'Control' && rcm.item && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.item}</Typography></>}
+                                                    {rcm.rcmType === 'Servicio' && rcm.sede && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.sede}</Typography></>}
+                                                    {(rcm.rcmType === 'Control' || rcm.rcmType === 'Servicio') && cantidadRcm && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>×{cantidadRcm}</Typography></>}
+                                                </>
                                             )}
-                                            {rcm.ensayos.length > 0 && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography></>}
-                                            {rcm.tieneVencimiento && rcm.submuestrasVencimiento && rcm.submuestrasVencimiento.length > 0 && (
-                                                <><Typography variant='body2' color='text.secondary'>|</Typography>{renderVencimientoPill(rcm)}</>
-                                            )}
-                                            {rcm.rcmType === 'Muestra' && rcm.cantidadMuestras && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.cantidadMuestras}</Typography></>}
-                                            {rcm.rcmType === 'Control' && rcm.sede && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.sede}</Typography></>}
-                                            {rcm.rcmType === 'Control' && rcm.item && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.item}</Typography></>}
-                                            {rcm.rcmType === 'Servicio' && rcm.sede && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.sede}</Typography></>}
-                                            {(rcm.rcmType === 'Control' || rcm.rcmType === 'Servicio') && cantidadRcm && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>×{cantidadRcm}</Typography></>}
                                         </Box>
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
