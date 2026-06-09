@@ -30,9 +30,10 @@ async function main() {
       'Rilem',
       'Testigos Hormigón',
       'Vigas Prismáticas',
-      'Bandeja Schotcrette'
+      'Bandeja Schotcrette',
+      'Árido'
     ],
-    Asfalto: ['Mezclas en caliente', 'Mezclas en frío', 'Testigos Asfalto'],
+    Asfalto: ['Mezclas en caliente', 'Mezclas en frío', 'Testigos Asfalto', 'Árido'],
     'Elementos y Componentes': [
       'Solera',
       'Solera Zarpa',
