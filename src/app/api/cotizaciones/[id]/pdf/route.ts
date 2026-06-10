@@ -500,7 +500,7 @@ Condiciones para terreno y accesos
                     <ol type="a">
                       <li>El trabajo inicia con la <strong>recepción de la OC y el Formulario de ingreso de obra (RPG-05-03)</strong>, confirmando la aceptación de esta cotización.</li>
                       <li>Los volúmenes indicados son referenciales. Se factura en base a servicios realmente ejecutados y conforme a los informes de ensayo emitidos.</li>
-                      <li>El <strongZcliente es responsable de verificar la exactitud de la información en OC y documentos enviados para facturación.</strong> Pampa Austral Ltda. no asume responsabilidad por errores en estos documentos, evitando así retrasos en la facturación, pago y entrega de informes.</li>
+                      <li>El <strong>cliente es responsable de verificar la exactitud de la información en OC y documentos enviados para facturación.</strong> Pampa Austral Ltda. no asume responsabilidad por errores en estos documentos, evitando así retrasos en la facturación, pago y entrega de informes.</li>
                       <li>No se emitirán facturas a razones sociales de terceros.</li>
                       <li>Si la facturación requiere la aprobación de la <strong>Minuta de Trabajo</strong>, el <strong><u>plazo máximo para ello será de 5 días</u></strong>. Transcurrido ese plazo sin observaciones, se considera aprobada.</li>
                       <li>Laboratorio Pampa Austral Ltda. no acepta Órdenes de Compra que contemplen retenciones sobre los montos facturados. En caso de que la OC recibida incluya cláusulas de retención, el Laboratorio se reserva el derecho de rechazarla y solicitar su reemisión como condición previa al inicio del servicio.</li>
@@ -509,7 +509,7 @@ Condiciones para terreno y accesos
                     <ol type="a">
                       <li>Los <strong>servicios deben programarse con al menos 24 horas de anticipación</strong> al correo <strong>recepcion@pampaustral.cl</strong>, directamente con el Laboratorio y no con personal técnico en terreno.</li>
                       <li><strong><u>El envío de solicitud no garantiza la visita.</u></strong> Esta debe ser confirmada por el Laboratorio.</li>
-                      <li>Las solicitudes fuera del horario hábil (lunes a viernes, 08:00 - 18:00) se procesarán el <strong><u>siguiente día hábil</u></strong>.</li>
+                      <li>Las solicitudes fuera del horario hábil (lunes a jueves 8:00 - 18:00 / viernes 8:00 a 14:00) se procesarán el <strong><u>siguiente día hábil</u></strong>.</li>
                       <li>Suspensiones sin aviso previo de 24 h generarán cargos por viáticos y movilización.</li>
                       <li>El laboratorio puede <strong>reprogramar servicios</strong> por condiciones climáticas adversas, según disponibilidad de ambas partes.</li>
                       <li>Informar <strong><u>previo</u></strong> a la programación del servicio si se <strong>requiere acreditación del personal.</strong></li>

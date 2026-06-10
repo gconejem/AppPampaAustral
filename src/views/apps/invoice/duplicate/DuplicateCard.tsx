@@ -1215,7 +1215,7 @@ Consideraciones adicionales y requisitos especiales
   • Anexo de Informe, tendrá un costo de 0,42 UF neto, salvo que las modificaciones sean de responsabilidad de Laboratorio Pampa Austral Ltda.
   • Informe con firma y timbres físicos tiene un costo de 0,58 UF neto
   • Recargos por jornadas extraordinarias (a todos los ítem de la cotización).
-    50% Adicional Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.
+    50% Adicional Lunes a jueves desde 18:00 a 21:00 horas, viernes 14:00 a 21:00 horas.
     100% Adicional Sábado, Domingo o Festivo.
 * Cualquier requisito adicional, como certificaciones, acreditaciones de personal, normativas, reglamentos o exigencias de seguridad y medioambiente, debe informarse previamente para su evaluación y nueva cotización si corresponde.`
     }
@@ -1227,7 +1227,7 @@ Consideraciones adicionales y requisitos especiales
   • Costo adicional del Laboratorista por hora: 1,7 UF - (Se considera una permanencia máxima de 1 hora en obra)
   • Jornada completa de Laboratorista (8 horas): 8,4 UF
   • Recargos por jornadas extraordinarias (aplicables a todos los ítems cotizados):
-    - 50% Adicional: Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.
+    - 50% Adicional: Lunes a jueves desde 18:00 a 21:00 horas, viernes 14:00 a 21:00 horas.
     - 100% Adicional: Sábado, Domingo o Festivo.
   
   (3) Adicionales relacionados a los Informes de Laboratorio:

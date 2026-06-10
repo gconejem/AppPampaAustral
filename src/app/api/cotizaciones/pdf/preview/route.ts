@@ -75,7 +75,7 @@ function renderCotizacionHTML(cotizacion: any, logoBase64: string, firmaBase64: 
             <li>Jornada completa de Laboratorista (8 horas): 8,4 UF.</li>
             <li>Recargos por jornadas extraordinarias (aplicables a todos los ítems cotizados).
               <ul style="margin-top: 2px; margin-bottom: 2px;">
-                <li>50% Adicional: Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.</li>
+                <li>50% Adicional: Lunes a jueves desde 18:00 a 21:00 horas, viernes 14:00 a 21:00 horas.</li>
                 <li>100% Adicional: Sábado, Domingo o Festivo.</li>
               </ul>
             </li>
@@ -129,7 +129,7 @@ Condiciones para terreno y accesos
             <li>Informe con firma y timbres físicos tiene un costo de <strong>0,58 UF neto</strong></li>
             <li><strong>Recargos por jornadas extraordinarias</strong> (a todos los ítem de la cotización):
               <ul style="margin-top: 2px; margin-bottom: 2px;">
-                <li><strong>50% Adicional</strong> Lunes a jueves desde 18:00 a 21:00 horas, viernes 17:00 a 21:00 horas.</li>
+                <li><strong>50% Adicional</strong> Lunes a jueves desde 18:00 a 21:00 horas, viernes 14:00 a 21:00 horas.</li>
                 <li><strong>100% Adicional</strong> Sábado, Domingo o Festivo.</li>
               </ul>
             </li>
@@ -532,7 +532,7 @@ Condiciones para terreno y accesos
                   <ol type="a">
                     <li>Los <strong>servicios deben programarse con al menos 24 horas de anticipación</strong> al correo <strong>recepcion@pampaustral.cl</strong>, directamente con el Laboratorio y no con personal técnico en terreno.</li>
                     <li><strong><u>El envío de solicitud no garantiza la visita.</u></strong> Esta debe ser confirmada por el Laboratorio.</li>
-                    <li>Las solicitudes fuera del horario hábil (lunes a viernes, 08:00 - 18:00) se procesarán el <strong><u>siguiente día hábil</u></strong>.</li>
+                    <li>Las solicitudes fuera del horario hábil (lunes a jueves 8:00 - 18:00 / viernes 8:00 a 14:00) se procesarán el <strong><u>siguiente día hábil</u></strong>.</li>
                     <li>Suspensiones sin aviso previo de 24 h generarán cargos por viáticos y movilización.</li>
                     <li>El laboratorio puede <strong>reprogramar servicios</strong> por condiciones climáticas adversas, según disponibilidad de ambas partes.</li>
                     <li>Informar <strong><u>previo</u></strong> a la programación del servicio si se <strong>requiere acreditación del personal.</strong></li>
