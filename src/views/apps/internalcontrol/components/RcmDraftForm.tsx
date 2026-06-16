@@ -18,7 +18,6 @@ import {
     Alert,
     Tooltip,
 } from '@mui/material'
-import type { TextFieldProps } from '@mui/material/TextField'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
@@ -33,7 +32,6 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import CloseIcon from '@mui/icons-material/Close'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import InventoryIcon from '@mui/icons-material/Inventory'
-import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
 import type { EnsayoAsociado, AreaType, FamiliaType, SubmuestraVencimiento, ProductoType, ParametroAreaType } from '../types/rcm-types'
 import ProductSearchInline from './ProductSearchInline'
 
@@ -115,26 +113,6 @@ interface RcmDraftFormProps {
     onShowOnlyPaquetesChange: () => void
     onSelectProduct: (producto: ProductoType) => void
     onAreaChange: (area: number | '') => void
-}
-
-const DatePickerTextField = React.forwardRef<HTMLInputElement, TextFieldProps>((props, ref) => (
-    <TextField {...props} inputRef={ref} />
-))
-
-DatePickerTextField.displayName = 'DatePickerTextField'
-
-const parseInputDate = (value: string) => {
-    if (!value) return null
-
-    const date = new Date(`${value}T00:00:00`)
-
-    return isNaN(date.getTime()) ? null : date
-}
-
-const formatInputDate = (date: Date | null) => {
-    if (!date || isNaN(date.getTime())) return ''
-
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
@@ -304,74 +282,23 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
         </>
     )
 
-    const renderDateField = ({
-        label,
-        value,
-        onChange,
-        required = false,
-        disabled = false,
-        readOnly = false
-    }: {
-        label: string
-        value: string
-        onChange: (value: string) => void
-        required?: boolean
-        disabled?: boolean
-        readOnly?: boolean
-    }) => (
-        <AppReactDatepicker
-            selected={parseInputDate(value)}
-            onChange={(date: Date | null) => onChange(formatInputDate(date))}
-            dateFormat='dd/MM/yyyy'
-            disabled={disabled}
-            isClearable={!required && !disabled}
-            customInput={
-                <DatePickerTextField
-                    label={label}
-                    required={required}
-                    fullWidth
-                    disabled={disabled}
-                    InputLabelProps={{ shrink: true }}
-                    InputProps={{ readOnly }}
-                />
-            }
-        />
-    )
-
     const renderDatesRow = (fechaLabel: string) => (
         <Grid container spacing={3} sx={{ mt: 0 }}>
             <Grid item xs={12} md={3}>
-                {renderDateField({
-                    label: 'Fecha Codificación',
-                    value: fechaCodificacion,
-                    onChange: () => undefined,
-                    required: true,
-                    disabled: true,
-                    readOnly: true
-                })}
+                <TextField label='Fecha Codificación' type='date' value={fechaCodificacion} required fullWidth disabled
+                    InputLabelProps={{ shrink: true }} InputProps={{ readOnly: true }} />
             </Grid>
             <Grid item xs={12} md={3}>
-                {renderDateField({
-                    label: fechaLabel,
-                    value: fechaServicio,
-                    onChange: setFechaServicio,
-                    required: true
-                })}
+                <TextField label={fechaLabel} type='date' value={fechaServicio} onChange={(e) => setFechaServicio(e.target.value)}
+                    required fullWidth InputLabelProps={{ shrink: true }} />
             </Grid>
             <Grid item xs={12} md={3}>
-                {renderDateField({
-                    label: 'Fecha de Ingreso',
-                    value: fechaIngreso,
-                    onChange: setFechaIngreso,
-                    required: true
-                })}
+                <TextField label='Fecha de Ingreso' type='date' value={fechaIngreso} onChange={(e) => setFechaIngreso(e.target.value)}
+                    required fullWidth InputLabelProps={{ shrink: true }} />
             </Grid>
             <Grid item xs={12} md={3}>
-                {renderDateField({
-                    label: 'Fecha de Entrega',
-                    value: fechaEntrega,
-                    onChange: setFechaEntrega
-                })}
+                <TextField label='Fecha de Entrega' type='date' value={fechaEntrega} onChange={(e) => setFechaEntrega(e.target.value)}
+                    fullWidth InputLabelProps={{ shrink: true }} />
             </Grid>
         </Grid>
     )
@@ -603,12 +530,8 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                 </Typography>
                                 <Grid container spacing={3}>
                                     <Grid item xs={12} md={3}>
-                                        {renderDateField({
-                                            label: 'Fecha Confección',
-                                            value: fechaConfeccion,
-                                            onChange: setFechaConfeccion,
-                                            required: true
-                                        })}
+                                        <TextField label='Fecha Confección' type='date' value={fechaConfeccion}
+                                            onChange={(e) => setFechaConfeccion(e.target.value)} required fullWidth InputLabelProps={{ shrink: true }} />
                                     </Grid>
                                     <Grid item xs={12} md={3}>
                                         <TextField label='Elemento' value={elemento} onChange={(e) => setElemento(e.target.value)} required fullWidth />
@@ -642,12 +565,8 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                 </Typography>
                                 <Grid container spacing={3}>
                                     <Grid item xs={6} md={3}>
-                                        {renderDateField({
-                                            label: 'Fecha Confección',
-                                            value: fechaConfeccion,
-                                            onChange: setFechaConfeccion,
-                                            required: true
-                                        })}
+                                        <TextField label='Fecha Confección' type='date' value={fechaConfeccion}
+                                            onChange={(e) => setFechaConfeccion(e.target.value)} required fullWidth InputLabelProps={{ shrink: true }} />
                                     </Grid>
                                 </Grid>
                             </Box>
@@ -680,11 +599,8 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                 </Typography>
                                 <Grid container spacing={3}>
                                     <Grid item xs={6} md={3}>
-                                        {renderDateField({
-                                            label: 'Fecha Confección',
-                                            value: fechaConfeccion,
-                                            onChange: setFechaConfeccion
-                                        })}
+                                        <TextField label='Fecha Confección' type='date' value={fechaConfeccion}
+                                            onChange={(e) => setFechaConfeccion(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
                                     </Grid>
                                 </Grid>
                             </Box>
