@@ -293,6 +293,23 @@ const Step2CreateRcms = ({
         form.autoEnableVencimiento(productSearch.areas, productSearch.todasLasFamilias)
     }, [form.area, form.tipoServicio, productSearch.areas, productSearch.todasLasFamilias, form.rcmType, crud.isDuplicatingRcm])
 
+    const handleAreaChange = (nextArea: number | '') => {
+        const previousArea = form.area
+
+        if (previousArea === nextArea) return
+
+        form.setArea(nextArea)
+        form.resetDynamicFieldsOnAreaChange()
+
+        if (previousArea !== '') {
+            if (ensayosAsociados.length > 0) {
+                setEnsayosAsociados([])
+            }
+            ensayoHooks.clearPendientes()
+            productSearch.resetSearchFilters()
+        }
+    }
+
     const handleQuickDuplicate = (rcmId: number) => {
         crud.handleDuplicateInline(rcmId)
     }
@@ -376,6 +393,7 @@ const Step2CreateRcms = ({
                         showOnlyPaquetes={productSearch.showOnlyPaquetes}
                         onShowOnlyPaquetesChange={productSearch.handleShowOnlyPaquetesChange}
                         onSelectProduct={ensayoHooks.handleSelectProduct}
+                        onAreaChange={handleAreaChange}
                     />
 
                     {/* Saved RCM lists */}

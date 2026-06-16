@@ -112,6 +112,7 @@ interface RcmDraftFormProps {
     showOnlyPaquetes: boolean
     onShowOnlyPaquetesChange: () => void
     onSelectProduct: (producto: ProductoType) => void
+    onAreaChange: (area: number | '') => void
 }
 
 const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
@@ -121,7 +122,8 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
     onSaveRcm, onCancelEdit,
     searchTerm, onSearchChange, paginatedProductos,
     totalProductos, productsPage, onPageChange,
-    showOnlyPaquetes, onShowOnlyPaquetesChange, onSelectProduct
+    showOnlyPaquetes, onShowOnlyPaquetesChange, onSelectProduct,
+    onAreaChange
 }) => {
 
     const {
@@ -131,7 +133,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
         expandedRcm, setExpandedRcm,
         showRcmCard, rcmType,
         sede, setSede, customSede, setCustomSede,
-        area, setArea, tipoServicio, setTipoServicio,
+        area, tipoServicio, setTipoServicio,
         numeroTarjeta, setNumeroTarjeta, tomaMuestra, setTomaMuestra,
         tipoMaterial, setTipoMaterial, customTipoMaterial, setCustomTipoMaterial,
         item, setItem, customItem, setCustomItem,
@@ -146,7 +148,6 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
         submuestrasVencimiento, setSubmuestrasVencimiento,
         errorVencimiento, setErrorVencimiento,
         getTodayDateForInput,
-        resetDynamicFieldsOnAreaChange,
     } = form
 
     const {
@@ -259,7 +260,10 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                 <FormControl fullWidth required>
                     <InputLabel id={areaLabelId} shrink>Área</InputLabel>
                     <Select labelId={areaLabelId} label='Área' value={area} displayEmpty notched
-                        onChange={(e) => { setArea(e.target.value as number | ''); resetDynamicFieldsOnAreaChange() }}>
+                        onChange={(e) => {
+                            const nextArea = e.target.value === '' ? '' : Number(e.target.value)
+                            onAreaChange(nextArea)
+                        }}>
                         <MenuItem value='' disabled>Seleccionar área</MenuItem>
                         {areas.map((a) => <MenuItem key={a.id} value={a.id}>{a.nombre}</MenuItem>)}
                     </Select>
