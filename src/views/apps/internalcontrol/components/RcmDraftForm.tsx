@@ -18,10 +18,6 @@ import {
     Alert,
     Tooltip,
 } from '@mui/material'
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
-import { es } from 'date-fns/locale'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import LayersIcon from '@mui/icons-material/Layers'
@@ -875,30 +871,31 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                                                 }} sx={{ width: '100px' }} inputProps={{ min: 0 }} />
                                                         </td>
                                                         <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
-                                                                <DatePicker
-                                                                    value={submuestra.fechaVencimiento ? new Date(submuestra.fechaVencimiento + 'T00:00:00') : null}
-                                                                    minDate={fechaConfeccion ? new Date(fechaConfeccion + 'T00:00:00') : undefined}
-                                                                    onChange={(newValue) => {
-                                                                        const nuevaFecha = newValue ? `${newValue.getFullYear()}-${String(newValue.getMonth() + 1).padStart(2, '0')}-${String(newValue.getDate()).padStart(2, '0')}` : ''
-                                                                        const fechaBase = fechaConfeccion
-                                                                        if (fechaBase && nuevaFecha) {
-                                                                            const fechaBaseDate = new Date(fechaBase + 'T00:00:00')
-                                                                            const fechaVenc = new Date(nuevaFecha + 'T00:00:00')
-                                                                            const diffTime = fechaVenc.getTime() - fechaBaseDate.getTime()
-                                                                            const diffDias = Math.round(diffTime / (1000 * 60 * 60 * 24))
-                                                                            setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
-                                                                                s.id === submuestra.id ? { ...s, fechaVencimiento: nuevaFecha, dias: diffDias >= 0 ? diffDias : 0 } : s
-                                                                            ))
-                                                                        } else {
-                                                                            setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
-                                                                                s.id === submuestra.id ? { ...s, fechaVencimiento: nuevaFecha, dias: 0 } : s
-                                                                            ))
-                                                                        }
-                                                                    }}
-                                                                    slotProps={{ textField: { size: 'small', sx: { width: '170px' } } }}
-                                                                />
-                                                            </LocalizationProvider>
+                                                            <TextField
+                                                                size='small'
+                                                                type='date'
+                                                                value={submuestra.fechaVencimiento}
+                                                                onChange={(e) => {
+                                                                    const nuevaFecha = e.target.value
+                                                                    const fechaBase = fechaConfeccion
+                                                                    if (fechaBase && nuevaFecha) {
+                                                                        const fechaBaseDate = new Date(fechaBase + 'T00:00:00')
+                                                                        const fechaVenc = new Date(nuevaFecha + 'T00:00:00')
+                                                                        const diffTime = fechaVenc.getTime() - fechaBaseDate.getTime()
+                                                                        const diffDias = Math.round(diffTime / (1000 * 60 * 60 * 24))
+                                                                        setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                            s.id === submuestra.id ? { ...s, fechaVencimiento: nuevaFecha, dias: diffDias >= 0 ? diffDias : 0 } : s
+                                                                        ))
+                                                                    } else {
+                                                                        setSubmuestrasVencimiento(submuestrasVencimiento.map(s =>
+                                                                            s.id === submuestra.id ? { ...s, fechaVencimiento: nuevaFecha, dias: 0 } : s
+                                                                        ))
+                                                                    }
+                                                                }}
+                                                                sx={{ width: '170px' }}
+                                                                InputLabelProps={{ shrink: true }}
+                                                                inputProps={{ min: fechaConfeccion || undefined }}
+                                                            />
                                                         </td>
                                                         <td style={{ padding: '12px', textAlign: 'center' }}>
                                                             <TextField size='small' type='number' value={submuestra.cantidad}
