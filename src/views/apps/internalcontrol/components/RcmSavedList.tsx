@@ -556,6 +556,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                                 <>
                                                     {rcm.area && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.area}</Typography></>}
                                                     {rcm.tipoServicio && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.tipoServicio}</Typography></>}
+                                                    {rcm.fechaServicio && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{formatDateOnly(rcm.fechaServicio)}</Typography></>}
                                                     {rcm.numeroTarjeta && (
                                                         <><Typography variant='body2' color='text.secondary'>|</Typography>
                                                             <Chip label={`T:${rcm.numeroTarjeta}`} size='small' sx={{ bgcolor: '#1976d2', color: '#ffffff', fontWeight: 600, fontSize: '0.75rem' }} /></>
