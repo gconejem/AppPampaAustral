@@ -190,7 +190,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
     const presetRef = React.useRef<{ area: number | '', tipoServicio: number | '' }>({ area: '', tipoServicio: '' })
 
     React.useEffect(() => {
-        if (isEditingRcm || isDuplicatingRcm) return
+        if (isEditingRcm) return
         const areaObj = areas.find(a => a.id === area)
         const familiaObj = todasLasFamilias.find(f => f.id === tipoServicio)
         const isHormigonFresco =
@@ -208,7 +208,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
         presetRef.current = { area, tipoServicio }
 
         if (isHormigonFresco) {
-            if (areaOrTipoChanged) {
+            if (areaOrTipoChanged || (isDuplicatingRcm && submuestrasVencimiento.length === 0)) {
                 // Área/tipo cambió → crear preset completo
                 setCantidadMuestras('3')
                 setSubmuestrasVencimiento([
@@ -223,12 +223,12 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                 })
                 setSubmuestrasVencimiento(updated)
             }
-        } else if (areaOrTipoChanged) {
+        } else if (areaOrTipoChanged && (!isDuplicatingRcm || submuestrasVencimiento.length > 0)) {
             setCantidadMuestras('1')
             setSubmuestrasVencimiento([])
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [area, tipoServicio, fechaConfeccion])
+    }, [area, tipoServicio, fechaConfeccion, isDuplicatingRcm])
 
     const handleToggleExpand = () => setExpandedRcm(!expandedRcm)
 

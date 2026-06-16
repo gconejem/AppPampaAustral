@@ -290,9 +290,10 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         setCantidadMuestras(rcm.cantidadMuestras)
         setFechaServicio(rcm.fechaServicio)
 
-        // Cargar estados de vencimiento
-        setTieneVencimiento(rcm.tieneVencimiento || false)
-        setSubmuestrasVencimiento(rcm.submuestrasVencimiento || [])
+        // En duplicado, las submuestras pertenecen a la muestra original.
+        // El vencimiento/submuestras automáticos se recalculan por área y tipo de servicio.
+        setTieneVencimiento(mode === 'duplicate' ? false : rcm.tieneVencimiento || false)
+        setSubmuestrasVencimiento(mode === 'duplicate' ? [] : rcm.submuestrasVencimiento || [])
 
         // Mostrar formulario
         setShowRcmCard(true)

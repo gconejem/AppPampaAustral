@@ -289,9 +289,8 @@ const Step2CreateRcms = ({
     }, [form.rcmType])
 
     useEffect(() => {
-        if (crud.isDuplicatingRcm) return
         form.autoEnableVencimiento(productSearch.areas, productSearch.todasLasFamilias)
-    }, [form.area, form.tipoServicio, productSearch.areas, productSearch.todasLasFamilias, form.rcmType, crud.isDuplicatingRcm])
+    }, [form.area, form.tipoServicio, productSearch.areas, productSearch.todasLasFamilias, form.rcmType])
 
     const handleAreaChange = (nextArea: number | '') => {
         const previousArea = form.area
