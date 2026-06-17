@@ -455,6 +455,7 @@ export function useRcmCrud({
                     fechaServicio: rcm.fechaServicio,
                     fechaMuestreo: rcm.fechaMuestreo || rcm.fechaServicio,
                     fechaIngreso: today,
+                    fechaConfeccion: rcm.fechaConfeccion,
                     numeroTarjeta: rcm.numeroTarjeta,
                     tipoMaterial: rcm.tipoMaterial,
                     item: rcm.item,
