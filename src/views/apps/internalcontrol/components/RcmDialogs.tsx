@@ -418,7 +418,7 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                                                 sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 700, fontFamily: 'monospace', fontSize: '0.7rem', height: 22, '& .MuiChip-label': { px: 1 } }}
                                                             />
                                                             <Typography variant='caption' sx={{ color: 'text.secondary', fontSize: '0.72rem', wordBreak: 'break-word', whiteSpace: 'normal', flex: 1 }}>
-                                                                {sku.nombre} <Box component='span' sx={{ color: 'primary.main', fontWeight: 700 }}>×{ag.cantidad}</Box>
+                                                                {sku.nombre} <Box component='span' sx={{ color: 'primary.main', fontWeight: 700 }}>×{sku.cantidad ?? 1}</Box>
                                                             </Typography>
                                                         </Box>
                                                     )) : (

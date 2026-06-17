@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import type { CodigoAgrupador, RCMData, EnsayoAsociado, AreaType, FamiliaType, ProductoType } from '../types/rcm-types'
 import { generateTemporaryProductCode } from '../utils/temporaryCodes'
 
+type AgrupadorEnsayo = { productoId: number; sku: string; nombre: string; cantidad?: number }
+
 interface UseCodigoAgrupadorParams {
     savedRcms: RCMData[]
     ensayosAsociados: EnsayoAsociado[]
@@ -58,20 +60,50 @@ export function useCodigoAgrupador({
         { id: 'COD-003', nombre: 'Asfalto CA-24', tipo: 'Muestra', descripcion: 'Muestras de carpeta asfáltica' },
     ])
 
-    const buildEnsayosFromRcmIds = (rcmIds: number[]) => {
-        const ensayos: Array<{ productoId: number; sku: string; nombre: string; cantidad?: number }> = []
-        const seenProductoIds = new Set<number>()
+    const getEnsayoKey = (ensayo: AgrupadorEnsayo) =>
+        ensayo.productoId > 0
+            ? `producto:${ensayo.productoId}`
+            : `sku:${ensayo.sku.trim().toLowerCase()}`
 
-        rcmIds.forEach(rcmId => {
-            const fullRcm = savedRcms.find(r => r.id === rcmId)
-            fullRcm?.ensayos.forEach(e => {
-                if (seenProductoIds.has(e.productoId)) return
-                seenProductoIds.add(e.productoId)
-                ensayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre, cantidad: e.cantidad ?? 1 })
-            })
+    const getPositiveCantidad = (cantidad?: number) => {
+        const value = Number(cantidad ?? 1)
+        return Number.isFinite(value) && value > 0 ? value : 1
+    }
+
+    const aggregateEnsayos = (ensayos: AgrupadorEnsayo[]) => {
+        const aggregated = new Map<string, AgrupadorEnsayo>()
+
+        ensayos.forEach(ensayo => {
+            const key = getEnsayoKey(ensayo)
+            const cantidad = getPositiveCantidad(ensayo.cantidad)
+            const existing = aggregated.get(key)
+
+            if (existing) {
+                aggregated.set(key, {
+                    ...existing,
+                    cantidad: getPositiveCantidad(existing.cantidad) + cantidad
+                })
+                return
+            }
+
+            aggregated.set(key, { ...ensayo, cantidad })
         })
 
-        return ensayos
+        return Array.from(aggregated.values())
+    }
+
+    const buildEnsayosFromRcmIds = (rcmIds: number[]) => {
+        const ensayos = rcmIds.flatMap(rcmId => {
+            const fullRcm = savedRcms.find(r => r.id === rcmId)
+            return fullRcm?.ensayos.map(e => ({
+                productoId: e.productoId,
+                sku: e.sku,
+                nombre: e.nombre,
+                cantidad: e.cantidad
+            })) ?? []
+        })
+
+        return aggregateEnsayos(ensayos)
     }
 
     useEffect(() => {
@@ -171,7 +203,7 @@ export function useCodigoAgrupador({
 
         if (rcmsToAssign.length === 0) return
 
-        const allEnsayos: Array<{ productoId: number; sku: string; nombre: string; cantidad?: number }> = []
+        let allEnsayos: AgrupadorEnsayo[] = []
         const seenProductoIds = new Set<number>()
         const hasDialogSkus = dialogSkus.length > 0 || dialogSkuSearch.trim().length > 0
         if (hasDialogSkus) {
@@ -188,24 +220,14 @@ export function useCodigoAgrupador({
                 allEnsayos.push({ productoId: -1, sku: dialogSkuSearch.trim(), nombre: dialogSkuSearch.trim(), cantidad: 1 })
             }
         } else {
-            rcmsToAssign.forEach(rcmRef => {
-                const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
-                if (fullRcm) {
-                    fullRcm.ensayos.forEach(e => {
-                        if (!seenProductoIds.has(e.productoId)) {
-                            seenProductoIds.add(e.productoId)
-                            allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre, cantidad: e.cantidad ?? 1 })
-                        }
-                    })
-                }
-            })
+            allEnsayos = buildEnsayosFromRcmIds(rcmsToAssign.map(rcmRef => rcmRef.id))
             if (allEnsayos.length === 0 && ensayosAsociados.length > 0) {
-                ensayosAsociados.forEach(e => {
-                    if (!seenProductoIds.has(e.productoId)) {
-                        seenProductoIds.add(e.productoId)
-                        allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre, cantidad: e.cantidad ?? 1 })
-                    }
-                })
+                allEnsayos = aggregateEnsayos(ensayosAsociados.map(e => ({
+                    productoId: e.productoId,
+                    sku: e.sku,
+                    nombre: e.nombre,
+                    cantidad: e.cantidad
+                })))
             }
         }
 
@@ -271,25 +293,15 @@ export function useCodigoAgrupador({
             const existingRcmIds = new Set(ag.rcmsVinculados.map(r => r.id))
             const newRcms = rcmsToAdd.filter(r => !existingRcmIds.has(r.id))
 
-            const existingEnsayoIds = new Set(ag.ensayos.map(e => e.productoId))
-            const newEnsayos: Array<{ productoId: number; sku: string; nombre: string; cantidad?: number }> = []
-
-            newRcms.forEach(rcmRef => {
-                const fullRcm = savedRcms.find(r => r.id === rcmRef.id)
-                if (fullRcm) {
-                    fullRcm.ensayos.forEach(e => {
-                        if (!existingEnsayoIds.has(e.productoId)) {
-                            existingEnsayoIds.add(e.productoId)
-                            newEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre, cantidad: e.cantidad ?? 1 })
-                        }
-                    })
-                }
-            })
+            const nextRcmsVinculados = [...ag.rcmsVinculados, ...newRcms]
+            const nextEnsayos = ag.facturacion === 'Fijo'
+                ? ag.ensayos
+                : buildEnsayosFromRcmIds(nextRcmsVinculados.map(r => r.id))
 
             return {
                 ...ag,
-                rcmsVinculados: [...ag.rcmsVinculados, ...newRcms],
-                ensayos: [...ag.ensayos, ...newEnsayos],
+                rcmsVinculados: nextRcmsVinculados,
+                ensayos: nextEnsayos,
                 cantidad: ag.cantidad + newRcms.length
             }
         }))
@@ -441,14 +453,12 @@ export function useCodigoAgrupador({
             temporaryCode: rcm.temporaryCode
         }
 
-        const allEnsayos: Array<{ productoId: number; sku: string; nombre: string; cantidad?: number }> = []
-        const seenIds = new Set<number>()
-        rcm.ensayos.forEach(e => {
-            if (!seenIds.has(e.productoId)) {
-                seenIds.add(e.productoId)
-                allEnsayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre, cantidad: e.cantidad ?? 1 })
-            }
-        })
+        const allEnsayos = aggregateEnsayos(rcm.ensayos.map(e => ({
+            productoId: e.productoId,
+            sku: e.sku,
+            nombre: e.nombre,
+            cantidad: e.cantidad
+        })))
 
         setIsCreatingCodigo(true)
         try {
@@ -489,14 +499,12 @@ export function useCodigoAgrupador({
             const hasRcm = ag.rcmsVinculados.some(rv => rv.id === rcm.id)
             if (!hasRcm) return ag
             if (ag.rcmsVinculados.length !== 1) return ag
-            const seen = new Set<number>()
-            const ensayos: Array<{ productoId: number; sku: string; nombre: string; cantidad?: number }> = []
-            rcm.ensayos.forEach(e => {
-                if (!seen.has(e.productoId)) {
-                    seen.add(e.productoId)
-                    ensayos.push({ productoId: e.productoId, sku: e.sku, nombre: e.nombre, cantidad: e.cantidad ?? 1 })
-                }
-            })
+            const ensayos = aggregateEnsayos(rcm.ensayos.map(e => ({
+                productoId: e.productoId,
+                sku: e.sku,
+                nombre: e.nombre,
+                cantidad: e.cantidad
+            })))
             const nextCantidad = (rcm.rcmType === 'Control' || rcm.rcmType === 'Servicio')
                 ? (rcm.ensayos[0]?.cantidad ?? ag.cantidad)
                 : ag.cantidad
