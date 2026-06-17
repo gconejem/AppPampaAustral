@@ -17,6 +17,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CloseIcon from '@mui/icons-material/Close'
 import InventoryIcon from '@mui/icons-material/Inventory'
+import { formatDateOnly } from '@/utils/dateUtils'
 import type { RCMData, CodigoAgrupador } from '../types/rcm-types'
 
 interface CodigoCreationDialogProps {
@@ -54,6 +55,57 @@ interface CodigoCreationDialogProps {
     isCreatingCodigo: boolean
 }
 
+const getRcmTypeShortLabel = (rcmType?: string) => {
+    if (rcmType === 'Control') return 'CTR'
+    if (rcmType === 'Servicio') return 'SRV'
+
+    return 'MUE'
+}
+
+const getRcmTypeColor = (rcmType?: string) => {
+    if (rcmType === 'Control') return '#FF0096'
+    if (rcmType === 'Servicio') return '#3b3b3b'
+
+    return 'primary.main'
+}
+
+const getCantidadRcm = (rcm?: RCMData) => {
+    if (!rcm) return ''
+    if (rcm.cantidadMuestras) return rcm.cantidadMuestras
+
+    const totalEnsayos = rcm.ensayos.reduce((sum, ensayo) => sum + (ensayo.cantidad || 0), 0)
+
+    return totalEnsayos > 0 ? String(totalEnsayos) : ''
+}
+
+const getSelectedRcmSummary = (rcm?: RCMData) => {
+    if (!rcm) return ['RCM no encontrado']
+
+    if (rcm.rcmType === 'Muestra') {
+        return [
+            `T:${rcm.numeroTarjeta || '-'}`,
+            rcm.area,
+            rcm.tipoServicio,
+            rcm.tipoMaterial || '-',
+            rcm.item || '-',
+            `#${rcm.tomaMuestra || '-'}`
+        ].filter(Boolean)
+    }
+
+    const cantidadRcm = getCantidadRcm(rcm)
+
+    return [
+        rcm.area,
+        rcm.tipoServicio,
+        rcm.fechaServicio ? formatDateOnly(rcm.fechaServicio) : '',
+        rcm.numeroTarjeta ? `T:${rcm.numeroTarjeta}` : '',
+        rcm.ensayos[0]?.nombre,
+        rcm.sede,
+        rcm.rcmType === 'Control' ? rcm.item : '',
+        cantidadRcm ? `×${cantidadRcm}` : ''
+    ].filter(Boolean)
+}
+
 const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
     open, onClose,
     selectedRcmIds, savedRcms,
@@ -76,7 +128,7 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
             onClose={onClose}
             maxWidth='sm'
             fullWidth
-            PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden', maxWidth: '690px' } }}
+            PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden', maxWidth: '725px' } }}
         >
             <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem', pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 {isEditMode ? 'Editar Código Producto' : 'Agrupar en Código Producto'}
@@ -102,27 +154,26 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                 ) : selectedRcmIds.map((id, idx) => {
                                     const rcm = savedRcms.find(r => r.id === id)
                                     const rcmNum = rcm?.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
-                                    const tipoMaterial = rcm?.tipoMaterial || '-'
-                                    const item = rcm?.item || '-'
-                                    const tomaMuestra = rcm?.tomaMuestra || '-'
+                                    const summaryParts = getSelectedRcmSummary(rcm)
                                     return (
                                         <Box
                                             key={id}
                                             sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'white', border: '1px solid', borderColor: '#BFDBFE', borderRadius: '6px', px: 1, py: 0.5 }}
                                         >
                                             <Chip
-                                                label='MUE'
+                                                label={getRcmTypeShortLabel(rcm?.rcmType)}
                                                 size='small'
-                                                sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 700, fontSize: '0.7rem', height: 24, '& .MuiChip-label': { px: 2 } }}
+                                                sx={{ bgcolor: getRcmTypeColor(rcm?.rcmType), color: 'white', fontWeight: 700, fontSize: '0.7rem', height: 24, '& .MuiChip-label': { px: 2 } }}
                                             />
-                                            <Typography variant='body2' sx={{ fontWeight: 700, color: 'primary.main', fontFamily: 'monospace', fontSize: '0.82rem' }}>
+                                            <Typography
+                                                variant='body2'
+                                                noWrap
+                                                sx={{ fontWeight: 700, color: 'primary.main', fontFamily: 'monospace', fontSize: '0.82rem', flexShrink: 0 }}
+                                            >
                                                 {rcmNum}
                                             </Typography>
-                                            <Typography variant='caption' sx={{ color: 'text.secondary', fontSize: '0.78rem' }} noWrap>
-                                                T:{rcm?.numeroTarjeta || '-'}
-                                                {rcm?.area ? ` ${rcm.area}` : ''}
-                                                {rcm?.tipoServicio ? ` ${rcm.tipoServicio}` : ''}
-                                                {` | ${tipoMaterial} | ${item} | #${tomaMuestra}`}
+                                            <Typography variant='caption' sx={{ color: 'text.secondary', fontSize: '0.78rem', minWidth: 0, flex: 1 }} noWrap>
+                                                {summaryParts.join(' | ')}
                                             </Typography>
                                             {isEditMode && (
                                                 <IconButton
