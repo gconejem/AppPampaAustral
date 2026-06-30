@@ -530,10 +530,6 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (type === 'CONTROL' && rcm === 'ENSAYADO') return 'ENSAYADO'
     if (type === 'SERVICIO' && (rcm === 'EJECUTADO' || rcm === 'ENSAYADO')) return rcm
 
-    // En MUESTRA, no forzamos ENSAYADO desde la carga del popup.
-    // Si el registro quedó como ENSAYADO pero el RCM aún no avanzó, lo tratamos como EN_PROCESO.
-    if (type === 'MUESTRA' && current === 'ENSAYADO' && rcm !== 'ENSAYADO') return 'EN_PROCESO'
-
     return current || 'CODIFICADO'
   }
 
@@ -665,6 +661,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [gestionarEstados, setGestionarEstados] = useState<Record<string, string>>({})
   const [gestionarSaving, setGestionarSaving] = useState(false)
   const [gestionarObservaciones, setGestionarObservaciones] = useState<Record<string, string>>({})
+  const [gestionarEstadoMasivoInfo, setGestionarEstadoMasivoInfo] = useState<string>('')
   const [ensayadorOptions, setEnsayadorOptions] = useState<string[]>([])
   const [gestionarSubmuestraDialogOpen, setGestionarSubmuestraDialogOpen] = useState(false)
   const [gestionarSubmuestraServicio, setGestionarSubmuestraServicio] = useState<any>(null)
@@ -695,6 +692,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setGestionarEnsayadores({})
     setGestionarEstados({})
     setGestionarObservaciones({})
+    setGestionarEstadoMasivoInfo('')
     setGestionarSubmuestraDialogOpen(false)
     setGestionarSubmuestraServicio(null)
     setGestionarSubmuestraActiva(null)
@@ -849,8 +847,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
         const subStates = subItems.map((sub: any) => gestionarEstados[String(sub._syntheticKey ?? sub.id)] ?? 'CODIFICADO')
 
-        if (subStates.every(e => String(e).toUpperCase().includes('ENSAYADO'))) return 'ENSAYADO'
-        if (subStates.some(e => String(e).toUpperCase().includes('PROCESO'))) return 'EN_PROCESO'
+        const normalizedSubStates = subStates.map((state: string) => normalizeEnsayoState(state))
+
+        if (normalizedSubStates.length > 0 && normalizedSubStates.every((state: string) => state === 'ENSAYADO')) return 'ENSAYADO'
+        if (normalizedSubStates.some((state: string) => state !== 'CODIFICADO')) return 'EN_PROCESO'
 
         return 'CODIFICADO'
       }
@@ -946,9 +946,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       const todosEstadosProbetas = gestionarProbetas.map((probeta: any) => probeta?.estado ?? 'CODIFICADO')
       const todosEstados = [...todosEstadosServicios, ...todosEstadosProbetas]
 
-      const estadoFinal = todosEstados.every(e => String(e).toUpperCase().includes('ENSAYADO'))
+      const normalizedEstados = todosEstados.map((estado: string) => normalizeEnsayoState(estado))
+      const estadoFinal = normalizedEstados.length > 0 && normalizedEstados.every((estado: string) => estado === 'ENSAYADO')
         ? 'ENSAYADO'
-        : todosEstados.some(e => String(e).toUpperCase().includes('PROCESO'))
+        : normalizedEstados.some((estado: string) => estado !== 'CODIFICADO')
           ? 'EN_PROCESO'
           : 'CODIFICADO'
 
@@ -2672,6 +2673,81 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     }
   }
 
+  const normalizeEnsayoState = (raw?: string | null) => {
+    const state = String(raw ?? 'CODIFICADO').toUpperCase()
+
+    if (state.includes('ENSAYADO')) return 'ENSAYADO'
+    if (state.includes('PROCESO')) return 'EN_PROCESO'
+
+    return 'CODIFICADO'
+  }
+
+  const canTransitionEnsayoState = (fromRaw: string | null | undefined, toRaw: string) => {
+    const from = normalizeEnsayoState(fromRaw)
+    const to = normalizeEnsayoState(toRaw)
+
+    if (from === 'ENSAYADO') return to === 'ENSAYADO'
+    if (from === 'EN_PROCESO') return to === 'EN_PROCESO' || to === 'ENSAYADO'
+
+    // CODIFICADO
+    return to === 'CODIFICADO' || to === 'EN_PROCESO'
+  }
+
+  const hasAssignedEnsayador = (service: any, currentEnsayador?: string | null) => {
+    const resolved = String(currentEnsayador ?? service?.ensayador ?? '').trim()
+
+    return Boolean(resolved)
+  }
+
+  const applyEstadoMasivo = (targetState: 'EN_PROCESO' | 'ENSAYADO') => {
+    setGestionarEstados(prev => {
+      const next = { ...prev }
+      let aplicados = 0
+      let omitidosTransition = 0
+      let omitidosSinEnsayador = 0
+
+      gestionarServicios
+        .filter((s: any) => !s._isPaqueteHeader)
+        .forEach((s: any) => {
+          const key = String(s._syntheticKey ?? s.id)
+          const currentState = getEstadoServicioConProbetas(s, prev[key] ?? s.estado ?? 'CODIFICADO')
+          const ensayadorActual = gestionarEnsayadores[key] ?? s.ensayador ?? ''
+
+          if (targetState === 'EN_PROCESO' && !hasAssignedEnsayador(s, ensayadorActual)) {
+            omitidosSinEnsayador += 1
+
+            return
+          }
+
+          if (!canTransitionEnsayoState(currentState, targetState)) {
+            omitidosTransition += 1
+
+            return
+          }
+
+          const normalizedCurrent = normalizeEnsayoState(currentState)
+
+          if (normalizedCurrent !== targetState) aplicados += 1
+          next[key] = targetState
+        })
+
+      const omitidos = omitidosTransition + omitidosSinEnsayador
+
+      if (omitidos > 0) {
+        const detalle: string[] = []
+
+        if (omitidosTransition > 0) detalle.push(`${omitidosTransition} por transición no permitida`)
+        if (omitidosSinEnsayador > 0) detalle.push(`${omitidosSinEnsayador} sin ensayador`)
+
+        setGestionarEstadoMasivoInfo(`${aplicados} actualizados · ${omitidos} omitidos (${detalle.join(' · ')})`)
+      } else {
+        setGestionarEstadoMasivoInfo(aplicados > 0 ? `${aplicados} actualizados` : 'Sin cambios')
+      }
+
+      return next
+    })
+  }
+
   const canMarkProbetaAsReady = (probeta?: any) => {
     const daysToDue = diffDaysFromToday(probeta?.fechaVencimiento)
 
@@ -2711,10 +2787,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (!serviceUsesSubmuestras(service)) return fallback ?? service?.estado ?? 'CODIFICADO'
 
     const probetasServicio = getSubmuestrasForService(service)
-    const estados = probetasServicio.map((probeta: any) => String(probeta?.estado ?? 'CODIFICADO').toUpperCase())
+    const estados = probetasServicio.map((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO'))
 
-    if (estados.some(estado => estado.includes('ENSAYADO'))) return 'ENSAYADO'
-    if (estados.some(estado => estado.includes('PROCESO'))) return 'EN_PROCESO'
+    if (estados.length > 0 && estados.every((estado: string) => estado === 'ENSAYADO')) return 'ENSAYADO'
+    if (estados.some((estado: string) => estado !== 'CODIFICADO')) return 'EN_PROCESO'
 
     return fallback ?? service?.estado ?? 'CODIFICADO'
   }
@@ -4816,14 +4892,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                               variant='outlined'
                               disabled={!puedeIniciarEnsayos}
                               startIcon={<i className='ri-play-fill' style={{ fontSize: 11 }} />}
-                              onClick={() => {
-                                const map: Record<string, string> = {}
-
-                                gestionarServicios
-                                  .filter((s: any) => !s._isPaqueteHeader)
-                                  .forEach((s: any) => { map[String(s._syntheticKey ?? s.id)] = 'EN_PROCESO' })
-                                setGestionarEstados(map)
-                              }}
+                              onClick={() => applyEstadoMasivo('EN_PROCESO')}
                               sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.75rem', borderColor: '#93c5fd', color: '#1d4ed8', bgcolor: '#eff6ff', '&:hover': { bgcolor: '#dbeafe' }, px: 1 }}
                             >
                               En Proceso
@@ -4833,19 +4902,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                               variant='outlined'
                               disabled={!puedeIniciarEnsayos}
                               startIcon={<i className='ri-check-line' style={{ fontSize: 11 }} />}
-                              onClick={() => {
-                                const map: Record<string, string> = {}
-
-                                gestionarServicios
-                                  .filter((s: any) => !s._isPaqueteHeader)
-                                  .forEach((s: any) => { map[String(s._syntheticKey ?? s.id)] = 'ENSAYADO' })
-                                setGestionarEstados(map)
-                              }}
+                              onClick={() => applyEstadoMasivo('ENSAYADO')}
                               sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.75rem', borderColor: '#6ee7b7', color: '#065f46', bgcolor: '#ecfdf5', '&:hover': { bgcolor: '#d1fae5' }, px: 1 }}
                             >
                               Ensayado
                             </Button>
                           </Box>
+                          {gestionarEstadoMasivoInfo && (
+                            <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#4b5563' }}>
+                              {gestionarEstadoMasivoInfo}
+                            </Typography>
+                          )}
                           {mensajeBloqueoEnsayo && (
                             <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#b45309' }}>
                               {mensajeBloqueoEnsayo}
@@ -4910,7 +4977,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                               }
 
                               const estadoActualServicio = getEstadoServicioConProbetas(s, gestionarEstados[sKey] ?? s.estado ?? 'CODIFICADO')
-                              const ensayadorActual = gestionarEnsayadores[sKey] ?? ''
+                              const ensayadorActual = gestionarEnsayadores[sKey] ?? s.ensayador ?? ''
+                              const tieneEnsayadorAsignado = hasAssignedEnsayador(s, ensayadorActual)
+                              const puedeIniciarServicio = puedeIniciarEnsayos && tieneEnsayadorAsignado
                               const esEnsayado = String(estadoActualServicio).toUpperCase().includes('ENSAYADO')
                               const esEnProceso = String(estadoActualServicio).toUpperCase().includes('PROCESO')
                               const esCodificado = !esEnsayado && !esEnProceso
@@ -5004,15 +5073,19 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                         Completado
                                       </Box>
                                     ) : esCodificado ? (
-                                      <Button
-                                        size='small'
-                                        variant='outlined'
-                                        disabled={!puedeIniciarEnsayos}
-                                        onClick={() => setGestionarEstados(prev => ({ ...prev, [sKey]: 'EN_PROCESO' }))}
-                                        sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1, textTransform: 'none', borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff', minWidth: 0 }}
-                                      >
-                                        <i className='ri-play-fill' style={{ fontSize: 12, marginRight: 3 }} />Iniciar
-                                      </Button>
+                                      <Tooltip title={!tieneEnsayadorAsignado ? 'Asigna ensayador para iniciar' : (!puedeIniciarEnsayos ? (mensajeBloqueoEnsayo ?? '') : '')}>
+                                        <Box component='span'>
+                                          <Button
+                                            size='small'
+                                            variant='outlined'
+                                            disabled={!puedeIniciarServicio}
+                                            onClick={() => setGestionarEstados(prev => ({ ...prev, [sKey]: 'EN_PROCESO' }))}
+                                            sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1, textTransform: 'none', borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff', minWidth: 0 }}
+                                          >
+                                            <i className='ri-play-fill' style={{ fontSize: 12, marginRight: 3 }} />Iniciar
+                                          </Button>
+                                        </Box>
+                                      </Tooltip>
                                     ) : esEnProceso ? (
                                       <Button
                                         size='small'
