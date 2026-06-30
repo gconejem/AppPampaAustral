@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 import { toast } from 'react-hot-toast'
 
@@ -160,7 +161,20 @@ interface StepperVerticalWithNumbersProps {
 
 const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange }: StepperVerticalWithNumbersProps) => {
   const router = useRouter()
+  const { data: session } = useSession()
   const [activeStep, setActiveStep] = useState(0)
+
+  const getCurrentUserName = () => {
+    const name = session?.user?.name
+
+    if (typeof name === 'string' && name.trim()) return name.trim()
+
+    const email = session?.user?.email
+
+    if (typeof email === 'string' && email.trim()) return email.trim()
+
+    return null
+  }
 
   // Estado para el número de RCM
   const [numeroRcm, setNumeroRcm] = useState<string>('')
@@ -252,9 +266,9 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange
   const [openCodificarDialog, setOpenCodificarDialog] = useState(false)
   const [muestrasSeleccionadas, setMuestrasSeleccionadas] = useState<string[]>([])
   const [gruposMuestras, setGruposMuestras] = useState<GrupoMuestras[]>([])
-  const [servicioPopoverAnchor, setServicioPopoverAnchor] = useState<{[key: string]: HTMLElement | null}>({})
-  const [searchTermGrupo, setSearchTermGrupo] = useState<{[key: string]: string}>({})
-  const [selectedProductGrupo, setSelectedProductGrupo] = useState<{[key: string]: Producto | null}>({})
+  const [servicioPopoverAnchor, setServicioPopoverAnchor] = useState<{ [key: string]: HTMLElement | null }>({})
+  const [searchTermGrupo, setSearchTermGrupo] = useState<{ [key: string]: string }>({})
+  const [selectedProductGrupo, setSelectedProductGrupo] = useState<{ [key: string]: Producto | null }>({})
 
   // Obtener el próximo número de RCM al cargar el componente
   useEffect(() => {
@@ -853,7 +867,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange
 
     // Obtener datos de las muestras seleccionadas
     const muestrasData = muestras.filter(m => muestrasSeleccionadas.includes(m.numeroMuestra))
-    
+
     // Obtener el servicio más común (o el primero si no hay coincidencias)
     const servicioActual = muestrasData[0]?.servicios[0] || null
 
@@ -915,7 +929,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange
     const muestrasActualizadas = muestras.map(muestra => {
       // Buscar si esta muestra está en algún grupo
       const grupoConMuestra = gruposMuestras.find(g => g.muestrasIds.includes(muestra.numeroMuestra))
-      
+
       if (grupoConMuestra && grupoConMuestra.nuevoServicio) {
         // Reemplazar o agregar el nuevo servicio
         const nuevosServicios = [...muestra.servicios]
@@ -942,7 +956,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange
           servicios: nuevosServicios
         }
       }
-      
+
       return muestra
     })
 
@@ -973,6 +987,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange
       const clienteId = otData?.agenda?.cliente?.clienteId || null
       const obraId = otData?.agenda?.obra?.obraId || null
       const ordenTrabajoId = otData?.id || null
+      const funcionarioAlta = getCurrentUserName()
 
       const dataToSend = {
         fechaCodificacion,
@@ -985,7 +1000,9 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange
         clienteId,
         obraId,
         ordenTrabajoId,
-        estadoRcm: rcmEstado
+        estadoRcm: rcmEstado,
+        funcionario: funcionarioAlta,
+        usuario: funcionarioAlta
       }
 
       console.log('Datos a enviar:', dataToSend)
@@ -2872,8 +2889,8 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange
                                       .filter(p => {
                                         const searchLower = (searchTermGrupo[grupo.id] || '').toLowerCase()
                                         return p.nombre.toLowerCase().includes(searchLower) ||
-                                               p.sku.toLowerCase().includes(searchLower) ||
-                                               (p.tipo && p.tipo.toLowerCase().includes(searchLower))
+                                          p.sku.toLowerCase().includes(searchLower) ||
+                                          (p.tipo && p.tipo.toLowerCase().includes(searchLower))
                                       })
                                       .slice(0, 10)
                                       .map(producto => (
@@ -2892,15 +2909,15 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange
                                     {filteredProductos.filter(p => {
                                       const searchLower = (searchTermGrupo[grupo.id] || '').toLowerCase()
                                       return p.nombre.toLowerCase().includes(searchLower) ||
-                                             p.sku.toLowerCase().includes(searchLower)
+                                        p.sku.toLowerCase().includes(searchLower)
                                     }).length === 0 && (
-                                      <ListItem>
-                                        <ListItemText
-                                          primary='No se encontraron servicios'
-                                          secondary='Intenta con otros términos'
-                                        />
-                                      </ListItem>
-                                    )}
+                                        <ListItem>
+                                          <ListItemText
+                                            primary='No se encontraron servicios'
+                                            secondary='Intenta con otros términos'
+                                          />
+                                        </ListItem>
+                                      )}
                                   </List>
                                 </Box>
                               </Popover>
@@ -2913,7 +2930,7 @@ const StepperVerticalWithNumbers = ({ otData, tipoOT, loading, onRcmEstadoChange
                               value={grupo.cantidad}
                               onChange={(e) => {
                                 const nuevaCantidad = parseInt(e.target.value) || 1
-                                setGruposMuestras(prev => prev.map(g => 
+                                setGruposMuestras(prev => prev.map(g =>
                                   g.id === grupo.id ? { ...g, cantidad: nuevaCantidad } : g
                                 ))
                               }}

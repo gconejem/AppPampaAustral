@@ -69,6 +69,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         clienteId,
         obraId,
         ordenTrabajoId,
+        funcionario,
+        usuario,
       } = req.body
 
       // Generar número de RCM único (correlativo numérico)
@@ -98,6 +100,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       for (const p of productos) productosMap[p.sku] = p.productoId
 
       const estadoInicial = rcmType === 'Control' ? 'ENSAYADO' : rcmType === 'Servicio' ? 'EJECUTADO' : 'CODIFICADO'
+      const funcionarioAlta =
+        (typeof funcionario === 'string' && funcionario.trim())
+          ? funcionario.trim()
+          : (typeof usuario === 'string' && usuario.trim())
+            ? usuario.trim()
+            : null
 
       const rcm = await prisma.rCM.create({
         data: {
@@ -215,6 +223,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           familia: true,
         },
       })
+
+      try {
+        const parsedFechaCodificacion = fechaCodificacion ? new Date(fechaCodificacion) : null
+        const fechaInicio = parsedFechaCodificacion && !Number.isNaN(parsedFechaCodificacion.getTime())
+          ? parsedFechaCodificacion
+          : new Date()
+
+        await prisma.rCMHistory.create({
+          data: {
+            rcm: { connect: { id: rcm.id } },
+            tipo: 'Ope',
+            tipoEstado: 'CODIFICADO',
+            motivo: 'Alta RCM',
+            observacion: 'Registro inicial de codificacion',
+            funcionario: funcionarioAlta,
+            fechaAccion: fechaInicio,
+            estAnterior: 'CODIFICADO',
+            estNuevo: estadoInicial,
+            aplicadoA: 'CP',
+          },
+        })
+      } catch (historyError) {
+        console.warn('No se pudo registrar historial inicial de RCM:', historyError)
+      }
 
       res.status(200).json(rcm)
     } catch (error) {

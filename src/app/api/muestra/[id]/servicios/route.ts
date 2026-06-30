@@ -57,6 +57,7 @@ export async function GET(
         // ✅ 3. Mapear servicios - SKU como código + ensayador desde historial (aplicadoA)
         const serviciosEnriquecidos = servicios.map(s => ({
             id: s.id,
+            productoId: s.productoId ?? null,
             codigo: s.producto?.sku ?? (s.producto as any)?.SKU ?? (s.producto as any)?.codigo ?? s.productoId?.toString() ?? s.id.toString(),
             nombre: s.producto?.nombre ?? 'Sin nombre',
             tipo: s.producto?.familia?.includes('Ensayo') ? 'Ensayo' : 'Análisis',

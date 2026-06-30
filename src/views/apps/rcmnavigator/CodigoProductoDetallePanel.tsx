@@ -88,6 +88,10 @@ type RcmRow = {
   area?: { nombre?: string | null } | null
   familia?: { nombre?: string | null } | null
   servicios?: Servicio[]
+  muestras?: Array<{
+    tipoMaterial?: string | null
+    item?: string | null
+  }>
   RCMHistory?: HistoryEntry[]
   ordenTrabajoId?: string | null
   ordenTrabajo?: { id?: string | null; clave?: string | null; correlativ?: string | null } | null
@@ -146,18 +150,23 @@ const formatRcmLabel = (numeroRcm?: string | null) => {
 }
 
 const getMaterialItemTomaParts = (r: RcmRow) => {
-  const material = String(r.tipoMaterial ?? '').trim()
-  const item = String(r.procedencia ?? r.item ?? '').trim()
-  const nota = String(r.tomaMuestra ?? r.ubicacionSector ?? '').trim()
+  const material = String(r.tipoMaterial ?? r.muestras?.[0]?.tipoMaterial ?? '').trim()
+  const itemRaw = String(r.item ?? '').trim()
+  const item = (itemRaw && itemRaw.toLowerCase() !== 'procedencia')
+    ? itemRaw
+    : String(r.muestras?.[0]?.item ?? '').trim()
+  const nota = String(r.tomaMuestra ?? '').trim()
 
   return { material, item, nota }
 }
 
 const formatMaterialItemToma = (r: RcmRow) => {
   const { material, item, nota } = getMaterialItemTomaParts(r)
-  const parts = [material, item, nota].filter(Boolean)
+  const parts = [material || '-', item || '-', nota || '-']
 
-  return parts.length ? parts.join(' - ') : '-'
+  if (parts.every(p => p === '-')) return '-'
+
+  return parts.join(' - ')
 }
 
 const isCompletedByRcmState = (estadoOperativo?: string | null) => {
@@ -715,66 +724,26 @@ export default function CodigoProductoDetallePanel({
                       </td>
                       <td style={{ maxWidth: 420 }}>
                         {(() => {
-                          const { material, item, nota } = getMaterialItemTomaParts(r)
                           const fullText = formatMaterialItemToma(r)
 
-                          if (!material && !item && !nota) {
+                          if (fullText === '-') {
                             return <Typography variant='body2'>-</Typography>
                           }
 
                           return (
-                            <Box
+                            <Typography
+                              variant='body2'
                               title={fullText}
                               sx={{
-                                display: 'flex',
-                                alignItems: 'center',
                                 minWidth: 0,
                                 maxWidth: 420,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap'
                               }}
                             >
-                              {material ? (
-                                <Typography variant='body2' sx={{ flexShrink: 0 }}>
-                                  {material}
-                                </Typography>
-                              ) : null}
-
-                              {item ? (
-                                <>
-                                  {material ? (
-                                    <Typography variant='body2' sx={{ px: 0.5, flexShrink: 0 }}>
-                                      {' - '}
-                                    </Typography>
-                                  ) : null}
-                                  <Typography
-                                    variant='body2'
-                                    sx={{
-                                      minWidth: 0,
-                                      maxWidth: 260,
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap',
-                                      flexShrink: 1
-                                    }}
-                                  >
-                                    {item}
-                                  </Typography>
-                                </>
-                              ) : null}
-
-                              {nota ? (
-                                <>
-                                  {material || item ? (
-                                    <Typography variant='body2' sx={{ px: 0.5, flexShrink: 0 }}>
-                                      {' - '}
-                                    </Typography>
-                                  ) : null}
-                                  <Typography variant='body2' sx={{ flexShrink: 0 }}>
-                                    {nota}
-                                  </Typography>
-                                </>
-                              ) : null}
-                            </Box>
+                              {fullText}
+                            </Typography>
                           )
                         })()}
                       </td>
@@ -1335,14 +1304,23 @@ export default function CodigoProductoDetallePanel({
                             const norma = String(s?.producto?.norma ?? s?.norma ?? '').trim()
                             const qty = Number(s?.cantidad ?? 0)
                             const stKey = normalizeStateKey(s?.estadoOperativo ?? s?.estado) ?? null
-                            const esPaquete =
-                              Boolean(s?.esPaquete) ||
-                              Boolean(s?.producto?.esPaquete) ||
-                              Array.isArray(s?.subProductos) ||
-                              Array.isArray(s?.producto?.productosEnPaquete) ||
-                              Array.isArray(s?.hijos) ||
-                              Array.isArray(s?.detalles) ||
-                              Array.isArray(s?.componentes)
+                            const explicitChildren = [
+                              ...(Array.isArray(s?.hijos) ? s.hijos : []),
+                              ...(Array.isArray(s?.detalles) ? s.detalles : []),
+                              ...(Array.isArray(s?.componentes) ? s.componentes : []),
+                              ...(Array.isArray(s?.subProductos) ? s.subProductos : [])
+                            ]
+
+                            const masterChildren = Array.isArray(s?.producto?.productosEnPaquete)
+                              ? s.producto.productosEnPaquete.map((pp: any) => ({
+                                cantidad: pp?.cantidad,
+                                producto: pp?.producto
+                              }))
+                              : []
+
+                            // Un SKU se considera paquete cuando está marcado como paquete en maestro
+                            // o cuando trae hijos explícitos en la codificación.
+                            const esPaquete = Boolean(s?.producto?.esPaquete) || explicitChildren.length > 0
                             // Fila principal (paquete o normal)
                             rows.push(
                               <tr key={String(s?.id ?? idx)} style={esPaquete ? { background: '#eaf4ff' } : {}}>
@@ -1379,18 +1357,10 @@ export default function CodigoProductoDetallePanel({
                               </tr>
                             )
                             // Si es paquete, mostrar hijos
-                            const hijos =
-                              s?.hijos ||
-                              s?.detalles ||
-                              s?.componentes ||
-                              s?.subProductos ||
-                              (Array.isArray(s?.producto?.productosEnPaquete)
-                                ? s.producto.productosEnPaquete.map((pp: any) => ({
-                                  cantidad: pp?.cantidad,
-                                  producto: pp?.producto
-                                }))
-                                : []) ||
-                              []
+                            const hijos = explicitChildren.length
+                              ? explicitChildren
+                              : (esPaquete ? masterChildren : [])
+
                             if (esPaquete && Array.isArray(hijos)) {
                               hijos.forEach((h: any, hidx: number) => {
                                 const hsku = String(h?.producto?.sku ?? h?.codigo ?? h?.sku ?? '').trim() || '-'

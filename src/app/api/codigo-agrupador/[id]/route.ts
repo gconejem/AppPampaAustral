@@ -164,6 +164,14 @@ export async function GET(request: Request, { params }: Params) {
                                     nombre: true,
                                 },
                             },
+                            muestras: {
+                                orderBy: { id: 'asc' },
+                                take: 1,
+                                select: {
+                                    tipoMaterial: true,
+                                    item: true,
+                                },
+                            },
                             RCMHistory: {
                                 orderBy: { createdAt: 'desc' },
                                 take: 20,

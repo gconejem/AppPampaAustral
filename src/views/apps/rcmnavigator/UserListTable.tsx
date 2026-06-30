@@ -561,6 +561,64 @@ const UserListTable2 = ({
   const [histLoading, setHistLoading] = useState(false)
   const [histCodigoData, setHistCodigoData] = useState<any>(null)
 
+  const histRowsWithStart = useMemo(() => {
+    const rows = Array.isArray(histRows) ? [...histRows] : []
+
+    const normalizeForCompare = (raw?: any) => {
+      const key = normalizeStateKey(raw)
+
+      return key ?? normalizeState(raw)
+    }
+
+    if (!histRowId) return rows
+
+    const r = data.find(d => d.representativeRcmId === histRowId) ?? data.find(d => d.id === histRowId)
+
+    if (!r) return rows
+
+    const sortedAsc = rows
+      .slice()
+      .sort((a: any, b: any) => {
+        const ta = new Date(a?.fechaAccion ?? a?.createdAt ?? 0).getTime()
+        const tb = new Date(b?.fechaAccion ?? b?.createdAt ?? 0).getTime()
+
+        return ta - tb
+      })
+
+    const oldest = sortedAsc[0] ?? null
+    const initialState = 'CODIFICADO'
+
+    const alreadyHasInitial = rows.some((h: any) => {
+      const nuevo = normalizeForCompare(h?.estNuevo)
+      const anterior = normalizeForCompare(h?.estAnterior)
+      const noAnterior = !anterior || anterior === '-'
+      const sameAsInitial = anterior === initialState
+
+      return nuevo === initialState && (noAnterior || sameAsInitial)
+    })
+
+    if (alreadyHasInitial) return rows
+
+    const fechaInicioRaw = String((r as any)?.fechaCodificacion ?? oldest?.fechaAccion ?? oldest?.createdAt ?? '').trim()
+
+    if (!fechaInicioRaw) return rows
+
+    const funcionarioInicio = String(oldest?.funcionario ?? oldest?.usuario ?? '').trim() || 'Sin registro'
+
+    const initialEntry = {
+      fechaAccion: fechaInicioRaw,
+      funcionario: funcionarioInicio,
+      aplicadoA: 'CP',
+      tipo: 'Inicio',
+      estAnterior: 'CODIFICADO',
+      estNuevo: initialState,
+      motivo: 'Registro inicial',
+      observacion: `Estado inicial del CP: ${String(initialState).replace(/_/g, ' ')}`
+    }
+
+    return [initialEntry, ...rows]
+  }, [histRows, histRowId, data])
+
   // Popover de ayuda para estados operativos (según imágenes)
   const [opHelpAnchorEl, setOpHelpAnchorEl] = useState<HTMLElement | null>(null)
   const [opHelpState, setOpHelpState] = useState<string | null>(null)
@@ -755,6 +813,7 @@ const UserListTable2 = ({
           return String(v ?? '').trim().toLowerCase()
         }
       }
+
       const existing: Record<AutoTemplateKey, number | null> = { DENSIDAD: null, HORMIGON: null }
 
       for (const t of AUTO_TEMPLATES) {
@@ -1128,6 +1187,8 @@ const UserListTable2 = ({
 
     const getAutoDraft = (key: AutoTemplateKey): AutoInformeDraft => {
       const draft = autoInformeDrafts?.[key]
+
+
       return draft ? draft : { ...emptyAutoDraft }
     }
 
@@ -2464,9 +2525,9 @@ const UserListTable2 = ({
   // helper: formatear sólo fecha a DD/MM/AAAA (sin hora)
   const formatDateDDMMYYYYDateOnly = (v: any) => {
     if (!v) return '-'
-    const d = v instanceof Date ? v : new Date(v)
+    const d = toDateOnly(v)
 
-    if (isNaN(d.getTime())) return '-'
+    if (!d || isNaN(d.getTime())) return '-'
     const dd = String(d.getDate()).padStart(2, '0')
     const mm = String(d.getMonth() + 1).padStart(2, '0')
     const yyyy = d.getFullYear()
@@ -2478,9 +2539,9 @@ const UserListTable2 = ({
   // helper: formatear fecha a DD-MM-AAAA (sin hora)
   const formatDateDDMMYYYYDateOnlyDash = (v: any) => {
     if (!v) return '-'
-    const d = v instanceof Date ? v : new Date(v)
+    const d = toDateOnly(v)
 
-    if (isNaN(d.getTime())) return '-'
+    if (!d || isNaN(d.getTime())) return '-'
     const dd = String(d.getDate()).padStart(2, '0')
     const mm = String(d.getMonth() + 1).padStart(2, '0')
     const yyyy = d.getFullYear()
@@ -3329,9 +3390,6 @@ const UserListTable2 = ({
 
       if (!target) return
 
-      // si el click ocurre dentro del panel de detalle inferior, no limpiar
-      if (target.closest('[data-rcmnav-detail]')) return
-
       // si el click ocurre dentro de un menú/popover/modal (portal), no limpiar
       if (target.closest('.MuiPopover-root') || target.closest('.MuiMenu-root') || target.closest('.MuiModal-root')) return
 
@@ -4031,43 +4089,49 @@ const UserListTable2 = ({
               <Typography variant='subtitle1' sx={{ fontWeight: 900, lineHeight: 1.2, color: 'primary.main' }}>
                 {String(codigoDialogMeta?.codigoNombre ?? codigoDialogData?.codigoNombre ?? '').trim() || '—'}
               </Typography>
-              <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-                <Typography
-                  variant='caption'
-                  color='text.secondary'
-                  sx={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                >
-                  {(() => {
-                    const ot = String(codigoDialogMeta?.ot ?? '').trim()
-
-                    const clienteName =
-                      String(codigoDialogMeta?.cliente?.razonSocial ?? codigoDialogMeta?.cliente?.nombreCliente ?? '').trim() ||
-                      String(codigoDialogMeta?.clienteNombre ?? '').trim()
-
-                    const obraNum = String(codigoDialogMeta?.obra?.numeroObra ?? '').trim()
-                    const obraTxt = obraNum ? `Obra ${obraNum}` : ''
-
-                    const ciudad = String(
-                      codigoDialogMeta?.ciudad ??
-                      codigoDialogMeta?.obra?.comuna ??
-                      codigoDialogMeta?.cliente?.comuna ??
-                      codigoDialogMeta?.cliente?.ciudad ??
-                      ''
-                    ).trim()
-
-                    return [ot ? `OT ${ot}` : '', clienteName, obraTxt, ciudad].filter(Boolean).join(' - ') || ' '
-                  })()}
-                </Typography>
-
+              <Box sx={{ mt: 0.5, minWidth: 0 }}>
                 {(() => {
+                  const ot = String(codigoDialogMeta?.ot ?? '').trim()
+
+                  const clienteName =
+                    String(codigoDialogMeta?.cliente?.razonSocial ?? codigoDialogMeta?.cliente?.nombreCliente ?? '').trim() ||
+                    String(codigoDialogMeta?.clienteNombre ?? '').trim()
+
+                  const obraNum = String(codigoDialogMeta?.obra?.numeroObra ?? '').trim()
+
+                  const ciudad = String(
+                    codigoDialogMeta?.ciudad ??
+                    codigoDialogMeta?.obra?.comuna ??
+                    codigoDialogMeta?.cliente?.comuna ??
+                    codigoDialogMeta?.cliente?.ciudad ??
+                    ''
+                  ).trim()
+
                   const mandante = String((codigoDialogMeta as any)?.mandante ?? codigoDialogMeta?.obra?.mandante ?? '').trim()
 
-                  if (!mandante) return null
+                  const row1 = [ot ? `OT ${ot}` : '', clienteName].filter(Boolean).join(' - ') || ' '
+
+                  const row2 = [obraNum ? `Obra ${obraNum}` : '', ciudad, mandante ? `Mandante ${mandante}` : '']
+                    .filter(Boolean)
+                    .join(' - ') || ' '
 
                   return (
-                    <Typography variant='caption' color='text.secondary' sx={{ whiteSpace: 'nowrap', fontWeight: 700, flexShrink: 0 }}>
-                      {`- Mandante ${mandante}`}
-                    </Typography>
+                    <>
+                      <Typography
+                        variant='caption'
+                        color='text.secondary'
+                        sx={{ display: 'block', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                      >
+                        {row1}
+                      </Typography>
+                      <Typography
+                        variant='caption'
+                        color='text.secondary'
+                        sx={{ display: 'block', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                      >
+                        {row2}
+                      </Typography>
+                    </>
                   )
                 })()}
               </Box>
@@ -4094,7 +4158,12 @@ const UserListTable2 = ({
                     )[opNormKey] ?? OPERATIONAL_STATES.find(s => s.value === opKey)?.label ?? op
                     : null
 
-                  const dateSrc = op ? (codigoDialogOpAt ?? (opKey === 'DIGITADO' ? codigoDialogDigitadoAt : null)) : null
+                  const fallbackOpDate = String((codigoDialogMeta as any)?.fechaCodificacion ?? '').trim() || null
+
+                  const dateSrc = op
+                    ? (codigoDialogOpAt ?? (opKey === 'DIGITADO' ? codigoDialogDigitadoAt : null) ?? fallbackOpDate)
+                    : null
+
                   const dateTxt = dateSrc ? formatDateDDMMYYYYDateOnly(dateSrc) : '-'
 
                   const daysSinceDigitado = (() => {
@@ -4119,6 +4188,12 @@ const UserListTable2 = ({
                   return (
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1, minWidth: 0 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end', minWidth: 0 }}>
+                        {op ? (
+                          <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+                            Desde {dateTxt}
+                          </Typography>
+                        ) : null}
+
                         {op && opInfo ? (
                           <Chip
                             size='small'
@@ -4153,12 +4228,6 @@ const UserListTable2 = ({
                           />
                         ) : null}
                       </Box>
-
-                      {op ? (
-                        <Typography variant='caption' color='text.secondary' sx={{ mt: 0.25, fontWeight: 700 }}>
-                          Desde {dateTxt}
-                        </Typography>
-                      ) : null}
 
                       {daysSinceDigitado != null ? (
                         <Typography variant='caption' color='text.secondary' sx={{ mt: 0.15, fontWeight: 700 }}>
@@ -4335,9 +4404,12 @@ const UserListTable2 = ({
               for (const e of ens) {
                 const sku = String(e?.sku ?? e?.producto?.sku ?? '').trim()
                 const nombre = String(e?.nombre ?? e?.producto?.nombre ?? '').trim()
-                const esPaquete = Boolean(e?.producto?.esPaquete)
 
-                const subProductos = Array.isArray(e?.producto?.productosEnPaquete)
+                const explicitChildren = Array.isArray(e?.subProductos)
+                  ? e.subProductos
+                  : []
+
+                const masterChildren = Array.isArray(e?.producto?.productosEnPaquete)
                   ? e.producto.productosEnPaquete
                     .map((sp: any) => {
                       const spSku = String(sp?.producto?.sku ?? '').trim()
@@ -4355,10 +4427,18 @@ const UserListTable2 = ({
                     .filter(Boolean) as Array<{ sku: string; nombre: string; cantidad: number }>
                   : []
 
+                // En este popup la etiqueta depende del maestro del producto:
+                // si el SKU está marcado como paquete, se muestra la chapa y sus hijos.
+                // Los hijos explícitos siguen teniendo prioridad cuando vienen en la codificación.
+                const esPaquete = Boolean(e?.producto?.esPaquete) || explicitChildren.length > 0
+
+                const subProductos = explicitChildren.length ? explicitChildren : (esPaquete ? masterChildren : [])
+
                 if (!sku) continue
                 const prev = map.get(sku)
                 const qtyFromServicios = qtyBySku.get(sku)
                 const fallbackTotalEnsayos = Number((codigoDialogMeta as any)?.ensayos?.total ?? 0)
+
                 const baseCantidad =
                   Number.isFinite(qtyFromServicios) && (qtyFromServicios as number) > 0
                     ? (qtyFromServicios as number)
@@ -4944,7 +5024,7 @@ const UserListTable2 = ({
                       const tarjeta = String(r?.numeroTarjeta ?? '').trim()
                       const tipoMaterial = String(r?.tipoMaterial ?? '').trim()
                       const item = String(r?.item ?? '').trim()
-                      const tomaMuestra = String(r?.tomaMuestra ?? r?.procedencia ?? '').trim()
+                      const tomaMuestra = String(r?.tomaMuestra ?? '').trim()
 
                       const opKey = normalizeStateKey(r?.estadoOperativo) ?? null
 
@@ -4970,7 +5050,7 @@ const UserListTable2 = ({
                       const infoItems = [
                         tipoMaterial,
                         item,
-                        tomaMuestra ? `#${tomaMuestra}` : ''
+                        tomaMuestra
                       ].filter(Boolean)
 
                       return (
@@ -6816,7 +6896,7 @@ const UserListTable2 = ({
             const currentState = getCurrentStateForRow(histRowId)
             const info = getOperationalInfo(currentState)
 
-            const sinceHit = (histRows ?? []).find((h: any) => {
+            const sinceHit = (histRowsWithStart ?? []).find((h: any) => {
               const est = normalizeStateForCompare(h?.estNuevo)
 
 
@@ -6918,7 +6998,7 @@ const UserListTable2 = ({
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
               <CircularProgress />
             </Box>
-          ) : !histRows.length ? (
+          ) : !histRowsWithStart.length ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
               <Typography variant='body2' color='text.secondary' sx={{ fontWeight: 700 }}>
                 Sin registros
@@ -6972,7 +7052,7 @@ const UserListTable2 = ({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {histRows.map((h, i) => (
+                  {histRowsWithStart.map((h, i) => (
                     <TableRow key={i}>
                       <TableCell align='center' sx={{ whiteSpace: 'nowrap' }}>
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
