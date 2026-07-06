@@ -267,6 +267,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const rcms = await prisma.rCM.findMany({
         where: whereClause,
         include: {
+          ordenTrabajo: {
+            select: {
+              id: true,
+              clave: true,
+              correlativ: true,
+              agenda: {
+                select: {
+                  id: true,
+                  obra: {
+                    select: {
+                      obraId: true,
+                      numeroObra: true,
+                      nombreObra: true,
+                      comuna: true,
+                      region: true,
+                      mandante: true
+                    }
+                  },
+                  cliente: {
+                    select: {
+                      clienteId: true,
+                      nombreCliente: true,
+                      razonSocial: true,
+                      comuna: true,
+                      ciudad: true,
+                      region: true,
+                      rut: true
+                    }
+                  }
+                }
+              }
+            }
+          },
           servicios: {
             include: { subProductos: true, producto: true },
           },

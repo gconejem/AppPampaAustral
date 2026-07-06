@@ -42,6 +42,7 @@ interface HeaderProps {
     areaId?: number | null
     areaName?: string | null
     ensayador?: string | null
+    servicioEnsayo?: string | null
     familia?: string
     sede?: string
   }) => void
@@ -73,6 +74,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
   const [selectedAreaName, setSelectedAreaName] = useState<string>('')
   const [selectedEnsayador, setSelectedEnsayador] = useState<string>('')
+  const [selectedServicioEnsayo, setSelectedServicioEnsayo] = useState<string>('')
   const [ensayadorOptions, setEnsayadorOptions] = useState<string[]>([])
   const [areaOptions, setAreaOptions] = useState<Area[]>([])
   const [selectedFamilia, setSelectedFamilia] = useState<string>('')
@@ -165,13 +167,14 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     areaId = selectedAreaId,
     areaName = selectedAreaName,
     ensayador = selectedEnsayador,
+    servicioEnsayo = selectedServicioEnsayo,
     familia = selectedFamilia,
     sede = selectedSede
   ) => {
     const start = dr.start ?? ''
     const end = dr.end ?? ''
 
-    if (!start && !end && !estOp && !areaId && !areaName && !ensayador && !familia && !sede) {
+    if (!start && !end && !estOp && !areaId && !areaName && !ensayador && !servicioEnsayo && !familia && !sede) {
       onFiltersChange?.(undefined)
 
       return
@@ -185,6 +188,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
       areaId?: number | null
       areaName?: string | null
       ensayador?: string | null
+      servicioEnsayo?: string | null
       familia?: string
       sede?: string
     } = {}
@@ -197,6 +201,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     if (typeof areaId !== 'undefined' && areaId !== null) payload.areaId = areaId
     if (areaName) payload.areaName = areaName
     if (ensayador) payload.ensayador = ensayador
+    if (servicioEnsayo) payload.servicioEnsayo = servicioEnsayo
     if (familia) payload.familia = familia
     if (sede) payload.sede = sede
 
@@ -207,7 +212,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     const next = value as 'fecha_codificacion' | 'fecha_muestreo' | 'fecha_ingreso' | 'fecha_vencimiento'
 
     setFechaTipo(next)
-    emitFilters(next, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador, selectedFamilia, selectedSede)
+    emitFilters(next, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador, selectedServicioEnsayo, selectedFamilia, selectedSede)
   }
 
   const handleAreaChange = (value: string) => {
@@ -218,29 +223,34 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     setSelectedAreaId(areaId)
     setSelectedAreaName(areaName)
     setSelectedFamilia('')
-    emitFilters(fechaTipo, dateRange, selectedEstadoOp, areaId, areaName, selectedEnsayador, '', selectedSede)
+    emitFilters(fechaTipo, dateRange, selectedEstadoOp, areaId, areaName, selectedEnsayador, selectedServicioEnsayo, '', selectedSede)
   }
 
   const handleEstadoToggle = (_event: React.MouseEvent<HTMLElement>, value: string | null) => {
     const next = value ?? ''
 
     setSelectedEstadoOp(next)
-    emitFilters(fechaTipo, dateRange, next, selectedAreaId, selectedAreaName, selectedEnsayador, selectedFamilia, selectedSede)
+    emitFilters(fechaTipo, dateRange, next, selectedAreaId, selectedAreaName, selectedEnsayador, selectedServicioEnsayo, selectedFamilia, selectedSede)
   }
 
   const handleEnsayadorChange = (value: string) => {
     setSelectedEnsayador(value)
-    emitFilters(fechaTipo, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, value, selectedFamilia, selectedSede)
+    emitFilters(fechaTipo, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, value, selectedServicioEnsayo, selectedFamilia, selectedSede)
+  }
+
+  const handleServicioEnsayoChange = (value: string) => {
+    setSelectedServicioEnsayo(value)
+    emitFilters(fechaTipo, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador, value, selectedFamilia, selectedSede)
   }
 
   const handleFamiliaChange = (value: string) => {
     setSelectedFamilia(value)
-    emitFilters(fechaTipo, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador, value, selectedSede)
+    emitFilters(fechaTipo, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador, selectedServicioEnsayo, value, selectedSede)
   }
 
   const handleSedeChange = (value: string) => {
     setSelectedSede(value)
-    emitFilters(fechaTipo, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador, selectedFamilia, value)
+    emitFilters(fechaTipo, dateRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador, selectedServicioEnsayo, selectedFamilia, value)
   }
 
   const handleRangeChangeFlexible = (range: any) => {
@@ -261,7 +271,7 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     const nextRange = { start, end }
 
     setDateRange(nextRange)
-    emitFilters(fechaTipo, nextRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador, selectedFamilia, selectedSede)
+    emitFilters(fechaTipo, nextRange, selectedEstadoOp, selectedAreaId, selectedAreaName, selectedEnsayador, selectedServicioEnsayo, selectedFamilia, selectedSede)
   }
 
   const handleClearFilters = () => {
@@ -273,15 +283,16 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     setSelectedAreaId(null)
     setSelectedAreaName('')
     setSelectedEnsayador('')
+    setSelectedServicioEnsayo('')
     setSelectedEstadoOp('')
     setSelectedFamilia('')
     setSelectedSede('')
 
-    emitFilters('fecha_codificacion', nextRange, '', null, '', '', '', '')
+    emitFilters('fecha_codificacion', nextRange, '', null, '', '', '', '', '')
   }
 
   useEffect(() => {
-    emitFilters('fecha_codificacion', defaultRange, '', null, '', '')
+    emitFilters('fecha_codificacion', defaultRange, '', null, '', '', '', '', '')
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -444,6 +455,17 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
               ))}
             </Select>
           </FormControl>
+        </Grid>
+
+        <Grid item xs={12} md={3}>
+          <TextField
+            label='Servicio / Ensayo'
+            size='small'
+            fullWidth
+            value={selectedServicioEnsayo}
+            onChange={e => handleServicioEnsayoChange(e.target.value)}
+            placeholder='Ej: Estructura'
+          />
         </Grid>
 
         <Grid item xs={12} md={6}>

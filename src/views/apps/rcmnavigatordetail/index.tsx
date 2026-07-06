@@ -36,6 +36,7 @@ export default function RcmNavigatorPage() {
     areaName?: string | null
     familia?: string
     ensayador?: string | null
+    servicioEnsayo?: string | null
     sede?: string
   } | undefined>()
 

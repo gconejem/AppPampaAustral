@@ -54,6 +54,7 @@ import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import Paper from '@mui/material/Paper'
 import CloseIcon from '@mui/icons-material/Close'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import CheckBoxOutlinedIcon from '@mui/icons-material/CheckBoxOutlined'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
 import VisibilityIcon from '@mui/icons-material/Visibility'
@@ -215,6 +216,8 @@ interface RCM {
   totalRcms?: number | null
   conEvento?: boolean
   informe?: number | null
+  informeTexto?: string | null
+  informeTextos?: string[]
   ensayos?: { ensayados: number; total: number } | null
   estadoOperativoCounts?: Record<string, number>
   estadoAdministrativoCounts?: Record<string, number>
@@ -650,15 +653,57 @@ const UserListTable2 = ({
     numeroMuestraCliente: string
   }
 
-  const emptyAutoDraft: AutoInformeDraft = {
+  const getTodayInputDate = () => {
+    const now = new Date()
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+
+    return local.toISOString().slice(0, 10)
+  }
+
+  const normalizeToInputDate = (raw: unknown) => {
+    const s = String(raw ?? '').trim()
+
+    if (!s) return ''
+
+    // Formato input date
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+
+    // dd/mm/yyyy o dd-mm-yyyy
+    const dmy = s.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/)
+
+    if (dmy) {
+      const dd = dmy[1]
+      const mm = dmy[2]
+      const yyyy = dmy[3]
+
+      return `${yyyy}-${mm}-${dd}`
+    }
+
+    return ''
+  }
+
+  const formatDateToDMY = (raw: unknown) => {
+    const iso = normalizeToInputDate(raw)
+
+    if (!iso) return ''
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+
+    if (!m) return ''
+
+    return `${m[3]}/${m[2]}/${m[1]}`
+  }
+
+  const createEmptyAutoDraft = (): AutoInformeDraft => ({
     numero: '',
     anexoPrev: '',
-    fechaEmision: '',
+    fechaEmision: getTodayInputDate(),
     resultadoAnalisis: '',
     observacionGeneral: '',
     numeroMuestraLab: '',
     numeroMuestraCliente: ''
-  }
+  })
+
+  const emptyAutoDraft: AutoInformeDraft = createEmptyAutoDraft()
 
   const getApplicableAutoTemplateKeys = (meta: any): AutoTemplateKey[] => {
     const flags = meta?.autoTemplates
@@ -684,8 +729,8 @@ const UserListTable2 = ({
   })
 
   const [autoInformeDrafts, setAutoInformeDrafts] = useState<Record<AutoTemplateKey, AutoInformeDraft>>({
-    DENSIDAD: { ...emptyAutoDraft },
-    HORMIGON: { ...emptyAutoDraft }
+    DENSIDAD: createEmptyAutoDraft(),
+    HORMIGON: createEmptyAutoDraft()
   })
 
   const [informeDrafts, setInformeDrafts] = useState<
@@ -698,6 +743,9 @@ const UserListTable2 = ({
       observaciones: string
       anexoPrev: string
       rcms: string[]
+      saved?: boolean
+      isEditing?: boolean
+      historyId?: number | null
     }>
   >([])
 
@@ -753,7 +801,7 @@ const UserListTable2 = ({
     setInformeDialogHistory([])
     setInformeDrafts([])
     setAutoInformeExisting({ DENSIDAD: null, HORMIGON: null })
-    setAutoInformeDrafts({ DENSIDAD: { ...emptyAutoDraft }, HORMIGON: { ...emptyAutoDraft } })
+    setAutoInformeDrafts({ DENSIDAD: createEmptyAutoDraft(), HORMIGON: createEmptyAutoDraft() })
     setInformeDialogErrors({})
     setHideEnsayosByRcm(true)
     setInformeDialogOpen(true)
@@ -859,16 +907,17 @@ const UserListTable2 = ({
       }
 
       const parseObservacion = (obs: string | null) => {
-        const result: { tipoInforme: string; fechaEmision: string; refCliente: string; observaciones: string; anexoPrev: string; rcms: string[] } = {
-          tipoInforme: '', fechaEmision: '', refCliente: '', observaciones: '', anexoPrev: '', rcms: []
+        const result: { tipoInforme: string; fechaEmision: string; refCliente: string; observaciones: string; anexoPrev: string; rcms: string[]; numeroInforme: string } = {
+          tipoInforme: '', fechaEmision: '', refCliente: '', observaciones: '', anexoPrev: '', rcms: [], numeroInforme: extractInformeTextFromObservacion(obs)
         }
 
         if (!obs) return result
         const parts = obs.split(' | ')
 
         for (const part of parts) {
-          if (part.startsWith('Tipo: ')) result.tipoInforme = part.slice(6).trim()
-          else if (part.startsWith('Fecha: ')) result.fechaEmision = part.slice(7).trim()
+          if (part.startsWith('N° Informe: ')) result.numeroInforme = part.slice(12).trim()
+          else if (part.startsWith('Tipo: ')) result.tipoInforme = part.slice(6).trim()
+          else if (part.startsWith('Fecha: ')) result.fechaEmision = normalizeToInputDate(part.slice(7).trim())
           else if (part.startsWith('Ref. Cliente: ')) result.refCliente = part.slice(14).trim()
           else if (part.startsWith('Obs: ')) result.observaciones = part.slice(5).trim()
           else if (part.startsWith('Anexo Prev: ')) result.anexoPrev = part.slice(12).trim()
@@ -887,14 +936,16 @@ const UserListTable2 = ({
 
           return {
             id: `saved-${numero}-${i}`,
-            numero: String(h.informe),
+            numero: parsed.numeroInforme || String(h.informe),
             tipoInforme: parsed.tipoInforme,
             fechaEmision: parsed.fechaEmision,
             refCliente: parsed.refCliente,
             observaciones: parsed.observaciones,
             anexoPrev: parsed.anexoPrev,
             rcms: parsed.rcms,
-            saved: true
+            saved: true,
+            isEditing: false,
+            historyId: Number.isFinite(Number(h?.id)) ? Number(h.id) : null
           }
         })
 
@@ -920,7 +971,7 @@ const UserListTable2 = ({
     setInformeDialogHistory([])
     setInformeDrafts([])
     setAutoInformeExisting({ DENSIDAD: null, HORMIGON: null })
-    setAutoInformeDrafts({ DENSIDAD: { ...emptyAutoDraft }, HORMIGON: { ...emptyAutoDraft } })
+    setAutoInformeDrafts({ DENSIDAD: createEmptyAutoDraft(), HORMIGON: createEmptyAutoDraft() })
     setInformeDialogErrors({})
     setHideEnsayosByRcm(true)
   }
@@ -942,6 +993,42 @@ const UserListTable2 = ({
 
 
     return null
+  }
+
+  const extractInformeTextFromObservacion = (obs: string | null | undefined) => {
+    const text = String(obs ?? '').trim()
+
+    if (!text) return ''
+    const parts = text.split(' | ')
+
+    for (const part of parts) {
+      if (/^(N° Informe|Nº Informe|Nro Informe|Numero Informe):\s*/i.test(part)) {
+        return part.replace(/^(N° Informe|Nº Informe|Nro Informe|Numero Informe):\s*/i, '').trim()
+      }
+    }
+
+    return ''
+  }
+
+  const mergeInformeTexts = (existing: Array<string | null | undefined>, incoming: Array<string | null | undefined>) => {
+    const out = Array.from(
+      new Set(
+        [...(existing ?? []), ...(incoming ?? [])]
+          .map(v => String(v ?? '').trim())
+          .filter(Boolean)
+      )
+    )
+
+    return out.sort((a, b) => {
+      const na = parseInformeNumber(a)
+      const nb = parseInformeNumber(b)
+
+      if (na != null && nb != null) return na - nb
+      if (na != null) return -1
+      if (nb != null) return 1
+
+      return compareText(a, b)
+    })
   }
 
   const computeEnsayosFromServicios = (servicios?: Array<{ cantidad?: number | null; estadoOperativo?: string | null }>) => {
@@ -1230,6 +1317,7 @@ const UserListTable2 = ({
           key: t.key,
           label: t.label,
           numero: n,
+          numeroRaw: String(draft.numero ?? '').trim(),
           anexoPrev: String(draft.anexoPrev ?? '').trim(),
           fechaEmision: String(draft.fechaEmision ?? '').trim(),
           resultadoAnalisis: String(draft.resultadoAnalisis ?? '').trim(),
@@ -1244,6 +1332,7 @@ const UserListTable2 = ({
       .map(d => ({
         id: d.id,
         numero: parseInformeNumber(d.numero),
+        numeroRaw: String((d as any).numero ?? '').trim(),
         tipoInforme: String((d as any).tipoInforme ?? '').trim(),
         fechaEmision: String((d as any).fechaEmision ?? '').trim(),
         refCliente: String(d.refCliente ?? '').trim(),
@@ -1256,6 +1345,7 @@ const UserListTable2 = ({
       .filter(d => d.numero != null) as Array<{
         id: string
         numero: number
+        numeroRaw: string
         tipoInforme: string
         fechaEmision: string
         refCliente: string
@@ -1347,10 +1437,14 @@ const UserListTable2 = ({
       setSavingDraftId(draftId)
       setInformeDialogErrors(prev => ({ ...prev, general: undefined }))
 
+      const historyId = Number((draft as any).historyId)
+      const isUpdate = Boolean((draft as any).saved && Number.isFinite(historyId) && historyId > 0)
+
       const funcionario = getCurrentUserName() ?? 'Usuario'
       const aplicadoA = getAppliedAForRow(rcmId)
 
       const parts = [
+        (draft as any).numero ? `N° Informe: ${(draft as any).numero}` : '',
         (draft as any).tipoInforme ? `Tipo: ${(draft as any).tipoInforme}` : '',
         (draft as any).fechaEmision ? `Fecha: ${(draft as any).fechaEmision}` : '',
         draft.refCliente ? `Ref. Cliente: ${draft.refCliente}` : '',
@@ -1373,8 +1467,10 @@ const UserListTable2 = ({
         informe: numero
       }
 
+      if (isUpdate) payload.historyId = historyId
+
       const res = await fetch(`/api/rcm/${rcmId}/history`, {
-        method: 'POST',
+        method: isUpdate ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
@@ -1391,10 +1487,16 @@ const UserListTable2 = ({
       const created = await res.json().catch(() => null)
 
       // Marcar draft como guardado
-      setInformeDrafts(prev => prev.map(d => d.id === draftId ? { ...d, saved: true } : d))
+      setInformeDrafts(prev => prev.map(d => d.id === draftId ? {
+        ...d,
+        saved: true,
+        isEditing: false,
+        historyId: isUpdate ? historyId : (Number.isFinite(Number(created?.id)) ? Number(created.id) : d.historyId ?? null)
+      } : d))
 
       // Actualizar caché de historial
       const entry = created ?? {
+        id: isUpdate ? historyId : undefined,
         tipo: payload.tipo,
         funcionario,
         estAnterior: null,
@@ -1407,11 +1509,35 @@ const UserListTable2 = ({
       }
 
       const current = historyCache.get(rcmId) ?? []
+      const previousEntry = isUpdate ? current.find((x: any) => Number(x?.id) === historyId) : null
 
-      historyCache.set(rcmId, [entry, ...current])
+      const previousNumeroRaw = String(
+        extractInformeTextFromObservacion(previousEntry?.observacion ?? null) ||
+        (previousEntry?.informe != null ? previousEntry.informe : '')
+      ).trim()
+
+      const nextEntry = { ...previousEntry, ...entry }
+
+      if (isUpdate) {
+        const replaced = current.map((x: any) => (Number(x?.id) === historyId ? nextEntry : x))
+        const exists = replaced.some((x: any) => Number(x?.id) === historyId)
+
+        historyCache.set(rcmId, exists ? replaced : [nextEntry, ...replaced])
+      } else {
+        historyCache.set(rcmId, [nextEntry, ...current])
+      }
 
       if (histDialogOpen && histRowId === rcmId) {
-        setHistRows(prev => [entry, ...prev])
+        if (isUpdate) {
+          setHistRows(prev => {
+            const replaced = prev.map((x: any) => (Number(x?.id) === historyId ? nextEntry : x))
+            const exists = replaced.some((x: any) => Number(x?.id) === historyId)
+
+            return exists ? replaced : [nextEntry, ...replaced]
+          })
+        } else {
+          setHistRows(prev => [nextEntry, ...prev])
+        }
       }
 
       // Actualizar columna N° Informe de la tabla con el máximo entre todos los guardados
@@ -1423,15 +1549,41 @@ const UserListTable2 = ({
       }).filter((n): n is number => n != null)
 
       const maxNum = allSaved.length ? Math.max(...allSaved) : numero
+      const numeroRaw = String((draft as any).numero ?? '').trim()
+
+      const currentTexts = (row: any) => [
+        ...(Array.isArray((row as any).informeTextos) ? (row as any).informeTextos : []),
+        (row as any).informeTexto
+      ]
+
+      const withoutPrevious = (arr: any[]) => {
+        if (!isUpdate || !previousNumeroRaw) return arr
+
+        return arr.filter(v => String(v ?? '').trim() !== previousNumeroRaw)
+      }
 
       setData(prev => prev.map(d =>
         d.id === rcmId || (d as any).representativeRcmId === rcmId
-          ? { ...d, informe: maxNum }
+          ? (() => {
+            const merged = mergeInformeTexts(
+              withoutPrevious(currentTexts(d)),
+              [numeroRaw || String(maxNum)]
+            )
+
+            return { ...d, informe: maxNum, informeTexto: merged[merged.length - 1] ?? null, informeTextos: merged }
+          })()
           : d
       ))
       setFilteredData(prev => prev.map(d =>
         d.id === rcmId || (d as any).representativeRcmId === rcmId
-          ? { ...d, informe: maxNum }
+          ? (() => {
+            const merged = mergeInformeTexts(
+              withoutPrevious(currentTexts(d)),
+              [numeroRaw || String(maxNum)]
+            )
+
+            return { ...d, informe: maxNum, informeTexto: merged[merged.length - 1] ?? null, informeTextos: merged }
+          })()
           : d
       ))
     } catch (e) {
@@ -1463,6 +1615,7 @@ const UserListTable2 = ({
       const aplicadoA = getAppliedAForRow(rcmId)
 
       const buildManualObservacion = (
+        numeroRaw: string,
         tipoInforme: string,
         fechaEmision: string,
         refCliente: string,
@@ -1471,8 +1624,9 @@ const UserListTable2 = ({
         rcms?: string[]
       ) => {
         const parts = [
+          numeroRaw ? `N° Informe: ${numeroRaw}` : '',
           tipoInforme ? `Tipo: ${tipoInforme}` : '',
-          fechaEmision ? `Fecha: ${fechaEmision}` : '',
+          fechaEmision ? `Fecha: ${formatDateToDMY(fechaEmision)}` : '',
           refCliente ? `Ref. Cliente: ${refCliente}` : '',
           observaciones ? `Obs: ${observaciones}` : '',
           anexoPrev ? `Anexo Prev: ${anexoPrev}` : '',
@@ -1486,6 +1640,7 @@ const UserListTable2 = ({
       const buildAutoObservacion = (
         key: AutoTemplateKey,
         draft: {
+          numeroRaw: string
           anexoPrev: string
           fechaEmision: string
           resultadoAnalisis: string
@@ -1497,7 +1652,8 @@ const UserListTable2 = ({
       ) => {
         if (key === 'DENSIDAD') {
           const parts = [
-            draft.fechaEmision ? `Fecha Emisión: ${draft.fechaEmision}` : '',
+            draft.numeroRaw ? `N° Informe: ${draft.numeroRaw}` : '',
+            draft.fechaEmision ? `Fecha Emisión: ${formatDateToDMY(draft.fechaEmision)}` : '',
             draft.resultadoAnalisis ? `Resultado Análisis: ${draft.resultadoAnalisis}` : '',
             draft.observacionGeneral ? `Observación General: ${draft.observacionGeneral}` : '',
             draft.anexoPrev ? `Anexo Prev: ${draft.anexoPrev}` : '',
@@ -1508,7 +1664,8 @@ const UserListTable2 = ({
         }
 
         const parts = [
-          draft.fechaEmision ? `Fecha Emisión: ${draft.fechaEmision}` : '',
+          draft.numeroRaw ? `N° Informe: ${draft.numeroRaw}` : '',
+          draft.fechaEmision ? `Fecha Emisión: ${formatDateToDMY(draft.fechaEmision)}` : '',
           draft.numeroMuestraLab ? `N° Muestra Lab: ${draft.numeroMuestraLab}` : '',
           draft.numeroMuestraCliente ? `N° Muestra Cliente: ${draft.numeroMuestraCliente}` : '',
           draft.observacionGeneral ? `Observación General: ${draft.observacionGeneral}` : '',
@@ -1553,6 +1710,7 @@ const UserListTable2 = ({
             a.key,
             {
               anexoPrev: a.anexoPrev,
+              numeroRaw: a.numeroRaw,
               fechaEmision: a.fechaEmision,
               resultadoAnalisis: a.resultadoAnalisis,
               observacionGeneral: a.observacionGeneral,
@@ -1598,7 +1756,7 @@ const UserListTable2 = ({
           tipo: 'Ope',
           tipoEstado: 'INFORME_MANUAL',
           motivo: null,
-          observacion: buildManualObservacion(m.tipoInforme, m.fechaEmision, m.refCliente, m.observaciones, m.anexoPrev, m.rcms),
+          observacion: buildManualObservacion(m.numeroRaw, m.tipoInforme, m.fechaEmision, m.refCliente, m.observaciones, m.anexoPrev, m.rcms),
           funcionario,
           estPrev: null,
           estNuevo: null,
@@ -1626,6 +1784,15 @@ const UserListTable2 = ({
       // 3) Marcar como DIGITADO (si corresponde)
       const prevNorm = normalizeStateForCompare(prevState)
       let digitadoEntry: any = null
+
+      const candidates = [
+        ...(autoCreates ?? []).map((a: any) => ({ num: Number(a?.numero), text: String(a?.numeroRaw ?? '').trim() })),
+        ...(manualCreates ?? []).map((m: any) => ({ num: Number(m?.numero), text: String(m?.numeroRaw ?? '').trim() }))
+      ].filter(c => Number.isFinite(c.num) && c.num > 0)
+
+      const topCandidate = candidates.sort((a, b) => b.num - a.num)[0] ?? null
+      const informeTextoToPersist = topCandidate?.text || String(informeToPersist)
+      const informeTextosToPersist = mergeInformeTexts([], candidates.map(c => c.text || String(c.num)))
 
       if (prevNorm !== 'DIGITADO') {
         const payload: any = {
@@ -1661,14 +1828,43 @@ const UserListTable2 = ({
       setData(prev =>
         prev.map(d =>
           d.id === rcmId || (d as any).representativeRcmId === rcmId
-            ? { ...d, estadoOperativo: prevNorm !== 'DIGITADO' ? 'DIGITADO' : (d as any).estadoOperativo, informe: informeToPersist }
+            ? (() => {
+              const merged = mergeInformeTexts(
+                [...(Array.isArray((d as any).informeTextos) ? (d as any).informeTextos : []), (d as any).informeTexto],
+                informeTextosToPersist
+              )
+
+              return {
+                ...d,
+                estadoOperativo: prevNorm !== 'DIGITADO' ? 'DIGITADO' : (d as any).estadoOperativo,
+                informe: informeToPersist,
+                informeTexto: merged[merged.length - 1] ?? informeTextoToPersist,
+                informeTextos: merged
+              }
+            })()
             : d
         )
       )
       setFilteredData(prev =>
         prev.map(d =>
           d.id === rcmId || (d as any).representativeRcmId === rcmId
-            ? { ...d, estadoOperativo: prevNorm !== 'DIGITADO' ? 'DIGITADO' : (d as any).estadoOperativo, informe: informeToPersist }
+            ? {
+              ...d,
+              estadoOperativo: prevNorm !== 'DIGITADO' ? 'DIGITADO' : (d as any).estadoOperativo,
+              informe: informeToPersist,
+              informeTexto: (() => {
+                const merged = mergeInformeTexts(
+                  [...(Array.isArray((d as any).informeTextos) ? (d as any).informeTextos : []), (d as any).informeTexto],
+                  informeTextosToPersist
+                )
+
+                return merged[merged.length - 1] ?? informeTextoToPersist
+              })(),
+              informeTextos: mergeInformeTexts(
+                [...(Array.isArray((d as any).informeTextos) ? (d as any).informeTextos : []), (d as any).informeTexto],
+                informeTextosToPersist
+              )
+            }
             : d
         )
       )
@@ -2406,6 +2602,10 @@ const UserListTable2 = ({
           totalRcms: r.totalRcms ?? 0,
           conEvento: Boolean(r.conEvento),
           informe: (r.informe ?? null) as number | null,
+          informeTexto: (r.informeTexto ?? null) as string | null,
+          informeTextos: Array.isArray(r.informeTextos)
+            ? r.informeTextos.map((x: any) => String(x ?? '').trim()).filter(Boolean)
+            : [],
           ensayos: r.ensayos ?? null,
           autoTemplates: r.autoTemplates ?? null,
           estadoOperativoCounts: opCounts,
@@ -3077,7 +3277,98 @@ const UserListTable2 = ({
         accessorFn: r => (r.informe == null ? null : Number(r.informe)),
         sortingFn: (rowA, rowB, columnId) => compareNumber(rowA.getValue(columnId), rowB.getValue(columnId)),
         sortDescFirst: true,
-        cell: ({ row }) => <span>{row.original.informe ?? '-'}</span>
+        cell: ({ row }) => {
+          const rawList = Array.isArray(row.original.informeTextos)
+            ? row.original.informeTextos
+            : [row.original.informeTexto ?? row.original.informe]
+
+          const list = (() => {
+            const seen = new Set<string>()
+
+            return rawList
+              .map(v => String(v ?? '').trim())
+              .filter(Boolean)
+              .filter(v => {
+                if (seen.has(v)) return false
+                seen.add(v)
+
+                return true
+              })
+          })()
+
+          if (!list.length) return <span>-</span>
+
+          if (list.length === 1) {
+            return (
+              <Typography
+                variant='body2'
+                title={list[0]}
+                sx={{
+                  display: 'inline-block',
+                  maxWidth: 180,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  verticalAlign: 'middle'
+                }}
+              >
+                {list[0]}
+              </Typography>
+            )
+          }
+
+          const visible = list.slice(0, 1)
+          const hidden = Math.max(0, list.length - visible.length)
+
+          return (
+            <Box
+              title={list.join(', ')}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexWrap: 'wrap',
+                gap: 0.45,
+                maxWidth: 190,
+                mx: 'auto'
+              }}
+            >
+              {visible.map(v => (
+                <Chip
+                  key={v}
+                  size='small'
+                  label={v}
+                  sx={{
+                    height: 22,
+                    borderRadius: 1.5,
+                    fontWeight: 700,
+                    maxWidth: 130,
+                    '& .MuiChip-label': {
+                      px: 0.8,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }
+                  }}
+                />
+              ))}
+              {hidden > 0 ? (
+                <Chip
+                  size='small'
+                  label={`+${hidden}`}
+                  sx={{
+                    height: 22,
+                    borderRadius: 1.5,
+                    fontWeight: 800,
+                    bgcolor: theme => alpha(theme.palette.primary.main, 0.12),
+                    color: 'primary.main',
+                    '& .MuiChip-label': { px: 0.8 }
+                  }}
+                />
+              ) : null}
+            </Box>
+          )
+        }
       },
       {
         id: 'estOp',
@@ -3393,6 +3684,9 @@ const UserListTable2 = ({
       // si el click ocurre dentro de un menú/popover/modal (portal), no limpiar
       if (target.closest('.MuiPopover-root') || target.closest('.MuiMenu-root') || target.closest('.MuiModal-root')) return
 
+      // si el click ocurre dentro del panel de detalle de código producto, no limpiar
+      if (target.closest('[data-rcmnav-detail]')) return
+
       const root = tableKeyboardRef.current
 
       if (!root) return
@@ -3459,7 +3753,10 @@ const UserListTable2 = ({
       const areaServicio = [area, servicio].filter(Boolean).join(' - ')
 
       const totalRcms = item.totalRcms ?? 0
-      const informe = item.informe ?? ''
+
+      const informe = Array.isArray(item.informeTextos) && item.informeTextos.length
+        ? item.informeTextos.join(', ')
+        : (item.informeTexto ?? item.informe ?? '')
 
       const opRaw = item.estadoOperativo ?? ''
       const opLabel = opRaw ? (OPERATIONAL_STATES.find(s => s.value === opRaw)?.label ?? opRaw) : ''
@@ -4375,20 +4672,6 @@ const UserListTable2 = ({
 
             {(() => {
               const ens = Array.isArray(codigoDialogData?.ensayos) ? codigoDialogData.ensayos : []
-              const qtyBySku = new Map<string, number>()
-              const rcms = Array.isArray(codigoDialogData?.rcms) ? codigoDialogData.rcms : []
-
-              for (const r of rcms) {
-                const servicios = Array.isArray((r as any)?.servicios) ? (r as any).servicios : []
-
-                for (const s of servicios) {
-                  const skuSrv = String((s as any)?.codigo ?? '').trim()
-                  const qtySrv = Number((s as any)?.cantidad ?? 0)
-
-                  if (!skuSrv || !Number.isFinite(qtySrv) || qtySrv <= 0) continue
-                  qtyBySku.set(skuSrv, (qtyBySku.get(skuSrv) ?? 0) + qtySrv)
-                }
-              }
 
               const map = new Map<
                 string,
@@ -4436,15 +4719,10 @@ const UserListTable2 = ({
 
                 if (!sku) continue
                 const prev = map.get(sku)
-                const qtyFromServicios = qtyBySku.get(sku)
-                const fallbackTotalEnsayos = Number((codigoDialogMeta as any)?.ensayos?.total ?? 0)
 
-                const baseCantidad =
-                  Number.isFinite(qtyFromServicios) && (qtyFromServicios as number) > 0
-                    ? (qtyFromServicios as number)
-                    : ens.length === 1 && Number.isFinite(fallbackTotalEnsayos) && fallbackTotalEnsayos > 0
-                      ? fallbackTotalEnsayos
-                      : 1
+                // Importante: el listado SKUs del CP representa la configuración del Código Producto,
+                // no la suma de servicios ejecutados por cada RCM.
+                const baseCantidad = 1
 
                 map.set(sku, {
                   sku,
@@ -5338,8 +5616,8 @@ const UserListTable2 = ({
                               />
                               <TextField
                                 label='FECHA DE EMISIÓN *'
-                                placeholder='dd-mm-aaaa'
-                                value={draft.fechaEmision}
+                                type='date'
+                                value={normalizeToInputDate(draft.fechaEmision)}
                                 onChange={e => {
                                   const v = e.target.value
 
@@ -5347,6 +5625,7 @@ const UserListTable2 = ({
                                 }}
                                 size='small'
                                 fullWidth
+                                inputProps={{ lang: 'es-CL' }}
                                 InputLabelProps={{ shrink: true }}
                               />
                             </Box>
@@ -5449,7 +5728,7 @@ const UserListTable2 = ({
 
                   return [
                     ...prev,
-                    { id: nextId, numero: '', tipoInforme: '', fechaEmision: '', refCliente: '', observaciones: '', anexoPrev: '', rcms: defaultRcms }
+                    { id: nextId, numero: '', tipoInforme: '', fechaEmision: getTodayInputDate(), refCliente: '', observaciones: '', anexoPrev: '', rcms: defaultRcms }
                   ]
                 })
               }}
@@ -5494,6 +5773,9 @@ const UserListTable2 = ({
                     : []
 
                   const hasRcmsSelected = selectedRcms.length > 0
+                  const isSaved = Boolean((d as any).saved)
+                  const isEditing = Boolean((d as any).isEditing)
+                  const isLocked = isSaved && !isEditing
 
 
                   return (
@@ -5505,10 +5787,10 @@ const UserListTable2 = ({
                         mb: 1.25,
                         borderRadius: 2,
                         borderColor: (d as any).saved
-                          ? alpha(theme.palette.success.main, 0.7)
+                          ? alpha(theme.palette.success.main, 0.55)
                           : isOk ? alpha(theme.palette.success.main, 0.55) : alpha(theme.palette.text.primary, 0.18),
                         bgcolor: (d as any).saved
-                          ? alpha(theme.palette.success.main, 0.08)
+                          ? alpha(theme.palette.success.main, 0.045)
                           : 'transparent'
                       })}
                     >
@@ -5523,9 +5805,35 @@ const UserListTable2 = ({
                               — {d.numero}
                             </Typography>
                           )}
-                          {(d as any).saved && (
-                            <Typography variant='caption' sx={theme => ({ color: theme.palette.success.main, fontWeight: 800, ml: 0.75, fontSize: '0.72rem' })}>
-                              ✓ Guardado
+                          {isSaved && !isEditing && (
+                            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, ml: 0.75 }}>
+                              <Typography variant='caption' sx={theme => ({ color: theme.palette.success.main, fontWeight: 800, fontSize: '0.72rem' })}>
+                                ✓ Guardado
+                              </Typography>
+                              <Button
+                                size='small'
+                                variant='text'
+                                onClick={() => {
+                                  setInformeDrafts(prev => prev.map(x => (x.id === d.id ? { ...x, isEditing: true } : x)))
+                                }}
+                                startIcon={<EditOutlinedIcon sx={{ fontSize: '0.9rem !important' }} />}
+                                sx={{
+                                  textTransform: 'none',
+                                  minWidth: 0,
+                                  px: 0.6,
+                                  py: 0.1,
+                                  fontSize: '0.72rem',
+                                  lineHeight: 1.2,
+                                  fontWeight: 700
+                                }}
+                              >
+                                Editar
+                              </Button>
+                            </Box>
+                          )}
+                          {isSaved && isEditing && (
+                            <Typography variant='caption' sx={theme => ({ color: theme.palette.warning.main, fontWeight: 800, ml: 0.75, fontSize: '0.72rem' })}>
+                              ✎ Editando
                             </Typography>
                           )}
                         </Box>
@@ -5535,7 +5843,7 @@ const UserListTable2 = ({
                           aria-label='Eliminar informe'
                           onClick={() => setInformeDrafts(prev => prev.filter(x => x.id !== d.id))}
                           sx={{ color: 'error.main', p: 0.25 }}
-                          disabled={(d as any).saved}
+                          disabled={isSaved}
                         >
                           <CloseIcon sx={{ fontSize: 16 }} />
                         </IconButton>
@@ -5551,7 +5859,7 @@ const UserListTable2 = ({
                             <Button
                               size='small'
                               variant='outlined'
-                              disabled={(d as any).saved}
+                              disabled={isLocked}
                               onClick={() => {
                                 setInformeDrafts(prev =>
                                   prev.map(x =>
@@ -5591,7 +5899,7 @@ const UserListTable2 = ({
                               <Box
                                 key={rcm}
                                 onClick={() => {
-                                  if ((d as any).saved) return
+                                  if (isLocked) return
                                   setInformeDrafts(prev =>
                                     prev.map(x => {
                                       if (x.id !== d.id) return x
@@ -5660,7 +5968,7 @@ const UserListTable2 = ({
                           }}
                           size='small'
                           fullWidth
-                          disabled={(d as any).saved}
+                          disabled={isLocked}
                           error={!!informeDialogErrors.numero && idx === 0}
                           helperText={
                             idx === 0 && informeDialogErrors.numero
@@ -5683,14 +5991,14 @@ const UserListTable2 = ({
                           }}
                           size='small'
                           fullWidth
-                          disabled={(d as any).saved}
+                          disabled={isLocked}
                           InputProps={{ sx: { fontSize: '0.8rem' } }}
                           InputLabelProps={{ shrink: true, sx: { fontSize: '0.75rem' } }}
                         />
                         <TextField
                           label='FECHA DE EMISIÓN'
-                          placeholder='Ej: 23-04-2026'
-                          value={(d as any).fechaEmision ?? ''}
+                          type={isLocked ? 'text' : 'date'}
+                          value={isLocked ? formatDateToDMY((d as any).fechaEmision) : normalizeToInputDate((d as any).fechaEmision)}
                           onChange={e => {
                             const v = e.target.value
 
@@ -5698,7 +6006,8 @@ const UserListTable2 = ({
                           }}
                           size='small'
                           fullWidth
-                          disabled={(d as any).saved}
+                          disabled={isLocked}
+                          inputProps={{ lang: 'es-CL' }}
                           InputProps={{ sx: { fontSize: '0.8rem' } }}
                           InputLabelProps={{ shrink: true, sx: { fontSize: '0.75rem' } }}
                         />
@@ -5716,7 +6025,7 @@ const UserListTable2 = ({
                           }}
                           size='small'
                           fullWidth
-                          disabled={(d as any).saved}
+                          disabled={isLocked}
                           InputProps={{ sx: { fontSize: '0.8rem' } }}
                           InputLabelProps={{ shrink: true, sx: { fontSize: '0.75rem' } }}
                         />
@@ -5731,14 +6040,14 @@ const UserListTable2 = ({
                           }}
                           size='small'
                           fullWidth
-                          disabled={(d as any).saved}
+                          disabled={isLocked}
                           InputProps={{ sx: { fontSize: '0.8rem' } }}
                           InputLabelProps={{ shrink: true, sx: { fontSize: '0.75rem' } }}
                         />
                       </Box>
 
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-                        {!(d as any).saved ? (
+                        {!isLocked ? (
                           <Button
                             variant='contained'
                             color='primary'
@@ -5748,7 +6057,7 @@ const UserListTable2 = ({
                             startIcon={<CheckBoxOutlinedIcon sx={{ fontSize: '0.9rem !important' }} />}
                             sx={{ textTransform: 'none', borderRadius: 2, fontSize: '0.75rem', py: 0.4 }}
                           >
-                            {savingDraftId === d.id ? 'Guardando…' : 'Guardar Informe'}
+                            {savingDraftId === d.id ? 'Guardando…' : (isSaved ? 'Actualizar Informe' : 'Guardar Informe')}
                           </Button>
                         ) : (
                           <Typography variant='caption' sx={theme => ({ color: theme.palette.success.main, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.72rem' })}>
@@ -5780,7 +6089,7 @@ const UserListTable2 = ({
 
                     return [
                       ...prev,
-                      { id: nextId, numero: '', tipoInforme: '', fechaEmision: '', refCliente: '', observaciones: '', anexoPrev: '', rcms: defaultRcms }
+                      { id: nextId, numero: '', tipoInforme: '', fechaEmision: getTodayInputDate(), refCliente: '', observaciones: '', anexoPrev: '', rcms: defaultRcms }
                     ]
                   })
                 }}

@@ -73,6 +73,21 @@ const normalizeStateKey = (raw?: string | null) => {
   return s.toUpperCase().replace(/\s+/g, '_')
 }
 
+const extractInformeTexto = (obs: unknown) => {
+  const text = String(obs ?? '').trim()
+
+  if (!text) return ''
+  const parts = text.split(' | ')
+
+  for (const part of parts) {
+    if (/^(N° Informe|Nº Informe|Nro Informe|Numero Informe):\s*/i.test(part)) {
+      return part.replace(/^(N° Informe|Nº Informe|Nro Informe|Numero Informe):\s*/i, '').trim()
+    }
+  }
+
+  return ''
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -187,7 +202,7 @@ export async function GET(request: Request) {
         RCMHistory: {
           orderBy: { createdAt: 'desc' },
           take: 20,
-          select: { estNuevo: true, tipo: true, tipoEstado: true, informe: true, createdAt: true }
+          select: { estNuevo: true, tipo: true, tipoEstado: true, informe: true, observacion: true, createdAt: true }
         }
       }
     })
@@ -345,16 +360,30 @@ export async function GET(request: Request) {
         }
       }
 
-      // N° Informe (max) desde el último historial traído por RCM (si existe)
+      // N° Informe: conservar máximo para orden y lista textual completa para mostrar en UI.
       let informeMax: number | null = null
+      let informeTexto: string | null = null
+      const informesByNumber = new Map<number, string>()
       for (const r of rcmsForAg) {
         for (const h of r.RCMHistory ?? []) {
           const inf = (h as any)?.informe ?? null
           if (inf === null || inf === undefined) continue
           const n = Number(inf)
-          if (Number.isFinite(n) && (informeMax === null || n > informeMax)) informeMax = n
+          if (!Number.isFinite(n)) continue
+
+          const text = extractInformeTexto((h as any)?.observacion) || String(n)
+          if (!informesByNumber.has(n)) informesByNumber.set(n, text)
+
+          if (informeMax === null || n > informeMax) {
+            informeMax = n
+            informeTexto = text
+          }
         }
       }
+
+      const informeTextos = Array.from(informesByNumber.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([, text]) => text)
 
       // Con Evento
       const conEvento = rcmsForAg.some(r => isEventoSinResolver(r.RCMHistory))
@@ -384,6 +413,8 @@ export async function GET(request: Request) {
         ensayos: { ensayados: ensayosEnsayados, total: ensayosTotal },
         autoTemplates: { DENSIDAD: autoDensidad, HORMIGON: autoHormigon },
         informe: informeMax,
+        informeTexto,
+        informeTextos,
         conEvento
       }
     })

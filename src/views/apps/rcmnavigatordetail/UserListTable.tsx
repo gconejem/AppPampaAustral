@@ -201,6 +201,7 @@ interface RCM {
   estadoOperativo?: string
   estadoAdministrativo?: string
   tipoServicio?: string | null
+  ensayoServicioNombres?: string[]
   proximoVencimiento?: string | null
   diasVencimiento?: number | null
   cantidadProbetas?: number
@@ -272,6 +273,7 @@ interface Filters {
   areaName?: string | null
   familia?: string | null
   ensayador?: string | null
+  servicioEnsayo?: string | null
 }
 
 // Component
@@ -1959,7 +1961,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
 
         // --- fetch ordenes de trabajo ---
-        const ordenIds = Array.from(new Set(raw.map((r: any) => r.ordenTrabajoId ?? r.ordenTrabajo?.id).filter(Boolean)))
+        const hasOrderDataInRaw = raw.some((r: any) => {
+          const ot = r?.ordenTrabajo
+          return Boolean(ot?.id || ot?.correlativ || ot?.correlativo || ot?.agenda?.obra || ot?.agenda?.cliente)
+        })
+
+        const ordenIds = hasOrderDataInRaw
+          ? []
+          : Array.from(new Set(raw.map((r: any) => r.ordenTrabajoId ?? r.ordenTrabajo?.id).filter(Boolean)))
         const ordenMap: Record<string | number, any> = {}
 
         if (ordenIds.length) {
@@ -2163,8 +2172,19 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           // --- CORRECCI├ôN: NORMALIZAR ORDEN DE TRABAJO ---
           const orderKey = r.ordenTrabajoId ?? r.ordenTrabajo?.id ?? r.ordenTrabajo?._id ?? ''
           const orderObj = orderKey ? (ordenMap[String(orderKey)] ?? null) : null
-          const obraFromOrder = orderObj?.agenda?.obra ?? orderObj?.obra ?? null
-          const clienteFromOrder = orderObj?.agenda?.cliente ?? orderObj?.cliente ?? null
+          const orderFromRow = r.ordenTrabajo ?? null
+          const obraFromOrder =
+            orderObj?.agenda?.obra ??
+            orderObj?.obra ??
+            orderFromRow?.agenda?.obra ??
+            orderFromRow?.obra ??
+            null
+          const clienteFromOrder =
+            orderObj?.agenda?.cliente ??
+            orderObj?.cliente ??
+            orderFromRow?.agenda?.cliente ??
+            orderFromRow?.cliente ??
+            null
 
           if (!obraObj && obraFromOrder) {
             obraObj = obraFromOrder
@@ -2383,6 +2403,18 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               familiaFinal ??
               null
 
+            const ensayoServicioNombres = Array.from(
+              new Set(
+                [
+                  ...(Array.isArray(serviciosMuestra)
+                    ? serviciosMuestra.map((sm: any) => String(sm?.nombre ?? '').trim())
+                    : []),
+                  String(tipoServicio ?? '').trim(),
+                  String(familiaFinal ?? '').trim()
+                ].filter(Boolean)
+              )
+            )
+
             const ss = r.ss ?? orderObj?.clave ?? r.ordenTrabajo?.clave ?? null
 
 
@@ -2446,6 +2478,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               estadoOperativo: estadoMuestraResuelto,
               estadoAdministrativo: r.estadoAdministrativo ?? r.estado_administrativo ?? '',
               tipoServicio,
+              ensayoServicioNombres,
               proximoVencimiento: nextProbeta?.fechaVencimiento ?? null,
               diasVencimiento: nextProbeta?.fechaVencimiento ? diffDaysFromToday(nextProbeta.fechaVencimiento) : null,
               cantidadProbetas: probetas.length,
@@ -3125,6 +3158,29 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         })
 
         return false
+      })
+    }
+
+    // Servicio / Ensayo filtering: coincidencia parcial sobre los nombres de ensayo/servicio de la fila.
+    const servicioEnsayoValue = (filters as any)?.servicioEnsayo ?? null
+
+    if (servicioEnsayoValue !== null && typeof servicioEnsayoValue !== 'undefined' && String(servicioEnsayoValue).trim() !== '') {
+      const qServ = normalizeText(servicioEnsayoValue)
+
+      result = result.filter((r: any) => {
+        const fromArray = Array.isArray(r.ensayoServicioNombres)
+          ? r.ensayoServicioNombres.map((x: any) => normalizeText(x))
+          : []
+
+        const topCandidates = [
+          normalizeText(r.tipoServicio ?? ''),
+          normalizeText(r.familia ?? ''),
+          normalizeText(r.muestra?.servicioRCM?.servicio?.nombre ?? '')
+        ].filter(Boolean)
+
+        const allCandidates = [...fromArray, ...topCandidates]
+
+        return allCandidates.some((cand: string) => cand.includes(qServ))
       })
     }
 

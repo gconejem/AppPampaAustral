@@ -48,53 +48,92 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (req.method === 'GET') {
         try {
-            const rcm = await prisma.rCM.findUnique({
-                where: { id: rcmId },
-                include: {
-                    servicios: {
-                        include: {
-                            subProductos: true,
-                            producto: {
-                                include: {
-                                    productosEnPaquete: {
-                                        include: {
-                                            producto: {
-                                                select: {
-                                                    productoId: true,
-                                                    sku: true,
-                                                    nombre: true,
-                                                    norma: true
+            let rcm: any = null
+
+            try {
+                rcm = await prisma.rCM.findUnique({
+                    where: { id: rcmId },
+                    include: {
+                        servicios: {
+                            include: {
+                                subProductos: true,
+                                producto: {
+                                    include: {
+                                        productosEnPaquete: {
+                                            include: {
+                                                producto: {
+                                                    select: {
+                                                        productoId: true,
+                                                        sku: true,
+                                                        nombre: true,
+                                                        norma: true
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
-                    },
-                    muestras: {
-                        include: {
-                            servicios: { include: { producto: true } },
-                            probetas: true,
                         },
-                    },
-                    cliente: true,
-                    obra: true,
-                    ordenTrabajo: {
-                        include: {
-                            agenda: {
-                                include: {
-                                    cliente: true,
-                                    obra: true,
+                        muestras: {
+                            include: {
+                                servicios: { include: { producto: true } },
+                                probetas: true,
+                            },
+                        },
+                        cliente: true,
+                        obra: true,
+                        ordenTrabajo: {
+                            include: {
+                                agenda: {
+                                    include: {
+                                        cliente: true,
+                                        obra: true,
+                                    },
                                 },
                             },
                         },
+                        area: true,
+                        familia: true,
+                        codigoAgrupador: true,
                     },
-                    area: true,
-                    familia: true,
-                    codigoAgrupador: true,
-                },
-            })
+                })
+            } catch (e) {
+                console.warn('GET /api/rcm/[id]: full include failed, using fallback include', e)
+
+                // Fallback defensivo para entornos con drift parcial de esquema/datos.
+                rcm = await prisma.rCM.findUnique({
+                    where: { id: rcmId },
+                    include: {
+                        servicios: {
+                            include: {
+                                producto: true,
+                            }
+                        },
+                        muestras: {
+                            include: {
+                                servicios: { include: { producto: true } },
+                                probetas: true,
+                            },
+                        },
+                        cliente: true,
+                        obra: true,
+                        ordenTrabajo: {
+                            include: {
+                                agenda: {
+                                    include: {
+                                        cliente: true,
+                                        obra: true,
+                                    },
+                                },
+                            },
+                        },
+                        area: true,
+                        familia: true,
+                        codigoAgrupador: true,
+                    },
+                })
+            }
 
             if (!rcm) {
                 return res.status(404).json({ error: 'RCM no encontrado' })

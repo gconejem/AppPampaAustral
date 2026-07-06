@@ -140,6 +140,128 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(201).json(created)
         }
 
+        if (req.method === 'PUT') {
+            const {
+                historyId,
+                tipo,
+                tipoEstado,
+                motivo,
+                observacion,
+                usuario,
+                funcionario,
+                estPrev,
+                estNuevo,
+                informe,
+                aplicadoA
+            } = req.body ?? {}
+
+            const hid = Number(historyId)
+            if (!Number.isFinite(hid) || hid <= 0) {
+                return res.status(400).json({ error: 'Invalid historyId' })
+            }
+
+            const existing = await prisma.rCMHistory.findFirst({
+                where: { id: hid, rcmId }
+            })
+
+            if (!existing) {
+                return res.status(404).json({ error: 'History entry not found for this RCM' })
+            }
+
+            const finalTipo = typeof tipo === 'string' && tipo.trim() ? tipo : existing.tipo
+            const finalFuncionario =
+                (typeof funcionario === 'string' && funcionario.trim())
+                    ? funcionario
+                    : (typeof usuario === 'string' && usuario.trim())
+                        ? usuario
+                        : existing.funcionario || 'Usuario'
+
+            const finalEstPrev =
+                (typeof estPrev === 'string' && estPrev.trim())
+                    ? estPrev.trim()
+                    : (estPrev !== undefined ? (estPrev ?? null) : existing.estAnterior)
+
+            const explicitEstNuevo = (typeof estNuevo === 'string' && estNuevo.trim()) ? estNuevo.trim() : null
+            const tipoEstadoNorm = String(tipoEstado ?? existing.tipoEstado ?? '').trim().toUpperCase()
+            const isInformeEvent = tipoEstadoNorm === 'INFORME_AUTO' || tipoEstadoNorm === 'INFORME_MANUAL'
+            const finalEstNuevo =
+                explicitEstNuevo ??
+                (isInformeEvent ? (existing.estNuevo ?? 'SIN_CAMBIO') : null) ??
+                ((typeof tipoEstado === 'string' && tipoEstado.trim()) ? tipoEstado.trim() : null) ??
+                existing.estNuevo ??
+                'SIN_CAMBIO'
+
+            const finalObservacion =
+                observacion !== undefined
+                    ? observacion
+                    : (motivo !== undefined ? motivo : existing.observacion)
+
+            const finalAplicadoA =
+                aplicadoA !== undefined
+                    ? ((typeof aplicadoA === 'string' && aplicadoA.trim()) ? aplicadoA.trim() : null)
+                    : existing.aplicadoA
+
+            const updated = await prisma.rCMHistory.update({
+                where: { id: hid },
+                data: {
+                    tipo: finalTipo,
+                    funcionario: finalFuncionario,
+                    estAnterior: finalEstPrev,
+                    estNuevo: finalEstNuevo,
+                    observacion: finalObservacion,
+                    informe: informe !== undefined ? (informe ?? null) : existing.informe,
+                    aplicadoA: finalAplicadoA,
+                    ...(typeof tipoEstado === 'string' ? { tipoEstado } : {}),
+                    ...(typeof motivo === 'string' ? { motivo } : {})
+                }
+            })
+
+            if (explicitEstNuevo) {
+                try {
+                    const appliedKey = String(aplicadoA ?? updated.aplicadoA ?? '').trim().toUpperCase()
+                    const applyToCp = appliedKey === 'CP' || appliedKey === 'CODIGO_PRODUCTO' || appliedKey === 'CODIGO PRODUCTO'
+
+                    const isEvento =
+                        String(tipoEstado ?? updated.tipoEstado ?? '').trim().toUpperCase() === 'EVENTO' ||
+                        String(finalTipo ?? '').trim() === 'Evento Abierto'
+
+                    if (applyToCp || isEvento) {
+                        const base = await prisma.rCM.findUnique({
+                            where: { id: rcmId },
+                            select: { codigoAgrupadorId: true, codigoProducto: true, ordenTrabajoId: true }
+                        })
+
+                        if (base?.codigoAgrupadorId) {
+                            await prisma.rCM.updateMany({
+                                where: { codigoAgrupadorId: base.codigoAgrupadorId },
+                                data: { estadoOperativo: explicitEstNuevo }
+                            })
+                        } else if (base?.codigoProducto && base?.ordenTrabajoId) {
+                            await prisma.rCM.updateMany({
+                                where: { codigoProducto: base.codigoProducto, ordenTrabajoId: base.ordenTrabajoId },
+                                data: { estadoOperativo: explicitEstNuevo }
+                            })
+                        } else {
+                            await prisma.rCM.update({
+                                where: { id: rcmId },
+                                data: { estadoOperativo: explicitEstNuevo }
+                            })
+                        }
+                    } else {
+                        await prisma.rCM.update({
+                            where: { id: rcmId },
+                            data: { estadoOperativo: explicitEstNuevo }
+                        })
+                    }
+                } catch (e) {
+                    // eslint-disable-next-line no-console
+                    console.warn('Warning: failed to update RCM.estadoOperativo on history PUT', e)
+                }
+            }
+
+            return res.status(200).json(updated)
+        }
+
         return res.status(405).json({ error: 'Method not allowed' })
     } catch (err) {
         // eslint-disable-next-line no-console

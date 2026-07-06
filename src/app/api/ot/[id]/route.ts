@@ -6,75 +6,110 @@ import { normalizeOrdenTrabajoTarjetas } from '@/lib/orden-trabajo-tarjetas'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+const baseInclude = {
+  tipoOT: true,
+  user: {
+    select: {
+      id: true,
+      name: true,
+      email: true
+    }
+  },
+  agenda: {
+    include: {
+      obra: true,
+      cliente: true,
+      servicios: true
+    }
+  }
+} as const
+
 // GET /api/ot/[id] - Obtener una OT específica
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    const ordenTrabajo = await prisma.ordenTrabajo.findUnique({
-      where: { id: params.id },
-      include: {
-        aceptacionVisita: true,
-        densidad: true,
-        hormigonFresco: true,
-        testigos: true,
-        extraccionAsfaltica: true,
-        muestreoMaterial: true,
-        retiroProbeta: true,
-        tipoOT: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        agenda: {
-          include: {
-            obra: true,
-            cliente: true,
-            servicios: true
-          }
+    let ordenTrabajo: any = null
+
+    try {
+      ordenTrabajo = await prisma.ordenTrabajo.findUnique({
+        where: { id: params.id },
+        include: {
+          aceptacionVisita: true,
+          densidad: true,
+          hormigonFresco: true,
+          testigos: true,
+          extraccionAsfaltica: true,
+          muestreoMaterial: true,
+          retiroProbeta: true,
+          ...baseInclude
         }
-      }
-    })
+      })
+    } catch (fullIncludeError) {
+      console.warn('GET /api/ot/[id]: fallo include completo, usando include base', {
+        id: params.id,
+        error: fullIncludeError
+      })
+
+      ordenTrabajo = await prisma.ordenTrabajo.findUnique({
+        where: { id: params.id },
+        include: baseInclude
+      })
+    }
 
     if (!ordenTrabajo) {
       return NextResponse.json({ error: 'Orden de trabajo no encontrada' }, { status: 404 })
     }
 
-    // Enriquecer los servicios con información del producto (área y familia)
+    // Enriquecer servicios sin romper el endpoint completo si un lookup de producto falla.
     if (ordenTrabajo.agenda?.servicios) {
-      console.log('Enriqueciendo servicios con información del producto...')
       const serviciosConProducto = await Promise.all(
         ordenTrabajo.agenda.servicios.map(async (servicio: any) => {
-          console.log('Buscando producto para código:', servicio.codigo)
+          const codigo = String(servicio?.codigo ?? '').trim()
 
-          // Buscar el producto por código (sku)
-          const producto = await prisma.producto.findUnique({
-            where: { sku: servicio.codigo },
-            select: {
-              area: true,
-              familia: true,
-              nombre: true
+          if (!codigo) {
+            return {
+              ...servicio,
+              area: null,
+              familia: null,
+              nombreProducto: servicio?.servicio ?? null
             }
-          })
-
-          console.log('Producto encontrado:', producto)
-
-          const servicioEnriquecido = {
-            ...servicio,
-            area: producto?.area || null,
-            familia: producto?.familia || null,
-            nombreProducto: producto?.nombre || servicio.servicio
           }
 
-          console.log('Servicio enriquecido:', servicioEnriquecido)
-          return servicioEnriquecido
+          try {
+            // Usar findFirst evita fallar por diferencias inesperadas en el origen del dato.
+            const producto = await prisma.producto.findFirst({
+              where: { sku: codigo },
+              select: {
+                area: true,
+                familia: true,
+                nombre: true
+              }
+            })
+
+            return {
+              ...servicio,
+              area: producto?.area ?? null,
+              familia: producto?.familia ?? null,
+              nombreProducto: producto?.nombre ?? servicio?.servicio ?? null
+            }
+          } catch (serviceError) {
+            console.warn('No se pudo enriquecer servicio de agenda:', {
+              ordenTrabajoId: params.id,
+              agendaServicioId: servicio?.id,
+              codigo,
+              error: serviceError
+            })
+
+            return {
+              ...servicio,
+              area: null,
+              familia: null,
+              nombreProducto: servicio?.servicio ?? null
+            }
+          }
         })
       )
 
-      // Reemplazar los servicios con la información enriquecida
       ordenTrabajo.agenda.servicios = serviciosConProducto
-      console.log('Servicios finales:', ordenTrabajo.agenda.servicios)
     }
 
     return NextResponse.json(ordenTrabajo)
@@ -132,30 +167,55 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       }
     })
 
-    // Enriquecer los servicios con información del producto (área y familia)
+    // Enriquecer servicios sin romper la respuesta si falla algún producto.
     if (ordenTrabajo.agenda?.servicios) {
       const serviciosConProducto = await Promise.all(
         ordenTrabajo.agenda.servicios.map(async (servicio: any) => {
-          // Buscar el producto por código (sku)
-          const producto = await prisma.producto.findUnique({
-            where: { sku: servicio.codigo },
-            select: {
-              area: true,
-              familia: true,
-              nombre: true
-            }
-          })
+          const codigo = String(servicio?.codigo ?? '').trim()
 
-          return {
-            ...servicio,
-            area: producto?.area || null,
-            familia: producto?.familia || null,
-            nombreProducto: producto?.nombre || servicio.servicio
+          if (!codigo) {
+            return {
+              ...servicio,
+              area: null,
+              familia: null,
+              nombreProducto: servicio?.servicio ?? null
+            }
+          }
+
+          try {
+            const producto = await prisma.producto.findFirst({
+              where: { sku: codigo },
+              select: {
+                area: true,
+                familia: true,
+                nombre: true
+              }
+            })
+
+            return {
+              ...servicio,
+              area: producto?.area ?? null,
+              familia: producto?.familia ?? null,
+              nombreProducto: producto?.nombre ?? servicio?.servicio ?? null
+            }
+          } catch (serviceError) {
+            console.warn('No se pudo enriquecer servicio de agenda (PUT):', {
+              ordenTrabajoId: params.id,
+              agendaServicioId: servicio?.id,
+              codigo,
+              error: serviceError
+            })
+
+            return {
+              ...servicio,
+              area: null,
+              familia: null,
+              nombreProducto: servicio?.servicio ?? null
+            }
           }
         })
       )
 
-      // Reemplazar los servicios con la información enriquecida
       ordenTrabajo.agenda.servicios = serviciosConProducto
     }
 

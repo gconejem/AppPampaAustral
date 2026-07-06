@@ -481,11 +481,11 @@ export default function CodigoProductoDetallePanel({
     return { totalRcms, ev }
   }, [rcms.length, eventos.length])
 
-  const openRcmDialog = async (rcmId: number) => {
+  const openRcmDialog = async (rcmId: number, seedRow?: RcmRow | null) => {
     setRcmDialogOpen(true)
     setRcmDialogLoading(true)
     setRcmDialogError(null)
-    setRcmDialogData(null)
+    setRcmDialogData(seedRow ?? null)
     setRcmDialogCpMeta(null)
     setRcmDialogHistory(null)
 
@@ -515,9 +515,12 @@ export default function CodigoProductoDetallePanel({
       const res = await fetch(`/api/rcm/${rcmId}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('No se pudo cargar el RCM')
       const json = await res.json().catch(() => null)
-      setRcmDialogData(json as any)
+      if (json) setRcmDialogData(json as any)
     } catch (e) {
-      setRcmDialogError(e instanceof Error ? e.message : 'No se pudo cargar el RCM')
+      // Mantener experiencia usable: si tenemos datos semilla de la fila, no bloquear el modal.
+      if (!seedRow) {
+        setRcmDialogError(e instanceof Error ? e.message : 'No se pudo cargar el RCM')
+      }
     } finally {
       setRcmDialogLoading(false)
     }
@@ -768,7 +771,7 @@ export default function CodigoProductoDetallePanel({
                             size='small'
                             aria-label='Ver'
                             title='Ver'
-                            onClick={() => openRcmDialog(r.id)}
+                            onClick={() => openRcmDialog(r.id, r)}
                             sx={theme => ({
                               width: 28,
                               height: 28,
