@@ -647,7 +647,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
           <div style="text-align:center;line-height:1.2;">
             <span style="color:#0300b4; font-weight:700; font-size:12px;">Descubrir</span> <span style="color:#ff0295; font-weight:700; font-size:12px;">•</span> <span style="color:#0300b4; font-weight:700; font-size:12px;">Proyectar</span> <span style="color:#ff0295; font-weight:700; font-size:12px;">•</span> <span style="color:#0300b4; font-weight:700; font-size:12px;">Concretar</span><br>
             Casa Matriz: Calle Santa Blanca N°51, Chillán - Chile<br>
-            Fono: 42-223 82 90 | 42-224 02 55 – Horario Atención: 8:00h a 18:00h (viernes hasta 17:00h)<br>
+            Fono: 42-223 82 90 | 42-224 02 55 – Horario Atención: 8:00h a 18:00h (viernes hasta 14:00h)<br>
             <span style="font-weight:bold;">contacto@pampaustral.cl</span>
           </div>
           <div style="position:absolute;left:32px;bottom:8px;font-size:12px;color:#736e7d;">
