@@ -3298,26 +3298,7 @@ const UserListTable2 = ({
 
           if (!list.length) return <span>-</span>
 
-          if (list.length === 1) {
-            return (
-              <Typography
-                variant='body2'
-                title={list[0]}
-                sx={{
-                  display: 'inline-block',
-                  maxWidth: 180,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  verticalAlign: 'middle'
-                }}
-              >
-                {list[0]}
-              </Typography>
-            )
-          }
-
-          const visible = list.slice(0, 1)
+          const visible = list.slice(0, 2)
           const hidden = Math.max(0, list.length - visible.length)
 
           return (
@@ -3325,46 +3306,43 @@ const UserListTable2 = ({
               title={list.join(', ')}
               sx={{
                 display: 'inline-flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                flexWrap: 'wrap',
-                gap: 0.45,
-                maxWidth: 190,
+                gap: 0.15,
+                minWidth: 36,
                 mx: 'auto'
               }}
             >
               {visible.map(v => (
-                <Chip
+                <Typography
                   key={v}
-                  size='small'
-                  label={v}
+                  variant='body2'
                   sx={{
-                    height: 22,
-                    borderRadius: 1.5,
                     fontWeight: 700,
-                    maxWidth: 130,
-                    '& .MuiChip-label': {
-                      px: 0.8,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }
+                    lineHeight: 1.15,
+                    textAlign: 'center',
+                    maxWidth: 72,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }}
-                />
+                >
+                  {v}
+                </Typography>
               ))}
               {hidden > 0 ? (
-                <Chip
-                  size='small'
-                  label={`+${hidden}`}
+                <Typography
+                  variant='body2'
                   sx={{
-                    height: 22,
-                    borderRadius: 1.5,
                     fontWeight: 800,
-                    bgcolor: theme => alpha(theme.palette.primary.main, 0.12),
                     color: 'primary.main',
-                    '& .MuiChip-label': { px: 0.8 }
+                    lineHeight: 1,
+                    textAlign: 'center'
                   }}
-                />
+                >
+                  +
+                </Typography>
               ) : null}
             </Box>
           )
@@ -3645,7 +3623,10 @@ const UserListTable2 = ({
     ]
   }, [adminStateOrder, opStateOrder, onSelectCodigo])
 
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'fechaCod', desc: true }])
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: 'codigo', desc: true },
+    { id: 'fechaCod', desc: true }
+  ])
 
   const searchedData = useMemo(() => {
     const q = String(globalFilter ?? '').toLowerCase().trim()
@@ -4672,6 +4653,50 @@ const UserListTable2 = ({
 
             {(() => {
               const ens = Array.isArray(codigoDialogData?.ensayos) ? codigoDialogData.ensayos : []
+              const rcms = Array.isArray(codigoDialogData?.rcms) ? codigoDialogData.rcms : []
+
+              // Derivar cantidad por SKU desde los servicios reales de los RCM del CP.
+              // Usamos el máximo por SKU para representar la configuración del código,
+              // evitando inflar cuando hay varios RCM del mismo CP.
+              const qtyBySku = new Map<string, number>()
+              const qtyBySubSku = new Map<string, number>()
+              const subSkuOrder = new Map<string, number>()
+              let subSkuOrderSeq = 0
+
+              for (const r of rcms) {
+                const servicios = Array.isArray((r as any)?.servicios) ? (r as any).servicios : []
+
+                for (const s of servicios) {
+                  const skuSvc = String((s as any)?.codigo ?? '').trim()
+
+                  if (!skuSvc) continue
+
+                  const qtySvcRaw = Number((s as any)?.cantidad)
+                  const qtySvc = Number.isFinite(qtySvcRaw) && qtySvcRaw > 0 ? qtySvcRaw : 1
+                  const prevQty = qtyBySku.get(skuSvc) ?? 0
+
+                  if (qtySvc > prevQty) qtyBySku.set(skuSvc, qtySvc)
+
+                  const subProductos = Array.isArray((s as any)?.subProductos) ? (s as any).subProductos : []
+
+                  for (const sp of subProductos) {
+                    const subSku = String((sp as any)?.sku ?? '').trim()
+
+                    if (!subSku) continue
+
+                    if (!subSkuOrder.has(subSku)) {
+                      subSkuOrder.set(subSku, subSkuOrderSeq)
+                      subSkuOrderSeq += 1
+                    }
+
+                    const subQtyRaw = Number((sp as any)?.cantidad)
+                    const subQty = Number.isFinite(subQtyRaw) && subQtyRaw > 0 ? subQtyRaw : 1
+                    const prevSubQty = qtyBySubSku.get(subSku) ?? 0
+
+                    if (subQty > prevSubQty) qtyBySubSku.set(subSku, subQty)
+                  }
+                }
+              }
 
               const map = new Map<
                 string,
@@ -4720,14 +4745,12 @@ const UserListTable2 = ({
                 if (!sku) continue
                 const prev = map.get(sku)
 
-                // Importante: el listado SKUs del CP representa la configuración del Código Producto,
-                // no la suma de servicios ejecutados por cada RCM.
-                const baseCantidad = 1
+                const baseCantidad = qtyBySku.get(sku) ?? 1
 
                 map.set(sku, {
                   sku,
                   nombre: prev?.nombre || nombre,
-                  cantidad: (prev?.cantidad ?? 0) + baseCantidad,
+                  cantidad: prev ? Math.max(prev.cantidad, baseCantidad) : baseCantidad,
                   esPaquete: prev?.esPaquete ?? esPaquete,
                   subProductos: prev?.subProductos?.length ? prev.subProductos : subProductos
                 })
@@ -4780,7 +4803,25 @@ const UserListTable2 = ({
                         )
 
                         if (it.esPaquete && it.subProductos.length) {
-                          for (const sp of it.subProductos) {
+                          const orderedSubProductos = [...it.subProductos].sort((a, b) => {
+                            const ai = subSkuOrder.get(String(a?.sku ?? '').trim())
+                            const bi = subSkuOrder.get(String(b?.sku ?? '').trim())
+
+                            if (ai == null && bi == null) return 0
+                            if (ai == null) return 1
+                            if (bi == null) return -1
+
+                            return ai - bi
+                          })
+
+                          for (const sp of orderedSubProductos) {
+                            const codedSubQty = qtyBySubSku.get(sp.sku) ?? qtyBySku.get(sp.sku)
+
+                            const resolvedSubQty =
+                              Number.isFinite(Number(codedSubQty)) && Number(codedSubQty) > 0
+                                ? Number(codedSubQty)
+                                : sp.cantidad * it.cantidad
+
                             rows.push(
                               <TableRow key={`sku-${it.sku}-sub-${sp.sku}`}>
                                 <TableCell sx={{ pl: 3, color: 'text.secondary', fontWeight: 700 }}>{sp.sku}</TableCell>
@@ -4788,7 +4829,7 @@ const UserListTable2 = ({
                                   {`↳ ${sp.nombre || '-'}`}
                                 </TableCell>
                                 <TableCell align='right' sx={{ color: 'text.secondary', fontWeight: 700 }}>
-                                  {sp.cantidad * it.cantidad}
+                                  {resolvedSubQty}
                                 </TableCell>
                               </TableRow>
                             )
@@ -5206,7 +5247,39 @@ const UserListTable2 = ({
               const firstEnsayo = (informeDialogData?.ensayos ?? [])?.[0]
               const firstSku = String(firstEnsayo?.sku ?? firstEnsayo?.producto?.sku ?? '').trim()
               const firstNombre = String(firstEnsayo?.nombre ?? firstEnsayo?.producto?.nombre ?? '').trim()
-              const chipLabel = [firstSku, firstNombre].filter(Boolean).join(' ').trim()
+
+              const firstQty = (() => {
+                const rcms = Array.isArray(informeDialogData?.rcms) ? informeDialogData.rcms : []
+
+                if (!firstSku || !rcms.length) {
+                  return 1
+                }
+
+                let maxQty = 0
+
+                for (const r of rcms) {
+                  const servicios = Array.isArray((r as any)?.servicios) ? (r as any).servicios : []
+
+                  for (const s of servicios) {
+                    const sku = String((s as any)?.codigo ?? '').trim()
+
+                    if (sku !== firstSku) {
+                      continue
+                    }
+
+                    const qtyRaw = Number((s as any)?.cantidad)
+                    const qty = Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : 1
+
+                    if (qty > maxQty) {
+                      maxQty = qty
+                    }
+                  }
+                }
+
+                return maxQty > 0 ? maxQty : 1
+              })()
+
+              const chipLabel = [firstSku, firstNombre, `x ${firstQty}`].filter(Boolean).join(' ').trim()
 
               return (
                 <>
@@ -5246,9 +5319,26 @@ const UserListTable2 = ({
               ? (informeDialogMeta?.rcmNumeros ?? []).map((x: any) => String(x ?? '').trim()).filter(Boolean)
               : []
 
-            const digitales = detailRcms.length || metaRcms.length
+            const rcmsCount = detailRcms.length || metaRcms.length
 
-            if (!digitales) return null
+            const applicableAutoKeys = getApplicableAutoTemplateKeys(informeDialogMeta)
+            const digitales = applicableAutoKeys.filter(k => autoInformeExisting?.[k] != null).length
+
+            const manualNums = Array.from(
+              new Set(
+                (informeDrafts ?? [])
+                  .map(d => parseInformeNumber(d?.numero))
+                  .filter((n): n is number => n != null)
+              )
+            )
+
+            const manuales = manualNums.length
+
+            const summaryLabel = `Digital: ${digitales} · Manual: ${manuales}`
+
+            const chipTone = digitales > 0 || manuales > 0 ? 'success' : 'primary'
+
+            if (!rcmsCount) return null
 
             const rcms = detailRcms.length ? detailRcms : metaRcms.map(n => ({ numeroRcm: n }))
 
@@ -5270,12 +5360,12 @@ const UserListTable2 = ({
                     <Chip
                       size='small'
                       variant='outlined'
-                      label={digitales === 0 ? '1 manual' : digitales === 1 ? '1 digital' : `${digitales} digitales`}
+                      label={summaryLabel}
                       sx={theme => ({
                         fontWeight: 900,
-                        color: digitales === 0 ? theme.palette.success.main : theme.palette.primary.main,
-                        borderColor: digitales === 0 ? alpha(theme.palette.success.main, 0.5) : alpha(theme.palette.primary.main, 0.5),
-                        bgcolor: digitales === 0 ? alpha(theme.palette.success.main, 0.08) : alpha(theme.palette.primary.main, 0.08)
+                        color: chipTone === 'success' ? theme.palette.success.main : theme.palette.primary.main,
+                        borderColor: chipTone === 'success' ? alpha(theme.palette.success.main, 0.5) : alpha(theme.palette.primary.main, 0.5),
+                        bgcolor: chipTone === 'success' ? alpha(theme.palette.success.main, 0.08) : alpha(theme.palette.primary.main, 0.08)
                       })}
                     />
                   </Box>
@@ -5321,7 +5411,12 @@ const UserListTable2 = ({
                       const ensayos = servicios
                         .map(s => ({
                           nombre: String(s?.nombre ?? '').trim(),
-                          estado: normalizeStateKey(s?.estadoOperativo ?? s?.estado) ?? null
+                          estado: normalizeStateKey(s?.estadoOperativo ?? s?.estado) ?? null,
+                          cantidad: (() => {
+                            const qtyRaw = Number((s as any)?.cantidad)
+
+                            return Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : 1
+                          })()
                         }))
                         .filter(e => e.nombre)
 
@@ -5409,9 +5504,9 @@ const UserListTable2 = ({
                                   const existing = grouped.get(e.nombre)
 
                                   if (existing) {
-                                    existing.count++
+                                    existing.count += Number(e.cantidad ?? 1)
                                   } else {
-                                    grouped.set(e.nombre, { count: 1, estado: e.estado })
+                                    grouped.set(e.nombre, { count: Number(e.cantidad ?? 1), estado: e.estado })
                                   }
                                 }
 
@@ -5423,7 +5518,7 @@ const UserListTable2 = ({
                                     <Chip
                                       key={nombre}
                                       size='small'
-                                      label={count > 1 ? `✓ ${nombre} x${count}` : `✓ ${nombre}`}
+                                      label={`✓ ${nombre} x ${count}`}
                                       sx={theme => {
                                         const isEnsayado = String(k ?? '').toUpperCase() === 'ENSAYADO'
                                         const bg = isEnsayado ? alpha(theme.palette.success.main, 0.12) : info.bgcolor

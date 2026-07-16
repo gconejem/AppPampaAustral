@@ -84,7 +84,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         cliente: true,
                         obra: true,
                         ordenTrabajo: {
-                            include: {
+                            select: {
+                                id: true,
+                                clave: true,
+                                correlativ: true,
                                 agenda: {
                                     include: {
                                         cliente: true,
@@ -119,7 +122,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         cliente: true,
                         obra: true,
                         ordenTrabajo: {
-                            include: {
+                            select: {
+                                id: true,
+                                clave: true,
+                                correlativ: true,
                                 agenda: {
                                     include: {
                                         cliente: true,

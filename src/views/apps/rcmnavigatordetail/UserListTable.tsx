@@ -2614,6 +2614,39 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return da.getTime() - db.getTime()
   }
 
+  const parseLeadingNumber = (value: any): number | null => {
+    const raw = String(value ?? '').trim()
+    if (!raw) return null
+
+    const direct = Number(raw)
+    if (Number.isFinite(direct)) return direct
+
+    const match = raw.match(/(\d+)/)
+    if (!match) return null
+
+    const parsed = Number(match[1])
+    return Number.isFinite(parsed) ? parsed : null
+  }
+
+  const sortRowsByDefault = (rows: RCM[]) => {
+    return rows.slice().sort((a, b) => {
+      const aNum = parseLeadingNumber(a.numeroRcm)
+      const bNum = parseLeadingNumber(b.numeroRcm)
+
+      if (aNum != null && bNum != null && aNum !== bNum) return bNum - aNum
+      if (aNum == null && bNum != null) return 1
+      if (aNum != null && bNum == null) return -1
+
+      const byIngreso = compareDateOnly(a.fechaIngreso, b.fechaIngreso)
+      if (byIngreso !== 0) return -byIngreso
+
+      const byCod = compareDateOnly(a.fechaCodificacion, b.fechaCodificacion)
+      if (byCod !== 0) return -byCod
+
+      return Number(b.id ?? 0) - Number(a.id ?? 0)
+    })
+  }
+
   // helper: formatear fecha a DD/MM/AAAA (ahora incluye HH:MM:SS)
   const formatDateDDMMYYYY = (v: any) => {
     if (!v) return '-'
@@ -3184,8 +3217,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       })
     }
 
-    console.log('applyDateFilter result count:', result.length)
-    setFilteredData(result)
+    const ordered = sortRowsByDefault(result)
+
+    console.log('applyDateFilter result count:', ordered.length)
+    setFilteredData(ordered)
   }
 
   const { lang: locale } = useParams()

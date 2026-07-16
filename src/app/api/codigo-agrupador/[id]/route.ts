@@ -88,7 +88,14 @@ export async function GET(request: Request, { params }: Params) {
                             servicios: {
                                 select: {
                                     codigo: true,
-                                    cantidad: true
+                                    cantidad: true,
+                                    subProductos: {
+                                        select: {
+                                            sku: true,
+                                            nombre: true,
+                                            cantidad: true
+                                        }
+                                    }
                                 }
                             },
                             RCMHistory: {
