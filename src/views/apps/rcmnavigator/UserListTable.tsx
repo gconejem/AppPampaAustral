@@ -4661,6 +4661,7 @@ const UserListTable2 = ({
               const qtyBySku = new Map<string, number>()
               const qtyBySubSku = new Map<string, number>()
               const subSkuOrder = new Map<string, number>()
+              const codedChildrenBySku = new Map<string, Array<{ sku: string; nombre: string; cantidad: number }>>()
               let subSkuOrderSeq = 0
 
               for (const r of rcms) {
@@ -4678,9 +4679,16 @@ const UserListTable2 = ({
                   if (qtySvc > prevQty) qtyBySku.set(skuSvc, qtySvc)
 
                   const subProductos = Array.isArray((s as any)?.subProductos) ? (s as any).subProductos : []
+                  let codedChildren = codedChildrenBySku.get(skuSvc)
+
+                  if (!codedChildren) {
+                    codedChildren = []
+                    codedChildrenBySku.set(skuSvc, codedChildren)
+                  }
 
                   for (const sp of subProductos) {
                     const subSku = String((sp as any)?.sku ?? '').trim()
+                    const subNombre = String((sp as any)?.nombre ?? '').trim()
 
                     if (!subSku) continue
 
@@ -4694,6 +4702,22 @@ const UserListTable2 = ({
                     const prevSubQty = qtyBySubSku.get(subSku) ?? 0
 
                     if (subQty > prevSubQty) qtyBySubSku.set(subSku, subQty)
+
+                    const existingIdx = codedChildren.findIndex(item => item.sku === subSku)
+
+                    if (existingIdx === -1) {
+                      codedChildren.push({
+                        sku: subSku,
+                        nombre: subNombre,
+                        cantidad: subQty
+                      })
+                    } else if (subQty > codedChildren[existingIdx].cantidad) {
+                      codedChildren[existingIdx] = {
+                        ...codedChildren[existingIdx],
+                        cantidad: subQty,
+                        nombre: codedChildren[existingIdx].nombre || subNombre
+                      }
+                    }
                   }
                 }
               }
@@ -4715,7 +4739,23 @@ const UserListTable2 = ({
 
                 const explicitChildren = Array.isArray(e?.subProductos)
                   ? e.subProductos
+                    .map((sp: any) => {
+                      const spSku = String(sp?.sku ?? '').trim()
+                      const spNombre = String(sp?.nombre ?? '').trim()
+                      const spCantidad = Number(sp?.cantidad ?? 1)
+
+                      if (!spSku) return null
+
+                      return {
+                        sku: spSku,
+                        nombre: spNombre,
+                        cantidad: Number.isFinite(spCantidad) && spCantidad > 0 ? spCantidad : 1
+                      }
+                    })
+                    .filter(Boolean) as Array<{ sku: string; nombre: string; cantidad: number }>
                   : []
+
+                const codedChildren = codedChildrenBySku.get(sku) ?? []
 
                 const masterChildren = Array.isArray(e?.producto?.productosEnPaquete)
                   ? e.producto.productosEnPaquete
@@ -4737,10 +4777,12 @@ const UserListTable2 = ({
 
                 // En este popup la etiqueta depende del maestro del producto:
                 // si el SKU está marcado como paquete, se muestra la chapa y sus hijos.
-                // Los hijos explícitos siguen teniendo prioridad cuando vienen en la codificación.
-                const esPaquete = Boolean(e?.producto?.esPaquete) || explicitChildren.length > 0
+                // Priorizamos hijos codificados reales; maestro solo como fallback.
+                const esPaquete = Boolean(e?.producto?.esPaquete) || codedChildren.length > 0 || explicitChildren.length > 0
 
-                const subProductos = explicitChildren.length ? explicitChildren : (esPaquete ? masterChildren : [])
+                const subProductos = codedChildren.length
+                  ? codedChildren
+                  : (explicitChildren.length ? explicitChildren : (esPaquete ? masterChildren : []))
 
                 if (!sku) continue
                 const prev = map.get(sku)

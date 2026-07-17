@@ -54,8 +54,76 @@ export async function GET(
             }
         })
 
+        const servicioIds = servicios.map(s => s.id)
+
+        const historialAsignacion = servicioIds.length
+            ? await prisma.servicioMuestraHistorial.findMany({
+                where: {
+                    servicioMuestraId: { in: servicioIds },
+                    aplicadoA: {
+                        not: null
+                    }
+                },
+                orderBy: {
+                    registro: 'desc'
+                },
+                select: {
+                    servicioMuestraId: true,
+                    aplicadoA: true,
+                    fechaAccion: true,
+                    registro: true
+                }
+            })
+            : []
+
+        const ultimaAsignacionByServicio = new Map<number, { aplicadoA: string | null, fechaAsignacionEnsayador: Date | null }>()
+
+        for (const h of historialAsignacion) {
+            const hasEnsayador = typeof h.aplicadoA === 'string' && h.aplicadoA.trim().length > 0
+
+            if (!hasEnsayador) continue
+            if (ultimaAsignacionByServicio.has(h.servicioMuestraId)) continue
+
+            ultimaAsignacionByServicio.set(h.servicioMuestraId, {
+                aplicadoA: h.aplicadoA,
+                fechaAsignacionEnsayador: h.fechaAccion ?? h.registro ?? null
+            })
+        }
+
+        const historialMarcasEnsayo = servicioIds.length
+            ? await prisma.servicioMuestraHistorial.findMany({
+                where: {
+                    servicioMuestraId: { in: servicioIds },
+                    OR: [
+                        { fechaInicioEnsayo: { not: null } },
+                        { fechaFinEnsayo: { not: null } }
+                    ]
+                },
+                orderBy: {
+                    registro: 'desc'
+                },
+                select: {
+                    servicioMuestraId: true,
+                    fechaInicioEnsayo: true,
+                    fechaFinEnsayo: true
+                }
+            })
+            : []
+
+        const marcasEnsayoByServicio = new Map<number, { fechaInicioEnsayo: Date | null, fechaFinEnsayo: Date | null }>()
+
+        for (const h of historialMarcasEnsayo) {
+            const current = marcasEnsayoByServicio.get(h.servicioMuestraId) ?? { fechaInicioEnsayo: null, fechaFinEnsayo: null }
+
+            if (!current.fechaInicioEnsayo && h.fechaInicioEnsayo) current.fechaInicioEnsayo = h.fechaInicioEnsayo
+            if (!current.fechaFinEnsayo && h.fechaFinEnsayo) current.fechaFinEnsayo = h.fechaFinEnsayo
+
+            marcasEnsayoByServicio.set(h.servicioMuestraId, current)
+        }
+
         // ✅ 3. Mapear servicios - SKU como código + ensayador desde historial (aplicadoA)
         const serviciosEnriquecidos = servicios.map(s => ({
+            ...(ultimaAsignacionByServicio.get(s.id) ?? {}),
             id: s.id,
             productoId: s.productoId ?? null,
             codigo: s.producto?.sku ?? (s.producto as any)?.SKU ?? (s.producto as any)?.codigo ?? s.productoId?.toString() ?? s.id.toString(),
@@ -63,7 +131,10 @@ export async function GET(
             tipo: s.producto?.familia?.includes('Ensayo') ? 'Ensayo' : 'Análisis',
             cantidad: s.cantidad ?? 1,
             estado: s.estado ?? 'CODIFICADO',
-            ensayador: s.history?.[0]?.aplicadoA ?? null,
+            ensayador: (ultimaAsignacionByServicio.get(s.id)?.aplicadoA ?? s.history?.[0]?.aplicadoA) ?? null,
+            fechaAsignacionEnsayador: ultimaAsignacionByServicio.get(s.id)?.fechaAsignacionEnsayador ?? null,
+            fechaInicioEnsayo: marcasEnsayoByServicio.get(s.id)?.fechaInicioEnsayo ?? null,
+            fechaFinEnsayo: marcasEnsayoByServicio.get(s.id)?.fechaFinEnsayo ?? null,
             observacion: s.history?.[0]?.observacion ?? null,
             area: s.producto?.area,
             familia: s.producto?.familia,

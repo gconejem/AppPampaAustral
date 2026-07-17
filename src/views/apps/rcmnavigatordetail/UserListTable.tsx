@@ -71,7 +71,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel
 } from '@tanstack/react-table'
-import type { ColumnDef, FilterFn } from '@tanstack/react-table'
+import type { ColumnDef, FilterFn, SortingState } from '@tanstack/react-table'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
@@ -189,6 +189,7 @@ const getAdministrativeStateColor = (raw?: string) => {
 interface RCM {
   id: number
   numeroRcm: string
+  rcmType?: string | null
   sede?: string | null
   ot?: string
   otDisplay?: string | null
@@ -416,6 +417,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         const aById = aIdentity.ids.length > 0
           ? aIdentity.ids.map((id: number) => idOrder.get(id)).find((v: any) => v != null) ?? null
           : null
+
         const bById = bIdentity.ids.length > 0
           ? bIdentity.ids.map((id: number) => idOrder.get(id)).find((v: any) => v != null) ?? null
           : null
@@ -426,6 +428,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         const aByCodigo = aById == null && aByKey == null && codigoOrder.has(aIdentity.keyCodigo)
           ? (codigoOrder.get(aIdentity.keyCodigo) as number)
           : null
+
         const bByCodigo = bById == null && bByKey == null && codigoOrder.has(bIdentity.keyCodigo)
           ? (codigoOrder.get(bIdentity.keyCodigo) as number)
           : null
@@ -442,6 +445,18 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       .map((x: any) => x.s)
   }
 
+  const getCodifiedSubProductos = (servicio: any, serviciosOrdenOriginal: any[]) => {
+    const matchOrden = findDetalleServicioMatch(servicio, serviciosOrdenOriginal)
+    const rawSub = Array.isArray(matchOrden?.subProductos) ? matchOrden.subProductos : []
+
+    return rawSub.map((sp: any) => ({
+      sku: sp?.sku ?? sp?.producto?.sku ?? null,
+      nombre: sp?.nombre ?? sp?.producto?.nombre ?? null,
+      norma: sp?.norma ?? sp?.producto?.norma ?? null,
+      cantidad: sp?.cantidad ?? 1
+    }))
+  }
+
   const isLikelyInvalidPersonName = (raw: any) => {
     const value = String(raw ?? '').trim()
 
@@ -454,6 +469,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const resolveDisplayPersonName = (...candidates: any[]) => {
     for (const c of candidates) {
       if (isLikelyInvalidPersonName(c)) continue
+
       return String(c).trim()
     }
 
@@ -465,6 +481,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [filteredData, setFilteredData] = useState<RCM[]>([])
   const [loading, setLoading] = useState(true)
   const [globalFilter, setGlobalFilter] = useState('')
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [hideControlServicio, setHideControlServicio] = useState(true)
   const [savingHistory, setSavingHistory] = useState(false)
   const [formErrors, setFormErrors] = useState<{ eventType?: string; motivo?: string; informeNumber?: string; general?: string }>({})
 
@@ -660,6 +678,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [gestionarRcmData, setGestionarRcmData] = useState<any>(null)
   const [gestionarEnsayadorGlobal, setGestionarEnsayadorGlobal] = useState('')
   const [gestionarEnsayadores, setGestionarEnsayadores] = useState<Record<string, string>>({})
+  const [gestionarFechasAsignacionEnsayador, setGestionarFechasAsignacionEnsayador] = useState<Record<string, string>>({})
+  const [gestionarFechasEnsayoOpen, setGestionarFechasEnsayoOpen] = useState<Record<string, boolean>>({})
   const [gestionarEstados, setGestionarEstados] = useState<Record<string, string>>({})
   const [gestionarSaving, setGestionarSaving] = useState(false)
   const [gestionarObservaciones, setGestionarObservaciones] = useState<Record<string, string>>({})
@@ -692,6 +712,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setGestionarRcmData(null)
     setGestionarEnsayadorGlobal('')
     setGestionarEnsayadores({})
+    setGestionarFechasAsignacionEnsayador({})
+    setGestionarFechasEnsayoOpen({})
     setGestionarEstados({})
     setGestionarObservaciones({})
     setGestionarEstadoMasivoInfo('')
@@ -719,12 +741,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         : null
 
       const serviciosDetalle = Array.isArray(muestraFromRcm?.servicios) ? muestraFromRcm.servicios : []
+
       const serviciosOrdenOriginal = Array.isArray(detalleRcm?.servicios) && detalleRcm.servicios.length > 0
         ? detalleRcm.servicios
         : serviciosDetalle
 
       const combinedRaw = (Array.isArray(dataServ.servicios) ? dataServ.servicios : []).map((s: any) => {
         const match = findDetalleServicioMatch(s, serviciosDetalle)
+        const subProductosCodificados = getCodifiedSubProductos(s, serviciosOrdenOriginal)
 
         const estadoResuelto = resolveServiceStateFromRcm(
           s?.estado ?? match?.estado ?? 'CODIFICADO',
@@ -736,7 +760,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         return {
           ...s,
           norma: s?.norma ?? match?.produto?.norma ?? match?.producto?.norma ?? null,
-          estado: estadoResuelto
+          estado: estadoResuelto,
+          subProductosCodificados
         }
       })
 
@@ -746,9 +771,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       const expandedCombined: any[] = []
 
       for (const svc of combined) {
-        if (svc.esPaquete && Array.isArray(svc.productosEnPaquete) && svc.productosEnPaquete.length > 0) {
+        const subItems = Array.isArray(svc.subProductosCodificados) && svc.subProductosCodificados.length > 0
+          ? svc.subProductosCodificados
+          : (Array.isArray(svc.productosEnPaquete) ? svc.productosEnPaquete : [])
+
+        if (svc.esPaquete && subItems.length > 0) {
           expandedCombined.push({ ...svc, _isPaqueteHeader: true })
-          svc.productosEnPaquete.forEach((sub: any, idx: number) => {
+          subItems.forEach((sub: any, idx: number) => {
             expandedCombined.push({
               _syntheticKey: `paq_${svc.id}_${idx}`,
               _paqueteParentId: svc.id,
@@ -758,7 +787,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               nombre: sub.nombre ?? '-',
               norma: sub.norma ?? null,
               estado: svc.estado,
-              ensayador: svc.ensayador ?? null,
+
+              // No heredar ensayador del padre: cada sub-ensayo se asigna de forma independiente.
+              ensayador: null,
+              fechaAsignacionEnsayador: null,
+              fechaInicioEnsayo: null,
+              fechaFinEnsayo: null,
               observacion: null,
               cantidad: sub.cantidad ?? 1
             })
@@ -769,6 +803,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       }
 
       const packageServices = combined.filter((svc: any) => svc.esPaquete && Array.isArray(svc.productosEnPaquete) && svc.productosEnPaquete.length > 0)
+
       const packageHistoryRows = await Promise.all(
         packageServices.map(async (svc: any) => {
           try {
@@ -787,6 +822,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       )
 
       const packageHistoryMap = new Map<number, any[]>(packageHistoryRows)
+
       const hydratedExpandedCombined = expandedCombined.map((item: any) => {
         if (!item._isPaqueteSubItem) return item
 
@@ -799,6 +835,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           ...item,
           estado: historyMatch.estNuevo ?? item.estado,
           ensayador: historyMatch.aplicadoA ?? item.ensayador,
+          fechaAsignacionEnsayador: historyMatch.fechaAccion ?? historyMatch.registro ?? item.fechaAsignacionEnsayador ?? null,
+          fechaInicioEnsayo: historyMatch.fechaInicioEnsayo ?? item.fechaInicioEnsayo ?? null,
+          fechaFinEnsayo: historyMatch.fechaFinEnsayo ?? item.fechaFinEnsayo ?? null,
           observacion: historyMatch.observacion ?? item.observacion
         }
       })
@@ -813,12 +852,15 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       // inicializar estado y ensayador local con los valores actuales de cada servicio
       const estadosInit: Record<string, string> = {}
       const ensayadoresInit: Record<string, string> = {}
+      const fechasAsignacionInit: Record<string, string> = {}
       const observacionesInit: Record<string, string> = {}
 
       hydratedExpandedCombined.forEach((s: any) => {
         const key = String(s._syntheticKey ?? s.id)
+
         estadosInit[key] = s.estado ?? 'CODIFICADO'
         if (s.ensayador) ensayadoresInit[key] = s.ensayador
+        if (s.fechaAsignacionEnsayador) fechasAsignacionInit[key] = toDateInputValue(s.fechaAsignacionEnsayador)
 
         if (typeof s.observacion === 'string' && s.observacion.trim()) {
           observacionesInit[key] = s.observacion
@@ -826,6 +868,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       })
       setGestionarEstados(estadosInit)
       setGestionarEnsayadores(ensayadoresInit)
+      setGestionarFechasAsignacionEnsayador(fechasAsignacionInit)
       setGestionarObservaciones(observacionesInit)
     } catch (e) {
       console.error('Error loading gestionar ensayos:', e)
@@ -888,8 +931,15 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             const ensayadorPrev = s.ensayador ?? ''
             const observacionNueva = (gestionarObservaciones[sKey] ?? '').trim()
             const observacionPrev = String(s.observacion ?? '').trim()
+            const fechaAsignacionNueva = String(gestionarFechasAsignacionEnsayador[sKey] ?? '').trim()
+            const fechaAsignacionPrev = toDateInputValue(s.fechaAsignacionEnsayador)
 
-            if (estadoNuevo === estadoPrev && ensayadorNuevo === ensayadorPrev && observacionNueva === observacionPrev) return
+            if (
+              estadoNuevo === estadoPrev &&
+              ensayadorNuevo === ensayadorPrev &&
+              observacionNueva === observacionPrev &&
+              fechaAsignacionNueva === fechaAsignacionPrev
+            ) return
 
             await fetch(`/api/servicioMuestra/${parentId}/history`, {
               method: 'POST',
@@ -902,24 +952,34 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 aplicadoA: ensayadorNuevo || null,
                 ensayoServicio: s.nombre,
                 observacion: observacionNueva || null,
+                fechaAccion: fechaAsignacionNueva || null,
                 skipServicioEstadoUpdate: true
               })
             })
           }),
           ...serviciosParaGuardar.map(async (s: any) => {
             const sKey = String(s._syntheticKey ?? s.id)
+
             const estadoNuevoBase = s._isPaqueteHeader
               ? getEstadoDerivedFromSubs(s.id)
               : (gestionarEstados[sKey] ?? s.estado ?? 'CODIFICADO')
+
             const estadoNuevo = getEstadoServicioConProbetas(s, estadoNuevoBase)
             const estadoPrev = s.estado ?? 'CODIFICADO'
             const ensayadorNuevo = gestionarEnsayadores[sKey] ?? ''
             const ensayadorPrev = s.ensayador ?? ''
             const observacionNueva = (gestionarObservaciones[sKey] ?? '').trim()
             const observacionPrev = String(s.observacion ?? '').trim()
+            const fechaAsignacionNueva = String(gestionarFechasAsignacionEnsayador[sKey] ?? '').trim()
+            const fechaAsignacionPrev = toDateInputValue(s.fechaAsignacionEnsayador)
 
             // Guardar si cambió estado, ensayador u observación
-            if (estadoNuevo === estadoPrev && ensayadorNuevo === ensayadorPrev && observacionNueva === observacionPrev) return
+            if (
+              estadoNuevo === estadoPrev &&
+              ensayadorNuevo === ensayadorPrev &&
+              observacionNueva === observacionPrev &&
+              fechaAsignacionNueva === fechaAsignacionPrev
+            ) return
 
             await fetch(`/api/servicioMuestra/${s.id}/history`, {
               method: 'POST',
@@ -931,7 +991,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 funcionario: user,
                 aplicadoA: ensayadorNuevo || null,
                 ensayoServicio: s.nombre,
-                observacion: observacionNueva || null
+                observacion: observacionNueva || null,
+                fechaAccion: fechaAsignacionNueva || null
               })
             })
           })
@@ -940,15 +1001,18 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       // Actualizar tabla principal: recalcular estado operativo del RCM
       const subItemsYRegulares = gestionarServicios.filter((s: any) => !s._isPaqueteHeader)
+
       const todosEstadosServicios = subItemsYRegulares.map((s: any) => {
         const key = String(s._syntheticKey ?? s.id)
 
         return getEstadoServicioConProbetas(s, gestionarEstados[key] ?? s.estado ?? 'CODIFICADO')
       })
+
       const todosEstadosProbetas = gestionarProbetas.map((probeta: any) => probeta?.estado ?? 'CODIFICADO')
       const todosEstados = [...todosEstadosServicios, ...todosEstadosProbetas]
 
       const normalizedEstados = todosEstados.map((estado: string) => normalizeEnsayoState(estado))
+
       const estadoFinal = normalizedEstados.length > 0 && normalizedEstados.every((estado: string) => estado === 'ENSAYADO')
         ? 'ENSAYADO'
         : normalizedEstados.some((estado: string) => estado !== 'CODIFICADO')
@@ -1428,12 +1492,22 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             detalleRcm?.estadoOperativo
           )
 
+          const subProductosCodificados = Array.isArray(servicio?.subProductos)
+            ? servicio.subProductos.map((sp: any) => ({
+              sku: sp?.sku ?? sp?.producto?.sku ?? null,
+              nombre: sp?.nombre ?? sp?.producto?.nombre ?? null,
+              norma: sp?.norma ?? sp?.producto?.norma ?? null,
+              cantidad: sp?.cantidad ?? 1
+            }))
+            : []
+
           return {
             ...servicio,
             norma: servicio?.norma ?? servicio?.producto?.norma ?? null,
             codigo: servicio?.codigo ?? servicio?.producto?.sku ?? null,
             cantidad: servicio?.cantidad ?? 1,
-            estado: estadoResuelto
+            estado: estadoResuelto,
+            subProductosCodificados
           }
         })
 
@@ -1467,12 +1541,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         : null
 
       const serviciosDetalle = Array.isArray(muestraRcm?.servicios) ? muestraRcm.servicios : []
+
       const serviciosOrdenOriginal = Array.isArray(detalleRcm?.servicios) && detalleRcm.servicios.length > 0
         ? detalleRcm.servicios
         : serviciosDetalle
 
       const serviciosCombinadosRaw = (Array.isArray(data.servicios) ? data.servicios : []).map((servicio: any) => {
         const match = findDetalleServicioMatch(servicio, serviciosDetalle)
+        const subProductosCodificados = getCodifiedSubProductos(servicio, serviciosOrdenOriginal)
 
         const estadoResuelto = resolveServiceStateFromRcm(
           servicio?.estado ?? match?.estado ?? 'CODIFICADO',
@@ -1485,7 +1561,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           norma: servicio?.norma ?? match?.producto?.norma ?? match?.norma ?? null,
           codigo: servicio?.codigo ?? match?.producto?.sku ?? match?.codigo ?? null,
           cantidad: servicio?.cantidad ?? match?.cantidad ?? 1,
-          estado: estadoResuelto
+          estado: estadoResuelto,
+          subProductosCodificados
         }
       })
 
@@ -1576,12 +1653,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         : null
 
       const serviciosDetalle = Array.isArray(muestraRcm?.servicios) ? muestraRcm.servicios : []
+
       const serviciosOrdenOriginal = Array.isArray(detalleRcm?.servicios) && detalleRcm.servicios.length > 0
         ? detalleRcm.servicios
         : serviciosDetalle
 
       const serviciosCombinadosRaw = (Array.isArray(data.servicios) ? data.servicios : []).map((servicio: any) => {
         const match = findDetalleServicioMatch(servicio, serviciosDetalle)
+        const subProductosCodificados = getCodifiedSubProductos(servicio, serviciosOrdenOriginal)
+
+        const estadoResuelto = resolveServiceStateFromRcm(
+          servicio?.estado ?? match?.estado ?? 'CODIFICADO',
+          detalleRcm?.rcmType,
+          detalleRcm?.estadoOperativo
+        )
 
 
         return {
@@ -1589,7 +1674,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           norma: servicio?.norma ?? match?.producto?.norma ?? match?.norma ?? null,
           codigo: servicio?.codigo ?? match?.producto?.sku ?? match?.codigo ?? null,
           cantidad: servicio?.cantidad ?? match?.cantidad ?? 1,
-          estado: servicio?.estado ?? match?.estado ?? 'CODIFICADO'
+          estado: estadoResuelto,
+          subProductosCodificados
         }
       })
 
@@ -1963,12 +2049,15 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         // --- fetch ordenes de trabajo ---
         const hasOrderDataInRaw = raw.some((r: any) => {
           const ot = r?.ordenTrabajo
+
+
           return Boolean(ot?.id || ot?.correlativ || ot?.correlativo || ot?.agenda?.obra || ot?.agenda?.cliente)
         })
 
         const ordenIds = hasOrderDataInRaw
           ? []
           : Array.from(new Set(raw.map((r: any) => r.ordenTrabajoId ?? r.ordenTrabajo?.id).filter(Boolean)))
+
         const ordenMap: Record<string | number, any> = {}
 
         if (ordenIds.length) {
@@ -2173,12 +2262,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const orderKey = r.ordenTrabajoId ?? r.ordenTrabajo?.id ?? r.ordenTrabajo?._id ?? ''
           const orderObj = orderKey ? (ordenMap[String(orderKey)] ?? null) : null
           const orderFromRow = r.ordenTrabajo ?? null
+
           const obraFromOrder =
             orderObj?.agenda?.obra ??
             orderObj?.obra ??
             orderFromRow?.agenda?.obra ??
             orderFromRow?.obra ??
             null
+
           const clienteFromOrder =
             orderObj?.agenda?.cliente ??
             orderObj?.cliente ??
@@ -2358,6 +2449,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
             const rcmTypeNorm = String((r as any)?.rcmType ?? '').toUpperCase().trim()
             const rcmEstadoNorm = String(r.estadoOperativo ?? '').toUpperCase().trim()
+
             const rcmAutoCompletado =
               (rcmTypeNorm === 'CONTROL' && rcmEstadoNorm === 'ENSAYADO') ||
               (rcmTypeNorm === 'SERVICIO' && (rcmEstadoNorm === 'EJECUTADO' || rcmEstadoNorm === 'ENSAYADO'))
@@ -2451,6 +2543,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               id: Number(`${r.id}${String(idx).padStart(3, '0')}`),
               rcmOriginalId: r.id,
               numeroRcm: r.numeroRcm,
+              rcmType: (r as any)?.rcmType ?? null,
               sede: r.sede ?? null,
 
               // Ô£à Agregar numeroTarjeta al objeto retornado
@@ -2558,9 +2651,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
   // Auto-seleccionar fila si llega rcmId como query param
   const initialRcmSelected = useRef(false)
+
   useEffect(() => {
     if (!initialRcmIdParam || initialRcmSelected.current || data.length === 0) return
     const matchRow = data.find(d => d.rcmOriginalId === initialRcmIdParam)
+
     if (matchRow) {
       initialRcmSelected.current = true
       handleView(matchRow)
@@ -2572,7 +2667,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   useEffect(() => {
     console.log('UserListTable - filters changed:', filters)
     applyDateFilter(data, filters)
-  }, [filters, data])
+  }, [filters, data, hideControlServicio])
 
   const toDateOnly = (input: any): Date | null => {
     if (!input) return null
@@ -2616,15 +2711,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
   const parseLeadingNumber = (value: any): number | null => {
     const raw = String(value ?? '').trim()
+
     if (!raw) return null
 
     const direct = Number(raw)
+
     if (Number.isFinite(direct)) return direct
 
     const match = raw.match(/(\d+)/)
+
     if (!match) return null
 
     const parsed = Number(match[1])
+
+
     return Number.isFinite(parsed) ? parsed : null
   }
 
@@ -2638,9 +2738,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       if (aNum != null && bNum == null) return -1
 
       const byIngreso = compareDateOnly(a.fechaIngreso, b.fechaIngreso)
+
       if (byIngreso !== 0) return -byIngreso
 
       const byCod = compareDateOnly(a.fechaCodificacion, b.fechaCodificacion)
+
       if (byCod !== 0) return -byCod
 
       return Number(b.id ?? 0) - Number(a.id ?? 0)
@@ -2707,6 +2809,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
     return formatDateDDMMYYYYDateOnlyDash(d)
   }
+
+  const toDateInputValue = (raw: any) => {
+    const d = toDateOnly(raw)
+
+    if (!d) return ''
+
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+
+    return `${y}-${m}-${day}`
+  }
+
+  const getTodayDateInputValue = () => toDateInputValue(new Date())
 
   const getOperationalLabel = (raw?: string | null) => {
     if (!raw) return '-'
@@ -2910,6 +3026,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     : null
 
   const puedeIniciarEnsayos = diasParaHabilitarEnsayo === null || diasParaHabilitarEnsayo <= 0
+
   const mensajeBloqueoEnsayo = !puedeIniciarEnsayos && proximaProbetaPendiente?.fechaVencimiento
     ? `Disponible desde ${formatDateDDMMYYYYDateOnlyDash(proximaProbetaPendiente.fechaVencimiento)}`
     : null
@@ -2963,11 +3080,21 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return { total, ensayados, pendientes }
   }
 
+  const isControlOrServicioRcm = (row: RCM) => {
+    const type = String(row?.rcmType ?? '').trim().toUpperCase()
+
+    return type === 'CONTROL' || type === 'SERVICIO'
+  }
+
   const applyDateFilter = (rows: RCM[], filters?: Filters) => {
     console.log('applyDateFilter called, rows:', rows.length, 'filters:', filters)
 
     // start with all rows
     let result = rows.slice()
+
+    if (hideControlServicio) {
+      result = result.filter(row => !isControlOrServicioRcm(row))
+    }
 
     // determine which property to use for date filtering
     const dfRaw = filters?.dateField ? String(filters.dateField).toLowerCase() : ''
@@ -3608,8 +3735,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       fuzzy: fuzzyFilter
     },
     state: {
+      sorting,
       globalFilter
     },
+    onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: fuzzyFilter,
     getCoreRowModel: getCoreRowModel(),
@@ -3629,6 +3758,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       const target = event.target as HTMLElement | null
       const tag = String(target?.tagName ?? '').toLowerCase()
+
       const isTypingTarget = Boolean(
         target?.isContentEditable ||
         tag === 'input' ||
@@ -3647,6 +3777,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       event.preventDefault()
 
       const isModalDetailOpen = Boolean(selectedRowId)
+
       const navigableRows = isModalDetailOpen
         ? visibleRows.filter((r: RCM | null | undefined) => Boolean(r?.muestra?.id))
         : visibleRows
@@ -3675,6 +3806,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         if (Number(nextRow.id) === Number(selectedRowId)) return
 
         void handleView(nextRow)
+
         return
       }
 
@@ -3895,6 +4027,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         </Button>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 'auto', flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Checkbox
+              size='small'
+              checked={hideControlServicio}
+              onChange={e => setHideControlServicio(e.target.checked)}
+            />
+            <Typography variant='body2' color='text.secondary' sx={{ whiteSpace: 'nowrap' }}>
+              Ocultar tipo Control/Servicio
+            </Typography>
+          </Box>
+
           <Typography variant='body2' color='text.secondary' sx={{ whiteSpace: 'nowrap' }}>
             {filteredData.length} registros mostrados
           </Typography>
@@ -3934,8 +4077,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 {headerGroup.headers.map(header => (
                   <th
                     key={header.id}
+                    onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
                     style={{
                       textAlign: 'center',
+                      cursor: header.column.getCanSort() ? 'pointer' : 'default',
+                      userSelect: 'none',
                       ...(header.column.id === 'select' ? { width: 44 } : {}),
                       ...(header.column.id === 'rcm' ? { width: 110 } : {}),
                       ...(header.column.id === 'numeroTarjeta' ? { width: 90 } : {}),
@@ -3950,7 +4096,22 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                       ...(header.column.id === 'acciones' ? { width: 120 } : {})
                     }}
                   >
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder ? null : (
+                      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                        <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                        {(() => {
+                          const s = header.column.getIsSorted()
+
+                          if (!s) return null
+
+                          return (
+                            <Typography component='span' variant='caption' sx={{ fontWeight: 900, lineHeight: 1 }}>
+                              {s === 'asc' ? '▲' : '▼'}
+                            </Typography>
+                          )
+                        })()}
+                      </Box>
+                    )}
                   </th>
                 ))}
               </tr>
@@ -4057,13 +4218,35 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         const tarjeta = muestra?.numeroTarjeta || row?.numeroTarjeta || rcmData?.numeroTarjeta || '-'
         const numeroMuestra = muestra?.numeroMuestra || '-'
         const ensayosCount = inlineServicios.length
-        const cp = rcmData?.codigoAgrupador?.codigo ?? row?.ss ?? '-'
+
+        const cp = (() => {
+          const candidates = [
+            (rcmData?.codigoAgrupador as any)?.codigoId,
+            (rcmData as any)?.codigoProducto,
+            (row as any)?.codigoProducto,
+            (rcmData?.codigoAgrupador as any)?.codigo
+          ]
+
+          for (const raw of candidates) {
+            const value = String(raw ?? '').trim()
+
+            if (!value) continue
+            const prdMatch = value.match(/(PRD-\d+)/i)
+
+            if (prdMatch?.[1]) return String(prdMatch[1]).toUpperCase()
+            if (/^PRD-/i.test(value)) return value.toUpperCase()
+          }
+
+          return '-'
+        })()
+
         const muestreadoPorInline = resolveDisplayPersonName(
           rcmData?.tomaMuestra,
           row?.ensayador,
           rcmData?.ordenTrabajo?.user?.name,
           rcmData?.ordenTrabajo?.user?.email
         )
+
         const material = muestra?.tipoMaterial || rcmData?.tipoMaterial || row?.tipoMaterial || '-'
         const item = muestra?.item || rcmData?.item || '-'
         const cantidad = muestra?.cantidadMuestras ?? rcmData?.cantidadMuestras ?? muestra?.cantidad ?? '-'
@@ -4242,6 +4425,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                               const isToday = safeDays === 0
                               const isTomorrow = safeDays === 1
                               const estadoSubmuestra = p?.estado ?? 'CODIFICADO'
+
                               const restantesLabel = isToday
                                 ? 'en 0d'
                                 : isTomorrow
@@ -4288,6 +4472,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                         ) : (
                           inlineServicios.map((servicio: any, idx: number) => {
                             const servicioId = servicio.id ?? servicio.servicioMuestraId ?? servicio.servicioId ?? servicio._id ?? idx
+
                             const estadoRaw = resolveServiceStateFromRcm(
                               servicio.estado ?? servicio.estadoServicio ?? 'CODIFICADO',
                               rcmData?.rcmType,
@@ -4388,14 +4573,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
           const area = rcmData?.area?.nombre ?? row?.area ?? '-'
           const familia = rcmData?.familia?.nombre ?? row?.familia ?? '-'
+
           const tipoServicio =
             row?.tipoServicio ??
             (rcmData as any)?.tipoServicio ??
             row?.familia ??
             ((rcmData as any)?.familia?.nombre ?? (rcmData as any)?.familia) ??
             '-'
+
           const agendaObra = (rcmData as any)?.ordenTrabajo?.agenda?.obra ?? null
           const agendaCliente = (rcmData as any)?.ordenTrabajo?.agenda?.cliente ?? null
+
           const normalizeCodigoProductoId = (raw: any) => {
             const value = String(raw ?? '').trim()
 
@@ -4411,7 +4599,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const codigoProductoCodigo = normalizeCodigoProductoId(
             (rcmData?.codigoAgrupador as any)?.codigoId ?? rcmData?.codigoProducto ?? (row as any)?.codigoProducto ?? null
           )
+
           const descripcionRaw = (rcmData?.codigoAgrupador as any)?.descripcionServicio ?? null
+
           const descripcionCP = (() => {
             const desc = String(descripcionRaw ?? '').trim()
 
@@ -4421,6 +4611,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
             return cpId && desc.toUpperCase() === cpId.toUpperCase() ? null : desc
           })()
+
           const nombreObra =
             rcmData?.obra?.nombreObra ??
             rcmData?.obra?.nombre ??
@@ -4434,16 +4625,19 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             agendaCliente?.nombreCliente ??
             row?.cliente?.nombreCliente ??
             '-'
+
           const clienteRut =
             rcmData?.cliente?.rut ??
             agendaCliente?.rut ??
             row?.cliente?.rut ??
             '-'
+
           const obraNumero =
             rcmData?.obra?.numeroObra ??
             agendaObra?.numeroObra ??
             row?.obra?.numeroObra ??
             '-'
+
           const ciudad =
             rcmData?.obra?.comuna ??
             agendaObra?.comuna ??
@@ -4452,6 +4646,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             row?.obra?.comuna ??
             row?.cliente?.ciudad ??
             '-'
+
           const region =
             rcmData?.obra?.region ??
             agendaObra?.region ??
@@ -4460,6 +4655,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             row?.obra?.region ??
             row?.cliente?.region ??
             '-'
+
           const mandante =
             rcmData?.obra?.mandante ??
             agendaObra?.mandante ??
@@ -4467,6 +4663,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             '-'
 
           const nroOt = rcmData?.ordenTrabajo?.correlativo || rcmData?.ordenTrabajo?.correlativ || row?.ot || '-'
+
           const muestreadoPor = resolveDisplayPersonName(
             rcmData?.tomaMuestra,
             row?.ensayador,
@@ -4499,6 +4696,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const mostrarElemento = esHormigon || esElementosComponentes
           const mostrarGrado = esHormigon || esElementosComponentes
           const mostrarCotas = esSuelo
+
           const areaChipSx = esHormigon
             ? { color: '#065f46', borderColor: 'rgba(4,120,87,0.38)', bgcolor: 'rgba(4,120,87,0.08)' }
             : esSuelo
@@ -4687,13 +4885,22 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                         ) : (
                           serviciosMuestra.map((servicio: any, idx: number) => {
                             const servicioId = servicio.id ?? servicio.servicioMuestraId ?? servicio.servicioId ?? servicio._id ?? null
+
                             const estadoRaw = resolveServiceStateFromRcm(
                               servicio.estado ?? servicio.estadoServicio ?? 'CODIFICADO',
                               rcmData?.rcmType,
                               row?.estadoOperativo ?? rcmData?.estadoOperativo
                             )
+
                             const esPaquete = servicio.esPaquete === true
-                            const subProductos: any[] = esPaquete && Array.isArray(servicio.productosEnPaquete) ? servicio.productosEnPaquete : []
+
+                            const subProductos: any[] = esPaquete
+                              ? (
+                                Array.isArray(servicio.subProductosCodificados) && servicio.subProductosCodificados.length > 0
+                                  ? servicio.subProductosCodificados
+                                  : (Array.isArray(servicio.productosEnPaquete) ? servicio.productosEnPaquete : [])
+                              )
+                              : []
 
                             return (
                               <>
@@ -4841,9 +5048,19 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       <Dialog
         open={gestionarOpen}
         onClose={() => setGestionarOpen(false)}
-        maxWidth='md'
+        maxWidth='xl'
         fullWidth
-        PaperProps={{ sx: { borderRadius: 2, overflow: 'hidden', maxWidth: 780, maxHeight: '94vh', display: 'flex', flexDirection: 'column' } }}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            overflow: 'hidden',
+            width: { xs: 'calc(100vw - 24px)', lg: 'min(96vw, 1320px)' },
+            maxWidth: { xs: 'calc(100vw - 24px)', lg: '1320px' },
+            maxHeight: '94vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }
+        }}
       >
         {(() => {
           const row = gestionarRow
@@ -4858,6 +5075,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               : { bgcolor: '#dcfce7', color: '#166534', borderColor: '#bbf7d0' }
 
           const areaLabel = rcmData?.area?.nombre ?? row?.area ?? '-'
+
           const tipoServicioLabel =
             row?.tipoServicio ??
             (rcmData as any)?.tipoServicio ??
@@ -4884,6 +5102,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
           const countableServices = gestionarServicios.filter((s: any) => !s._isPaqueteHeader)
           const totalServicios = countableServices.length
+
           const completados = countableServices.filter((s: any) => {
             const key = String(s._syntheticKey ?? s.id)
             const estadoCalculado = getEstadoServicioConProbetas(s, gestionarEstados[key] ?? s.estado ?? 'CODIFICADO')
@@ -4964,12 +5183,38 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                           size='small'
                           disabled={!gestionarEnsayadorGlobal}
                           onClick={() => {
-                            const map: Record<string, string> = {}
+                            setGestionarEnsayadores(prev => {
+                              const next = { ...prev }
 
-                            gestionarServicios
-                              .filter((s: any) => !s._isPaqueteHeader)
-                              .forEach((s: any) => { map[String(s._syntheticKey ?? s.id)] = gestionarEnsayadorGlobal })
-                            setGestionarEnsayadores(map)
+                              gestionarServicios
+                                .filter((s: any) => !s._isPaqueteHeader)
+                                .forEach((s: any) => {
+                                  const key = String(s._syntheticKey ?? s.id)
+                                  const actual = String(next[key] ?? s.ensayador ?? '').trim()
+
+                                  // Solo completar cuando no hay ensayador asignado previamente.
+                                  if (!actual) next[key] = gestionarEnsayadorGlobal
+                                })
+
+                              return next
+                            })
+
+                            const todayInput = getTodayDateInputValue()
+
+                            setGestionarFechasAsignacionEnsayador(prev => {
+                              const next = { ...prev }
+
+                              gestionarServicios
+                                .filter((s: any) => !s._isPaqueteHeader)
+                                .forEach((s: any) => {
+                                  const key = String(s._syntheticKey ?? s.id)
+                                  const actual = String((gestionarEnsayadores[key] ?? s.ensayador ?? '')).trim()
+
+                                  if (!actual) next[key] = todayInput
+                                })
+
+                              return next
+                            })
                           }}
                           sx={{ whiteSpace: 'nowrap', fontWeight: 700, textTransform: 'none', bgcolor: '#1e40af', '&:hover': { bgcolor: '#1d3a9b' }, height: 36, mt: '20px', flexShrink: 0 }}
                         >
@@ -5019,21 +5264,34 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                     </Typography>
                     <TableContainer component={Paper} variant='outlined' sx={{ borderColor: '#e5e7eb', borderRadius: 1.5, mb: 2.5 }}>
                       <Table size='small'>
+                        <colgroup>
+                          <col style={{ width: 72 }} />
+                          <col />
+                          <col style={{ width: 74 }} />
+                          <col style={{ width: 230 }} />
+                          <col style={{ width: 122 }} />
+                          <col style={{ width: 108 }} />
+                          <col style={{ width: 128 }} />
+                          <col style={{ width: 112 }} />
+                          <col style={{ width: 120 }} />
+                        </colgroup>
                         <TableHead>
                           <TableRow sx={{ bgcolor: '#f9fafb' }}>
-                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 56 }}>SKU</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 72 }}>SKU</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>ENSAYO / SERVICIO</TableCell>
-                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 70 }}>CANT</TableCell>
-                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 160 }}>ENSAYADOR</TableCell>
-                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 100 }}>ESTADO</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 74 }}>CANT</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 230 }}>ENSAYADOR</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 122 }}>F. ASIGN.</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 108 }}>ESTADO</TableCell>
                             <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 120 }}>ACCIÓN</TableCell>
-                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 70 }}>OBS.</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 112 }}>F. ENSAYO</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 120 }}>OBS.</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {gestionarServicios.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={7} align='center' sx={{ py: 3, color: '#9ca3af' }}>Sin ensayos registrados</TableCell>
+                              <TableCell colSpan={9} align='center' sx={{ py: 3, color: '#9ca3af' }}>Sin ensayos registrados</TableCell>
                             </TableRow>
                           ) : (
                             gestionarServicios.map((s: any) => {
@@ -5062,18 +5320,30 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                         {s.cantidad ?? 1}
                                       </Typography>
                                     </TableCell>
-                                    <TableCell colSpan={4} />
+                                    <TableCell colSpan={6} />
                                   </TableRow>
                                 )
                               }
 
                               const estadoActualServicio = getEstadoServicioConProbetas(s, gestionarEstados[sKey] ?? s.estado ?? 'CODIFICADO')
                               const ensayadorActual = gestionarEnsayadores[sKey] ?? s.ensayador ?? ''
+
+                              const fechaAsignacionActual =
+                                gestionarFechasAsignacionEnsayador[sKey] ??
+                                toDateInputValue(s.fechaAsignacionEnsayador) ??
+                                ''
+
+                              const fechaInicioEnsayoActual = s.fechaInicioEnsayo ?? null
+                              const fechaFinEnsayoActual = s.fechaFinEnsayo ?? null
+                              const tieneFechasEnsayo = Boolean(fechaInicioEnsayoActual || fechaFinEnsayoActual)
+                              const fechasEnsayoAbiertas = Boolean(gestionarFechasEnsayoOpen[sKey])
+
                               const tieneEnsayadorAsignado = hasAssignedEnsayador(s, ensayadorActual)
                               const puedeIniciarServicio = puedeIniciarEnsayos && tieneEnsayadorAsignado
                               const esEnsayado = String(estadoActualServicio).toUpperCase().includes('ENSAYADO')
                               const esEnProceso = String(estadoActualServicio).toUpperCase().includes('PROCESO')
                               const esCodificado = !esEnsayado && !esEnProceso
+                              const calendarioFechaHabilitado = String(ensayadorActual ?? '').trim().length > 0 && esCodificado
                               const submuestrasServicio = getSubmuestrasForService(s)
 
 
@@ -5098,14 +5368,98 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                       size='small'
                                       displayEmpty
                                       value={ensayadorActual}
-                                      onChange={e => setGestionarEnsayadores(prev => ({ ...prev, [sKey]: String(e.target.value) }))}
-                                      sx={{ width: '100%', fontSize: '0.82rem' }}
+                                      onChange={e => {
+                                        const nextEnsayador = String(e.target.value)
+
+                                        setGestionarEnsayadores(prev => ({ ...prev, [sKey]: nextEnsayador }))
+                                        setGestionarFechasAsignacionEnsayador(prev => {
+                                          if (!nextEnsayador.trim()) {
+                                            const { [sKey]: _removed, ...rest } = prev
+
+                                            return rest
+                                          }
+
+                                          return { ...prev, [sKey]: getTodayDateInputValue() }
+                                        })
+                                      }}
+                                      sx={{
+                                        width: '100%',
+                                        minWidth: 220,
+                                        fontSize: '0.82rem',
+                                        '& .MuiSelect-select': {
+                                          whiteSpace: 'nowrap',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis'
+                                        }
+                                      }}
                                     >
                                       <MenuItem value=''><em style={{ color: '#9ca3af' }}>—</em></MenuItem>
                                       {ensayadorOptions.map(name => (
                                         <MenuItem key={name} value={name}>{name}</MenuItem>
                                       ))}
                                     </Select>
+                                  </TableCell>
+                                  <TableCell align='center'>
+                                    <Box
+                                      sx={{
+                                        width: 118,
+                                        minHeight: 30,
+                                        px: 0.8,
+                                        borderRadius: 1,
+                                        border: '1px solid',
+                                        borderColor: '#d1d5db',
+                                        bgcolor: calendarioFechaHabilitado ? '#fff' : '#f3f4f6',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: 0.4
+                                      }}
+                                    >
+                                      <Typography sx={{ fontSize: '0.73rem', color: fechaAsignacionActual ? '#374151' : '#9ca3af' }}>
+                                        {fechaAsignacionActual ? formatDateDDMMYYYYDateOnly(fechaAsignacionActual) : 'dd/mm/yyyy'}
+                                      </Typography>
+                                      <IconButton
+                                        size='small'
+                                        disabled={!calendarioFechaHabilitado}
+                                        onClick={() => {
+                                          const input = document.getElementById(`fecha-asign-${sKey}`) as HTMLInputElement | null
+
+                                          if (!input) return
+                                          if (typeof input.showPicker === 'function') input.showPicker()
+                                          else input.click()
+                                        }}
+                                        sx={{ p: 0.2, color: calendarioFechaHabilitado ? '#4b5563' : '#9ca3af' }}
+                                      >
+                                        <i className='ri-calendar-line' style={{ fontSize: 13 }} />
+                                      </IconButton>
+                                      <input
+                                        id={`fecha-asign-${sKey}`}
+                                        type='date'
+                                        value={String(fechaAsignacionActual ?? '')}
+                                        disabled={!calendarioFechaHabilitado}
+                                        onChange={e => {
+                                          const nextFecha = String(e.target.value ?? '').trim()
+
+                                          setGestionarFechasAsignacionEnsayador(prev => {
+                                            if (!nextFecha) {
+                                              const { [sKey]: _removed, ...rest } = prev
+
+                                              return rest
+                                            }
+
+                                            return { ...prev, [sKey]: nextFecha }
+                                          })
+                                        }}
+                                        style={{
+                                          position: 'absolute',
+                                          opacity: 0,
+                                          width: 1,
+                                          height: 1,
+                                          pointerEvents: 'none'
+                                        }}
+                                        aria-label='Fecha de asignacion'
+                                      />
+                                    </Box>
                                   </TableCell>
                                   <TableCell align='center'>
                                     <Chip
@@ -5189,6 +5543,40 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                     ) : (
                                       <Typography sx={{ fontSize: '0.82rem', color: '#9ca3af' }}>-</Typography>
                                     )}
+                                  </TableCell>
+                                  <TableCell align='center'>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.4 }}>
+                                      <Button
+                                        size='small'
+                                        variant='outlined'
+                                        disabled={!tieneFechasEnsayo}
+                                        onClick={() => setGestionarFechasEnsayoOpen(prev => ({ ...prev, [sKey]: !prev[sKey] }))}
+                                        sx={{
+                                          minWidth: 0,
+                                          px: 0.7,
+                                          py: 0.15,
+                                          fontSize: '0.72rem',
+                                          borderColor: tieneFechasEnsayo ? '#93c5fd' : '#d1d5db',
+                                          color: tieneFechasEnsayo ? '#1d4ed8' : '#9ca3af',
+                                          bgcolor: tieneFechasEnsayo ? '#eff6ff' : '#f3f4f6'
+                                        }}
+                                      >
+                                        <i className={fechasEnsayoAbiertas ? 'ri-subtract-line' : 'ri-add-line'} style={{ fontSize: 12 }} />
+                                      </Button>
+                                      {fechasEnsayoAbiertas && (
+                                        <Box sx={{ minWidth: 106, px: 0.6, py: 0.5, borderRadius: 1, border: '1px dashed #cbd5e1', bgcolor: '#f8fafc' }}>
+                                          <Typography sx={{ fontSize: '0.68rem', color: '#334155', whiteSpace: 'nowrap' }}>
+                                            I: {fechaInicioEnsayoActual ? formatDateDDMMYYYY(fechaInicioEnsayoActual) : '-'}
+                                          </Typography>
+                                          <Typography sx={{ fontSize: '0.68rem', color: '#334155', whiteSpace: 'nowrap' }}>
+                                            F: {fechaFinEnsayoActual ? formatDateDDMMYYYY(fechaFinEnsayoActual) : '-'}
+                                          </Typography>
+                                        </Box>
+                                      )}
+                                      {!tieneFechasEnsayo && (
+                                        <Typography sx={{ fontSize: '0.68rem', color: '#9ca3af' }}>-</Typography>
+                                      )}
+                                    </Box>
                                   </TableCell>
                                   <TableCell align='center'>
                                     <TextField
@@ -5306,6 +5694,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const fichaKey = getSubmuestraFichaKey(service, probeta)
           const ficha = gestionarSubmuestraFormData[fichaKey] ?? createEmptySubmuestraFicha()
           const fichaEnsayada = String(probeta?.estado ?? '').toUpperCase().includes('ENSAYADO')
+
           const updateFicha = (field: string, value: any) => {
             setGestionarSubmuestraFormData(prev => ({
               ...prev,

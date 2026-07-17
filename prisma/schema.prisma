@@ -957,17 +957,19 @@ model ServicioMuestraHistorial {
   servicioMuestra   ServicioMuestra @relation(fields: [servicioMuestraId], references: [id], onDelete: Cascade)
 
   // Campos del historial
-  registro       DateTime @default(now())
-  funcionario    String?
-  aplicadoA      String?
-  ensayoServicio String?
-  tipo           String?
-  estAnterior    String?
-  estNuevo       String?
-  fechaAccion    DateTime @default(now())
-  observacion    String?  @db.Text
-  motivo         String?  @db.Text
-  informe        Int?
+  registro          DateTime  @default(now())
+  funcionario       String?
+  aplicadoA         String?
+  ensayoServicio    String?
+  tipo              String?
+  estAnterior       String?
+  estNuevo          String?
+  fechaAccion       DateTime  @default(now())
+  fechaInicioEnsayo DateTime?
+  fechaFinEnsayo    DateTime?
+  observacion       String?   @db.Text
+  motivo            String?   @db.Text
+  informe           Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

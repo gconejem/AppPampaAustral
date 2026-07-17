@@ -88,6 +88,8 @@ export async function GET(
             estAnterior: h.estAnterior,
             estNuevo: h.estNuevo,
             fechaAccion: h.fechaAccion,
+            fechaInicioEnsayo: h.fechaInicioEnsayo,
+            fechaFinEnsayo: h.fechaFinEnsayo,
             observacion: h.observacion,
             motivo: h.motivo,
             informe: h.informe
@@ -133,7 +135,35 @@ export async function POST(
         }
 
         const estadoNuevo = String(body.estNuevo)
+        const estadoNuevoUpper = estadoNuevo.trim().toUpperCase()
         const skipServicioEstadoUpdate = Boolean(body.skipServicioEstadoUpdate)
+        let fechaAccion = new Date()
+
+        if (body?.fechaAccion) {
+            const rawFechaAccion = String(body.fechaAccion).trim()
+
+            if (/^\d{4}-\d{2}-\d{2}$/.test(rawFechaAccion)) {
+                const [year, month, day] = rawFechaAccion.split('-').map(Number)
+
+                fechaAccion = new Date(Date.UTC(year, month - 1, day, 12, 0, 0))
+            } else {
+                const parsed = new Date(rawFechaAccion)
+
+                if (!isNaN(parsed.getTime())) {
+                    fechaAccion = parsed
+                }
+            }
+        }
+
+        const fechaInicioEnsayo =
+            estadoNuevoUpper === 'EN_PROCESO'
+                ? new Date()
+                : (body?.fechaInicioEnsayo ? new Date(String(body.fechaInicioEnsayo)) : null)
+
+        const fechaFinEnsayo =
+            estadoNuevoUpper === 'ENSAYADO'
+                ? new Date()
+                : (body?.fechaFinEnsayo ? new Date(String(body.fechaFinEnsayo)) : null)
 
         const { historyEntry, servicioRcmSyncCount } = await prisma.$transaction(async tx => {
             // ✅ Crear registro de historial - servicioMuestraId viene del param, NO del body
@@ -147,7 +177,9 @@ export async function POST(
                     tipo: body.tipo,
                     estAnterior: body.estAnterior ?? body.estPrev ?? null,
                     estNuevo: estadoNuevo,
-                    fechaAccion: new Date(),
+                    fechaAccion,
+                    fechaInicioEnsayo: fechaInicioEnsayo && !isNaN(fechaInicioEnsayo.getTime()) ? fechaInicioEnsayo : null,
+                    fechaFinEnsayo: fechaFinEnsayo && !isNaN(fechaFinEnsayo.getTime()) ? fechaFinEnsayo : null,
                     observacion: body.observacion ?? null,
                     motivo: body.motivo ?? null,
                     informe: body.informe ?? null
