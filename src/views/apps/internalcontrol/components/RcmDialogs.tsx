@@ -539,9 +539,28 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                             <Button
                                 onClick={() => {
                                     setShowFinalizadoSuccess(false)
-                                    router.push(`/${lang}/apps/rcmnavigator`)
+                                    router.push(`/${lang}/apps/otmanagement`)
                                 }}
                                 variant='contained'
+                                startIcon={<ArrowBackIcon />}
+                                sx={{
+                                    textTransform: 'none', borderRadius: '8px', fontWeight: 700,
+                                    justifyContent: 'space-between', px: 2, py: 1.25,
+                                }}
+                            >
+                                <Box component='span' sx={{ flex: 1, textAlign: 'left', ml: 1 }}>
+                                    Volver a Órdenes de Trabajo
+                                </Box>
+                                <Box component='span' sx={{ fontWeight: 400, fontSize: '0.72rem', opacity: 0.85, ml: 2 }}>
+                                    Seleccionar otra OT para codificar
+                                </Box>
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setShowFinalizadoSuccess(false)
+                                    router.push(`/${lang}/apps/rcmnavigator`)
+                                }}
+                                variant='outlined'
                                 startIcon={<Inventory2OutlinedIcon />}
                                 sx={{
                                     textTransform: 'none', borderRadius: '8px', fontWeight: 700,
@@ -572,25 +591,6 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                 </Box>
                                 <Box component='span' sx={{ fontWeight: 400, fontSize: '0.72rem', opacity: 0.85, ml: 2 }}>
                                     Asignar ensayadores y ejecutar ensayos
-                                </Box>
-                            </Button>
-                            <Button
-                                onClick={() => {
-                                    setShowFinalizadoSuccess(false)
-                                    router.push(`/${lang}/apps/otmanagement`)
-                                }}
-                                variant='outlined'
-                                startIcon={<ArrowBackIcon />}
-                                sx={{
-                                    textTransform: 'none', borderRadius: '8px', fontWeight: 600,
-                                    justifyContent: 'space-between', px: 2, py: 1.25,
-                                }}
-                            >
-                                <Box component='span' sx={{ flex: 1, textAlign: 'left', ml: 1 }}>
-                                    Volver a Órdenes de Trabajo
-                                </Box>
-                                <Box component='span' sx={{ fontWeight: 400, fontSize: '0.72rem', color: 'text.secondary', ml: 2 }}>
-                                    Seleccionar otra OT para codificar
                                 </Box>
                             </Button>
                         </Box>

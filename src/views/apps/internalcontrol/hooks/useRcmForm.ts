@@ -10,6 +10,9 @@ const STANDARD_SEDES = ['PA Chillán', 'PA Concepción', 'Cliente']
 const normalizeName = (value?: string | null) =>
     (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 
+const splitGradeValues = (value?: string | null) =>
+    (value || '').split(';').map(v => v.trim()).filter(Boolean)
+
 const normalizeCantidadMuestras = (value?: string | number | null) => {
     if (value === '' || value === undefined || value === null) return '1'
 
@@ -201,7 +204,11 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         setTipoServicio(familiaFound ? familiaFound.id : '')
 
         const areaId = areaFound?.id
-        const areaName = (areaFound?.nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+        const areaName = normalizeName(areaFound?.nombre)
+        const familiaName = normalizeName(familiaFound?.nombre)
+        const isDosificacionesHormigon =
+            areaName === 'hormigon' &&
+            ['dosificaciones hormigon', 'dosificaciones de hormigon'].includes(familiaName)
         const validMaterials = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'MATERIAL').map(p => p.descripcion) : []
         const validItems = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'ITEM').map(p => p.descripcion) : []
         const validGrades = areaId ? parametrosArea.filter(p => p.areaId === areaId && p.tipo === 'GRADO').map(p => p.descripcion) : []
@@ -222,6 +229,21 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         }
 
         // En duplicar, forzar nuevo número de tarjeta y número de muestra
+        const setGradeSelectOrCustom = (value: string | undefined) => {
+            const selectedGrades = splitGradeValues(value)
+            const isCatalogValue =
+                selectedGrades.length > 0 &&
+                selectedGrades.every(gradeValue => validGrades.includes(gradeValue))
+
+            if (value && !isCatalogValue) {
+                setGrado('Otro')
+                setCustomGrado(value)
+            } else {
+                setGrado(value || '')
+                setCustomGrado('')
+            }
+        }
+
         setNumeroTarjeta(mode === 'duplicate' ? '' : rcm.numeroTarjeta)
         setTomaMuestra(mode === 'duplicate' ? '' : rcm.tomaMuestra || '')
 
@@ -229,7 +251,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         if (mode === 'duplicate') {
             setSelectOrCustom(rcm.tipoMaterial, validMaterials, setTipoMaterial, setCustomTipoMaterial)
             setSelectOrCustom(rcm.item, validItems, setItem, setCustomItem)
-            setSelectOrCustom(rcm.grado, validGrades, setGrado, setCustomGrado)
+            setGradeSelectOrCustom(rcm.grado)
             setProcedencia(rcm.procedencia || '')
             setUbicacionSector(rcm.ubicacionSector || '')
             setElemento(rcm.elemento || '')
@@ -244,8 +266,10 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
                 if (areaName === 'hormigon' || areaName === 'elementos y componentes') {
                     setFechaConfeccion('')
                     setElemento('')
-                    setGrado('')
-                    setCustomGrado('')
+                    if (!isDosificacionesHormigon) {
+                        setGrado('')
+                        setCustomGrado('')
+                    }
                 } else if (areaName === 'asfalto' || areaName === 'otros') {
                     setFechaConfeccion('')
                 } else if (areaName === 'suelo') {
@@ -275,13 +299,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
             }
 
             // Manejar grado "Otro"
-            if (rcm.grado && !validGrades.includes(rcm.grado)) {
-                setGrado('Otro')
-                setCustomGrado(rcm.grado)
-            } else {
-                setGrado(rcm.grado || '')
-                setCustomGrado('')
-            }
+            setGradeSelectOrCustom(rcm.grado)
 
             setProcedencia(rcm.procedencia || '')
             setUbicacionSector(rcm.ubicacionSector || '')

@@ -28,6 +28,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import CloseIcon from '@mui/icons-material/Close'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import InventoryIcon from '@mui/icons-material/Inventory'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import type { EnsayoAsociado, AreaType, FamiliaType, SubmuestraVencimiento, ProductoType, ParametroAreaType } from '../types/rcm-types'
 import ProductSearchInline from './ProductSearchInline'
 
@@ -40,6 +41,15 @@ const normalizeNonNegativeIntegerInput = (value: string) => {
 
     return String(Math.max(0, Math.trunc(parsedValue)))
 }
+
+const normalizeName = (value?: string | null) =>
+    (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+
+const splitGradeValues = (value?: string | null) =>
+    (value || '').split(';').map(v => v.trim()).filter(Boolean)
+
+const joinGradeValues = (values: string[]) =>
+    Array.from(new Set(values.map(v => v.trim()).filter(Boolean))).join('; ')
 
 // The form prop type matches the return of useRcmForm
 interface FormState {
@@ -166,6 +176,18 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
     } = ensayoHandlers
 
     const [showSearch, setShowSearch] = React.useState(false)
+    const areaObj = areas.find(a => a.id === area)
+    const tipoServicioObj = todasLasFamilias.find(f => f.id === tipoServicio)
+    const areaName = areaObj?.nombre?.toLowerCase() || ''
+    const normalizedAreaName = normalizeName(areaObj?.nombre)
+    const normalizedTipoServicioName = normalizeName(tipoServicioObj?.nombre)
+    const isHormigonArea = normalizedAreaName === 'hormigon'
+    const isElementosComponentesArea = normalizedAreaName === 'elementos y componentes'
+    const isDosificacionesHormigon =
+        isHormigonArea &&
+        ['dosificaciones hormigon', 'dosificaciones de hormigon'].includes(normalizedTipoServicioName)
+    const gradoOptions = parametrosArea.filter(p => p.areaId === area && p.tipo === 'GRADO')
+    const selectedGradeValues = grado === 'Otro' ? ['Otro'] : splitGradeValues(grado)
 
     React.useEffect(() => {
         if (!area) {
@@ -197,11 +219,9 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
 
     React.useEffect(() => {
         if (isEditingRcm) return
-        const areaObj = areas.find(a => a.id === area)
-        const familiaObj = todasLasFamilias.find(f => f.id === tipoServicio)
         const isHormigonFresco =
-            areaObj?.nombre?.toLowerCase() === 'hormigón' &&
-            familiaObj?.nombre?.toLowerCase() === 'hormigón fresco'
+            normalizedAreaName === 'hormigon' &&
+            normalizedTipoServicioName === 'hormigon fresco'
 
         const calcFecha = (dias: number) => {
             if (!fechaConfeccion) return ''
@@ -236,7 +256,51 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [area, tipoServicio, fechaConfeccion, isDuplicatingRcm])
 
+    React.useEffect(() => {
+        if (isDosificacionesHormigon || splitGradeValues(grado).length <= 1) return
+
+        setGrado('')
+        setCustomGrado('')
+    }, [isDosificacionesHormigon, grado, setCustomGrado, setGrado])
+
     const handleToggleExpand = () => setExpandedRcm(!expandedRcm)
+
+    const handleMultipleGradoChange = (value: string | string[]) => {
+        const values = Array.isArray(value) ? value : splitGradeValues(value)
+
+        if (values.includes('Otro')) {
+            setGrado('Otro')
+            return
+        }
+
+        setCustomGrado('')
+        setGrado(joinGradeValues(values))
+    }
+
+    const handleCopyFechaConfeccion = async () => {
+        if (!fechaConfeccion || typeof navigator === 'undefined' || !navigator.clipboard) return
+
+        await navigator.clipboard.writeText(fechaConfeccion).catch(() => undefined)
+    }
+
+    const renderFechaConfeccionField = (required = false) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TextField label='Fecha Confección' type='date' value={fechaConfeccion}
+                onChange={(e) => setFechaConfeccion(e.target.value)} required={required} fullWidth InputLabelProps={{ shrink: true }} />
+            <Tooltip title={fechaConfeccion ? 'Copiar fecha de confección' : 'Sin fecha para copiar'}>
+                <span>
+                    <IconButton
+                        size='small'
+                        onClick={handleCopyFechaConfeccion}
+                        disabled={!fechaConfeccion}
+                        aria-label='Copiar fecha de confección'
+                    >
+                        <ContentCopyIcon fontSize='small' />
+                    </IconButton>
+                </span>
+            </Tooltip>
+        </Box>
+    )
 
     if (!showRcmCard) return null
 
@@ -279,7 +343,11 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                 <FormControl fullWidth required>
                     <InputLabel id={tipoLabelId} shrink>Tipo Servicio</InputLabel>
                     <Select labelId={tipoLabelId} label='Tipo Servicio' value={tipoServicio} displayEmpty notched disabled={!area}
-                        onChange={(e) => setTipoServicio(e.target.value as number | '')}>
+                        onChange={(e) => {
+                            setTipoServicio(e.target.value as number | '')
+                            setGrado('')
+                            setCustomGrado('')
+                        }}>
                         <MenuItem value='' disabled>Seleccionar tipo de servicio</MenuItem>
                         {todasLasFamilias.filter(f => f.areaId === area).map((f) => <MenuItem key={f.id} value={f.id}>{f.nombre}</MenuItem>)}
                     </Select>
@@ -308,8 +376,6 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
             </Grid>
         </Grid>
     )
-
-    const areaName = areas.find(a => a.id === area)?.nombre?.toLowerCase() || ''
 
     return (
         <>
@@ -541,28 +607,69 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                         )}
 
                         {/* Campos dinámicos Área Hormigón */}
-                        {rcmType === 'Muestra' && (areaName === 'hormigón' || areaName === 'elementos y componentes') && (
+                        {rcmType === 'Muestra' && (isHormigonArea || isElementosComponentesArea) && (
                             <Box sx={{ mt: 4, p: 3, border: '1px solid #f3e5f5', borderRadius: 2, bgcolor: '#fdf6ff' }}>
                                 <Typography variant='overline' sx={{ fontWeight: 800, letterSpacing: 2, color: '#e91e8c', display: 'block', mb: 2 }}>
                                     Campos Dinámicos — Área {areas.find(a => a.id === area)?.nombre}
                                 </Typography>
                                 <Grid container spacing={3}>
                                     <Grid item xs={12} md={3}>
-                                        <TextField label='Fecha Confección' type='date' value={fechaConfeccion}
-                                            onChange={(e) => setFechaConfeccion(e.target.value)} required fullWidth InputLabelProps={{ shrink: true }} />
+                                        {renderFechaConfeccionField(true)}
                                     </Grid>
                                     <Grid item xs={12} md={3}>
                                         <TextField label='Elemento' value={elemento} onChange={(e) => setElemento(e.target.value)} required fullWidth />
                                     </Grid>
                                     <Grid item xs={12} md={3}>
                                         <FormControl fullWidth>
-                                            <InputLabel>Grado</InputLabel>
-                                            <Select label='Grado' value={grado} onChange={(e) => setGrado(e.target.value)}>
-                                                <MenuItem value=''>Seleccionar...</MenuItem>
-                                                {parametrosArea.filter(p => p.areaId === area && p.tipo === 'GRADO').map(p =>
-                                                    <MenuItem key={p.id} value={p.descripcion}>{p.descripcion}</MenuItem>)}
-                                                <MenuItem value='Otro'>Otro...</MenuItem>
-                                            </Select>
+                                            {isDosificacionesHormigon ? (
+                                                <>
+                                                    <InputLabel shrink>Grado</InputLabel>
+                                                    <Select
+                                                        multiple
+                                                        displayEmpty
+                                                        notched
+                                                        label='Grado'
+                                                        value={selectedGradeValues}
+                                                        onChange={(e) => handleMultipleGradoChange(e.target.value as string[] | string)}
+                                                        renderValue={(selected) => {
+                                                            const values = selected as string[]
+
+                                                            if (values.length === 0) {
+                                                                return <Typography variant='body2' color='text.disabled'>Seleccionar...</Typography>
+                                                            }
+
+                                                            return (
+                                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                                    {values.map(value => (
+                                                                        <Chip key={value} label={value === 'Otro' ? 'Otro...' : value} size='small' />
+                                                                    ))}
+                                                                </Box>
+                                                            )
+                                                        }}
+                                                    >
+                                                        {gradoOptions.map(p => (
+                                                            <MenuItem key={p.id} value={p.descripcion}>
+                                                                <Checkbox checked={selectedGradeValues.includes(p.descripcion)} />
+                                                                {p.descripcion}
+                                                            </MenuItem>
+                                                        ))}
+                                                        <MenuItem value='Otro'>
+                                                            <Checkbox checked={selectedGradeValues.includes('Otro')} />
+                                                            Otro...
+                                                        </MenuItem>
+                                                    </Select>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <InputLabel>Grado</InputLabel>
+                                                    <Select label='Grado' value={grado} onChange={(e) => setGrado(e.target.value)}>
+                                                        <MenuItem value=''>Seleccionar...</MenuItem>
+                                                        {gradoOptions.map(p =>
+                                                            <MenuItem key={p.id} value={p.descripcion}>{p.descripcion}</MenuItem>)}
+                                                        <MenuItem value='Otro'>Otro...</MenuItem>
+                                                    </Select>
+                                                </>
+                                            )}
                                         </FormControl>
                                     </Grid>
                                     {grado === 'Otro' && (
@@ -576,15 +683,14 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                         )}
 
                         {/* Campos dinámicos Área Asfalto */}
-                        {rcmType === 'Muestra' && areaName === 'asfalto' && (
+                        {rcmType === 'Muestra' && normalizedAreaName === 'asfalto' && (
                             <Box sx={{ mt: 4, p: 3, border: '1px solid #f3e5f5', borderRadius: 2, bgcolor: '#fdf6ff' }}>
                                 <Typography variant='overline' sx={{ fontWeight: 800, letterSpacing: 2, color: '#e91e8c', display: 'block', mb: 2 }}>
                                     Campos Dinámicos — Área Asfalto
                                 </Typography>
                                 <Grid container spacing={3}>
                                     <Grid item xs={6} md={3}>
-                                        <TextField label='Fecha Confección' type='date' value={fechaConfeccion}
-                                            onChange={(e) => setFechaConfeccion(e.target.value)} required fullWidth InputLabelProps={{ shrink: true }} />
+                                        {renderFechaConfeccionField(true)}
                                     </Grid>
                                 </Grid>
                             </Box>
@@ -617,8 +723,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                 </Typography>
                                 <Grid container spacing={3}>
                                     <Grid item xs={6} md={3}>
-                                        <TextField label='Fecha Confección' type='date' value={fechaConfeccion}
-                                            onChange={(e) => setFechaConfeccion(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
+                                        {renderFechaConfeccionField()}
                                     </Grid>
                                 </Grid>
                             </Box>
