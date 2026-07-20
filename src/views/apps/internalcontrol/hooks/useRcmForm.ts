@@ -10,6 +10,16 @@ const STANDARD_SEDES = ['PA Chillán', 'PA Concepción', 'Cliente']
 const normalizeName = (value?: string | null) =>
     (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 
+const normalizeCantidadMuestras = (value?: string | number | null) => {
+    if (value === '' || value === undefined || value === null) return '1'
+
+    const parsedValue = Number(value)
+
+    if (!Number.isFinite(parsedValue)) return '1'
+
+    return String(Math.max(0, Math.trunc(parsedValue)))
+}
+
 export function useRcmForm({ otData }: UseRcmFormParams) {
     const getTodayDateForInput = () => {
         const today = new Date()
@@ -287,7 +297,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         setObservaciones(rcm.observaciones || '')
         setInformeEnsayo(rcm.informeEnsayo !== undefined ? rcm.informeEnsayo : rcm.rcmType !== 'Servicio')
         // tomaMuestra ya se estableció arriba según el modo (edit/duplicate)
-        setCantidadMuestras(rcm.cantidadMuestras)
+        setCantidadMuestras(normalizeCantidadMuestras(rcm.cantidadMuestras))
         setFechaServicio(rcm.fechaServicio)
 
         // En duplicado, las submuestras pertenecen a la muestra original.

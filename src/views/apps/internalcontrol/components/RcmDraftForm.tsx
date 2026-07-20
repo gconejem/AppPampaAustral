@@ -31,6 +31,16 @@ import InventoryIcon from '@mui/icons-material/Inventory'
 import type { EnsayoAsociado, AreaType, FamiliaType, SubmuestraVencimiento, ProductoType, ParametroAreaType } from '../types/rcm-types'
 import ProductSearchInline from './ProductSearchInline'
 
+const normalizeNonNegativeIntegerInput = (value: string) => {
+    if (value === '') return ''
+
+    const parsedValue = Number(value)
+
+    if (!Number.isFinite(parsedValue)) return ''
+
+    return String(Math.max(0, Math.trunc(parsedValue)))
+}
+
 // The form prop type matches the return of useRcmForm
 interface FormState {
     fechaCodificacion: string
@@ -429,7 +439,19 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                 <Grid container spacing={3} sx={{ mt: 0 }} alignItems='center'>
                                     <Grid item xs={12} md={3}>
                                         <TextField label='Cantidad de Muestras' type='number' value={cantidadMuestras}
-                                            onChange={(e) => { setErrorVencimiento(''); setCantidadMuestras(e.target.value) }} required fullWidth />
+                                            onChange={(e) => {
+                                                setErrorVencimiento('')
+                                                setCantidadMuestras(normalizeNonNegativeIntegerInput(e.target.value))
+                                            }}
+                                            onBlur={() => {
+                                                if (cantidadMuestras === '') setCantidadMuestras('0')
+                                            }}
+                                            required fullWidth inputProps={{
+                                                min: 0,
+                                                step: 1,
+                                                inputMode: 'numeric',
+                                                onWheel: (e: React.WheelEvent<HTMLInputElement>) => e.currentTarget.blur(),
+                                            }} />
                                     </Grid>
                                     <Grid item xs={12} md={3}>
                                         <FormControlLabel

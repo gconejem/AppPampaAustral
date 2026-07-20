@@ -86,6 +86,16 @@ function mapApiToRcmData(data: any) {
     }
 }
 
+const normalizeCantidadMuestras = (value?: string | number | null) => {
+    if (value === '' || value === undefined || value === null) return 0
+
+    const parsedValue = Number(value)
+
+    if (!Number.isFinite(parsedValue)) return 0
+
+    return Math.max(0, Math.trunc(parsedValue))
+}
+
 /* ── component ───────────────────────────────────────────────────────── */
 
 interface EditRcmViewProps {
@@ -206,7 +216,7 @@ export default function EditRcmView({ rcmId }: EditRcmViewProps) {
             cota1: v.cota1,
             cota2: v.cota2,
             tomaMuestra: v.tomaMuestra,
-            cantidadMuestras: parseInt(v.cantidadMuestras) || 1,
+            cantidadMuestras: normalizeCantidadMuestras(v.cantidadMuestras),
             vencimiento: v.tieneVencimiento,
             estadoOperativo: apiData?.estadoOperativo,
             ensayos: ensayosAsociados.map(e => ({

@@ -8,6 +8,16 @@ const validationToastOptions = {
     icon: React.createElement(CancelIcon, { sx: { color: '#d32f2f', fontSize: 20 } }),
 }
 
+const normalizeCantidadMuestras = (value?: string | number | null) => {
+    if (value === '' || value === undefined || value === null) return 0
+
+    const parsedValue = Number(value)
+
+    if (!Number.isFinite(parsedValue)) return 0
+
+    return Math.max(0, Math.trunc(parsedValue))
+}
+
 interface UseRcmCrudParams {
     savedRcms: RCMData[]
     setSavedRcms: React.Dispatch<React.SetStateAction<RCMData[]>>
@@ -180,6 +190,7 @@ export function useRcmCrud({
 
     const handleSaveRcm = async () => {
         const formValues = getFormValues()
+        const cantidadMuestras = normalizeCantidadMuestras(formValues.cantidadMuestras)
 
         // Validación: campos obligatorios comunes (Área, Tipo Servicio, Sede)
         const missingFields: string[] = []
@@ -229,7 +240,7 @@ export function useRcmCrud({
             }
 
             const sumaCantidades = formValues.submuestrasVencimiento.reduce((sum, sub) => sum + sub.cantidad, 0)
-            const cantidadRequerida = parseInt(formValues.cantidadMuestras) || 0
+            const cantidadRequerida = cantidadMuestras
 
             if (sumaCantidades !== cantidadRequerida) {
                 toast(`La suma de cantidades de submuestras (${sumaCantidades}) debe coincidir con la Cantidad de Muestras (${cantidadRequerida})`, validationToastOptions)
@@ -305,7 +316,7 @@ export function useRcmCrud({
                 fechaEntrega: formValues.fechaEntrega,
                 fechaConfeccion: formValues.fechaConfeccion,
                 tomaMuestra: formValues.tomaMuestra,
-                cantidadMuestras: formValues.rcmType === 'Muestra' ? formValues.cantidadMuestras : '',
+                cantidadMuestras: formValues.rcmType === 'Muestra' ? String(cantidadMuestras) : '',
                 estado: estadoRcm,
                 tieneVencimiento: formValues.tieneVencimiento,
                 submuestrasVencimiento: [...formValues.submuestrasVencimiento],
@@ -468,7 +479,7 @@ export function useRcmCrud({
                     cota1: rcm.cota1,
                     cota2: rcm.cota2,
                     informeEnsayo: rcm.informeEnsayo ?? true,
-                    cantidadMuestras: rcm.rcmType === 'Muestra' ? (parseInt(rcm.cantidadMuestras) || 1) : null,
+                    cantidadMuestras: rcm.rcmType === 'Muestra' ? normalizeCantidadMuestras(rcm.cantidadMuestras) : null,
                     vencimiento: rcm.tieneVencimiento ?? false,
                     tomaMuestra: rcm.tomaMuestra,
                     ensayos: rcm.ensayos.map(e => ({
