@@ -430,7 +430,6 @@ const Step2CreateRcms = ({
                 onOpenAgrupadorSearch={codigoReal.handleOpenAgrupadorSearch}
                 onRemoveEnsayoFromAgrupador={codigoReal.handleRemoveEnsayoFromAgrupador}
                 onChangeDescripcion={codigoReal.handleChangeAgrupadorDescripcion}
-                onChangeCantidad={codigoReal.handleChangeAgrupadorCantidad}
                 onChangeFacturacion={codigoReal.handleChangeAgrupadorFacturacion}
                 onEditAgrupador={codigoReal.handleOpenEditAgrupador}
                 onDeleteAgrupador={codigoReal.handleDeleteAgrupador}

@@ -22,7 +22,6 @@ interface CodigoAgrupadorPanelProps {
     onOpenAgrupadorSearch: (event: React.MouseEvent<HTMLElement>, agrupadorId: string) => void
     onRemoveEnsayoFromAgrupador: (agrupadorId: string, productoId: number) => void
     onChangeDescripcion: (agrupadorId: string, value: string) => void
-    onChangeCantidad: (agrupadorId: string, value: number) => void
     onChangeFacturacion: (agrupadorId: string, facturacion: 'Unitario' | 'Fijo') => void
     onEditAgrupador: (agrupadorId: string) => void
     onDeleteAgrupador: (agrupadorId: string) => void
@@ -32,7 +31,7 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
     codigosAgrupadores, savedRcms, cardRect,
     isSaving, onFinalizarCodificacion,
     onOpenAgrupadorSearch, onRemoveEnsayoFromAgrupador,
-    onChangeDescripcion, onChangeCantidad, onChangeFacturacion,
+    onChangeDescripcion, onChangeFacturacion,
     onEditAgrupador,
     onDeleteAgrupador,
 }) => {
@@ -201,13 +200,9 @@ const CodigoAgrupadorPanel: React.FC<CodigoAgrupadorPanelProps> = ({
                                     {/* Cantidad */}
                                     <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'top' }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                                            <TextField
-                                                size='small' type='number'
-                                                value={agrupador.cantidad}
-                                                onChange={(e) => onChangeCantidad(agrupador.id, parseInt(e.target.value) || 0)}
-                                                sx={{ width: 70 }}
-                                                inputProps={{ min: 1 }}
-                                            />
+                                            <Typography variant='body2' sx={{ width: 70, fontWeight: 600, textAlign: 'center' }}>
+                                                {agrupador.cantidad}
+                                            </Typography>
                                             <Typography variant='body2' color='text.secondary'>
                                                 {agrupador.unidad}
                                             </Typography>
