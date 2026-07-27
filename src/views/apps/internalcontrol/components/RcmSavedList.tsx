@@ -39,7 +39,7 @@ interface RcmSavedListProps {
     onToggleRcmSelection: (id: number) => void
     onOpenRcmMenu: (event: React.MouseEvent<HTMLElement>, rcmId: number) => void
     onNewRcmClick: (event: React.MouseEvent<HTMLElement>) => void
-    onOpenCodigoPopup: (event: React.MouseEvent<HTMLElement>) => void
+    onOpenCodigoPopup: (event: React.MouseEvent<HTMLElement>, rcmIds?: number[]) => void
     onQuickDuplicate: (rcmId: number) => void
     onSetActionBarRcmId: (id: number | null) => void
     onSetSelectedRcmIds: (ids: number[]) => void
@@ -513,7 +513,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                                 Duplicar
                                             </Button>
                                             <Button variant='outlined' size='small' startIcon={<LayersIcon />}
-                                                onClick={(e) => { onSetSelectedRcmIds([rcm.id]); onOpenCodigoPopup(e) }}
+                                                onClick={(e) => { onSetSelectedRcmIds([rcm.id]); onOpenCodigoPopup(e, [rcm.id]) }}
                                                 sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', borderColor: '#7B1FA2', color: '#7B1FA2', bgcolor: 'white', '&:hover': { bgcolor: '#F3E5F5', borderColor: '#6A1B9A' } }}>
                                                 Agrupar
                                             </Button>

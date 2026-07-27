@@ -410,7 +410,7 @@ const Step2CreateRcms = ({
                         onToggleRcmSelection={codigoReal.handleToggleRcmSelection}
                         onOpenRcmMenu={crud.handleOpenRcmMenu}
                         onNewRcmClick={crud.handleNewRcmClick}
-                        onOpenCodigoPopup={codigoReal.handleOpenCodigoPopup}
+                        onOpenCodigoPopup={(e, rcmIds) => codigoReal.handleOpenCodigoPopup(rcmIds)}
                         onQuickDuplicate={handleQuickDuplicate}
                         onSetActionBarRcmId={crud.setActionBarRcmId}
                         onSetSelectedRcmIds={codigoReal.setSelectedRcmIds}
@@ -562,6 +562,7 @@ const Step2CreateRcms = ({
                 onRemoveRcmFromEditing={codigoReal.handleRemoveRcmFromEditingAgrupador}
                 onSaveEditedCodigo={codigoReal.handleSaveEditedAgrupador}
                 isCreatingCodigo={codigoReal.isCreatingCodigo}
+                isSpecialSkuGrouping={codigoReal.isSpecialSkuGrouping}
             />
         </>
     )

@@ -53,6 +53,7 @@ interface CodigoCreationDialogProps {
     onRemoveRcmFromEditing: (rcmId: number) => void
     onSaveEditedCodigo: () => void
     isCreatingCodigo: boolean
+    isSpecialSkuGrouping: boolean
 }
 
 const getRcmTypeShortLabel = (rcmType?: string) => {
@@ -119,6 +120,7 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
     dialogFacturacion, setDialogFacturacion,
     onOpenSkuSearch,
     onConfirmCodigo, onAddToExisting, onRemoveRcmFromEditing, onSaveEditedCodigo, isCreatingCodigo,
+    isSpecialSkuGrouping,
 }) => {
     const isEditMode = dialogMode === 'editar'
 
@@ -325,6 +327,7 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                             size='small'
                                             type='number'
                                             value={dialogCantidad}
+                                            disabled={isSpecialSkuGrouping}
                                             onChange={(e) => setDialogCantidad(Math.max(1, parseInt(e.target.value) || 1))}
                                             inputProps={{ min: 1 }}
                                         />
@@ -339,6 +342,7 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                                     key={option}
                                                     fullWidth
                                                     size='small'
+                                                    disabled={isSpecialSkuGrouping}
                                                     variant={dialogFacturacion === option ? 'contained' : 'text'}
                                                     onClick={() => setDialogFacturacion(option)}
                                                     sx={{
@@ -392,14 +396,16 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                                 type='number'
                                                 size='small'
                                                 value={item.cantidad}
+                                                disabled={isSpecialSkuGrouping}
                                                 onChange={(e) => {
+                                                    if (isSpecialSkuGrouping) return
                                                     const newCantidad = Math.max(1, parseInt(e.target.value) || 1)
                                                     setDialogSkus(prev => prev.map((s, i) => i === idx ? { ...s, cantidad: newCantidad } : s))
                                                 }}
                                                 inputProps={{ min: 1, style: { textAlign: 'center', padding: '4px 8px' } }}
                                                 sx={{ width: 80, '& .MuiOutlinedInput-root': { height: 28 } }}
                                             />
-                                            <IconButton
+                                            {!isSpecialSkuGrouping && <IconButton
                                                 size='small'
                                                 onClick={() => {
                                                     const nextSkus = dialogSkus.filter((_, i) => i !== idx)
@@ -410,7 +416,7 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                                 sx={{ width: 32, height: 32, color: '#EF4444', p: 0.25, '&:hover': { bgcolor: 'transparent' } }}
                                             >
                                                 <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, lineHeight: 1, color: '#EF4444' }}>×</Typography>
-                                            </IconButton>
+                                            </IconButton>}
                                         </Box>
                                     ))}
                                 </Box>
@@ -425,9 +431,10 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                     fullWidth size='small'
                                     placeholder='Buscar SKU...'
                                     value={dialogSkuSearch}
+                                    disabled={isSpecialSkuGrouping}
                                     onChange={(e) => setDialogSkuSearch(e.target.value)}
-                                    onClick={onOpenSkuSearch}
-                                    inputProps={{ readOnly: true, style: { cursor: 'pointer' } }}
+                                    onClick={isSpecialSkuGrouping ? undefined : onOpenSkuSearch}
+                                    inputProps={{ readOnly: true, style: { cursor: isSpecialSkuGrouping ? 'default' : 'pointer' } }}
                                     InputProps={{
                                         startAdornment: <InputAdornment position='start'><SearchIcon fontSize='small' sx={{ color: 'text.disabled' }} /></InputAdornment>,
                                         endAdornment: dialogSkuSearch ? (
@@ -439,6 +446,11 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                         ) : undefined
                                     }}
                                 />
+                                {isSpecialSkuGrouping && (
+                                    <Typography variant='caption' sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
+                                        Para estos RCMs solo se permite el producto preseleccionado, con cantidad 1.
+                                    </Typography>
+                                )}
                             </Box>
 
                             {/* Mensaje informativo según modo */}

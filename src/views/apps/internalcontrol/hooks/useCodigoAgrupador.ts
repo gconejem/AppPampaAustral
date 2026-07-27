@@ -4,6 +4,8 @@ import { generateTemporaryProductCode } from '../utils/temporaryCodes'
 
 type AgrupadorEnsayo = { productoId: number; sku: string; nombre: string; cantidad?: number }
 
+export const SPECIAL_GROUPING_SKUS = new Set(['2062', '2064', '2065', '2063'])
+
 const normalizeText = (value?: string) =>
     (value || '')
         .normalize('NFD')
@@ -20,6 +22,12 @@ export const isReusableHormigonAridosRcm = (rcm: RCMData) => {
         (area === 'asfalto' && tipoServicio === 'dosificaciones asfalto')
     )
 }
+
+export const isSpecialSkuGrouping = (rcms: RCMData[]) =>
+    rcms.length > 0 && rcms.every(rcm => {
+        if (rcm.ensayos.length !== 1) return false
+        return SPECIAL_GROUPING_SKUS.has(String(rcm.ensayos[0]?.sku ?? '').trim())
+    })
 
 interface UseCodigoAgrupadorParams {
     savedRcms: RCMData[]
@@ -186,15 +194,26 @@ export function useCodigoAgrupador({
         )
     }
 
-    const handleOpenCodigoPopup = () => {
+    const handleOpenCodigoPopup = (rcmIdsOverride?: number[]) => {
+        const idsToUse = rcmIdsOverride ?? selectedRcmIds
+        if (rcmIdsOverride) setSelectedRcmIds(rcmIdsOverride)
+        const selectedRcms = savedRcms.filter(rcm => idsToUse.includes(rcm.id))
+        const specialGrouping = isSpecialSkuGrouping(selectedRcms)
+
         setOpenCodigoDialog(true)
         setShowNewCodigoForm(false)
         setSelectedCodigo('')
         setDialogSkuSearch('')
-        setDialogSkus([])
+        const firstEnsayo = specialGrouping ? selectedRcms[0]?.ensayos[0] : undefined
+        setDialogSkus(firstEnsayo ? [{
+            sku: firstEnsayo.sku,
+            nombre: firstEnsayo.nombre,
+            productoId: firstEnsayo.productoId,
+            cantidad: 1,
+        }] : [])
         setDialogDescripcionServicio('')
         setDialogCantidad(1)
-        setDialogFacturacion('Unitario')
+        setDialogFacturacion(specialGrouping ? 'Fijo' : 'Unitario')
         setDialogMode('nuevo')
         setEditingCodigoAgrupadorId(null)
         setSelectedExistingAgrupadorId(codigosAgrupadores.length > 0 ? codigosAgrupadores[0].id : '')
@@ -212,8 +231,16 @@ export function useCodigoAgrupador({
         setSelectedExistingAgrupadorId('')
         setSelectedRcmIds(agrupador.rcmsVinculados.map(rcm => rcm.id))
         setDialogSkuSearch('')
+        const selectedRcms = savedRcms.filter(rcm => agrupador.rcmsVinculados.some(ref => ref.id === rcm.id))
+        const specialGrouping = isSpecialSkuGrouping(selectedRcms)
+        const firstEnsayo = specialGrouping ? selectedRcms[0]?.ensayos[0] : undefined
         const facturacion = agrupador.facturacion === 'Fijo' ? 'Fijo' : 'Unitario'
-        setDialogSkus(facturacion === 'Fijo'
+        setDialogSkus(firstEnsayo ? [{
+            sku: firstEnsayo.sku,
+            nombre: firstEnsayo.nombre,
+            productoId: firstEnsayo.productoId,
+            cantidad: 1,
+        }] : facturacion === 'Fijo'
             ? agrupador.ensayos.map(ensayo => ({
                 sku: ensayo.sku,
                 nombre: ensayo.nombre,
@@ -223,8 +250,8 @@ export function useCodigoAgrupador({
             : []
         )
         setDialogDescripcionServicio(agrupador.descripcionServicio ?? '')
-        setDialogCantidad(agrupador.cantidad || 1)
-        setDialogFacturacion(facturacion)
+        setDialogCantidad(specialGrouping ? 1 : (agrupador.cantidad || 1))
+        setDialogFacturacion(specialGrouping ? 'Fijo' : facturacion)
     }
 
     const handleCloseCodigoPopup = () => {
@@ -256,6 +283,8 @@ export function useCodigoAgrupador({
         showRcmCard: boolean,
         setErrorVencimiento: (msg: string) => void,
     ) => {
+        const selectedRcms = savedRcms.filter(r => selectedRcmIds.includes(r.id))
+        const specialGrouping = isSpecialSkuGrouping(selectedRcms)
         const rcmsToAssign = selectedRcmIds.length > 0
             ? savedRcms.filter(r => selectedRcmIds.includes(r.id)).map(r => ({
                 id: r.id,
@@ -272,7 +301,17 @@ export function useCodigoAgrupador({
         let allEnsayos: AgrupadorEnsayo[] = []
         const seenProductoIds = new Set<number>()
         const hasDialogSkus = dialogSkus.length > 0 || dialogSkuSearch.trim().length > 0
-        if (hasDialogSkus) {
+        if (specialGrouping) {
+            const firstEnsayo = selectedRcms[0]?.ensayos[0]
+            if (firstEnsayo) {
+                allEnsayos = [{
+                    productoId: firstEnsayo.productoId,
+                    sku: firstEnsayo.sku,
+                    nombre: firstEnsayo.nombre,
+                    cantidad: 1,
+                }]
+            }
+        } else if (hasDialogSkus) {
             const seenSkus = new Set<string>()
             dialogSkus.forEach(skuItem => {
                 if (seenSkus.has(skuItem.sku)) return
@@ -323,9 +362,9 @@ export function useCodigoAgrupador({
                 rcmsVinculados: enrichedRcmsToAssign,
                 ensayos: allEnsayos,
                 descripcionServicio: dialogDescripcionServicio,
-                cantidad: dialogCantidad,
+                cantidad: specialGrouping ? 1 : dialogCantidad,
                 unidad: 'unid',
-                facturacion: facturacionValue
+                facturacion: specialGrouping ? 'Fijo' : facturacionValue
             }
 
             setCodigosAgrupadores(prev => [...prev, newAgrupador])
@@ -453,6 +492,7 @@ export function useCodigoAgrupador({
     }
 
     const handleSelectProductForSku = (producto: ProductoType) => {
+        if (isSpecialSkuGrouping(savedRcms.filter(r => selectedRcmIds.includes(r.id)))) return
         const sku = producto.sku || producto.nombre
         const idProducto = (producto as any).productoId || producto.id
         setDialogSkus(prev => prev.some(s => s.sku === sku) ? prev : [...prev, { sku, nombre: producto.nombre, productoId: idProducto, cantidad: 1 }])
@@ -476,6 +516,9 @@ export function useCodigoAgrupador({
     const handleSaveEditedAgrupador = () => {
         if (!editingCodigoAgrupadorId || selectedRcmIds.length === 0) return
 
+        const selectedRcms = savedRcms.filter(r => selectedRcmIds.includes(r.id))
+        const specialGrouping = isSpecialSkuGrouping(selectedRcms)
+
         const nextRcms = selectedRcmIds.map(id => {
             const fullRcm = savedRcms.find(r => r.id === id)
             return {
@@ -487,8 +530,15 @@ export function useCodigoAgrupador({
             }
         })
 
-        const nextFacturacion = dialogFacturacion === 'Fijo' && dialogSkus.length > 0 ? 'Fijo' : 'Unitario'
-        const nextEnsayos = nextFacturacion === 'Fijo'
+        const nextFacturacion = specialGrouping || (dialogFacturacion === 'Fijo' && dialogSkus.length > 0) ? 'Fijo' : 'Unitario'
+        const nextEnsayos = specialGrouping
+            ? [{
+                productoId: selectedRcms[0].ensayos[0].productoId,
+                sku: selectedRcms[0].ensayos[0].sku,
+                nombre: selectedRcms[0].ensayos[0].nombre,
+                cantidad: 1,
+            }]
+            : nextFacturacion === 'Fijo'
             ? dialogSkus.map(skuItem => ({
                 productoId: skuItem.productoId,
                 sku: skuItem.sku,
@@ -504,7 +554,7 @@ export function useCodigoAgrupador({
                     rcmsVinculados: nextRcms,
                     ensayos: nextEnsayos,
                     descripcionServicio: dialogDescripcionServicio,
-                    cantidad: dialogCantidad,
+                    cantidad: specialGrouping ? 1 : dialogCantidad,
                     facturacion: nextFacturacion
                 }
                 : ag
@@ -684,6 +734,7 @@ export function useCodigoAgrupador({
         handleOpenSkuSearch,
         handleCloseSkuSearch,
         handleSelectProductForSku,
+        isSpecialSkuGrouping: isSpecialSkuGrouping(savedRcms.filter(r => selectedRcmIds.includes(r.id))),
         handleRemoveEnsayoFromAgrupador,
         handleRemoveRcmFromEditingAgrupador,
         handleSaveEditedAgrupador,
