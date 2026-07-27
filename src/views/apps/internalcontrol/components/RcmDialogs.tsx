@@ -52,7 +52,7 @@ interface RcmDialogsProps {
     showPreFinalizacion: boolean
     setShowPreFinalizacion: (show: boolean) => void
     computeValidaciones: () => {
-        v1: boolean; v2: boolean; v3: boolean; v4: boolean; v5: boolean
+        v1: boolean; v2: boolean; v3: boolean; v4: boolean; v5: boolean; v6: boolean
         totalRcms: number; tipoControl: number; tipoMuestra: number; tipoServicio: number
         codigosProducto: number; modoPxQ: number; modoFijo: number
     }
@@ -267,13 +267,14 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
             {/* Dialog: Revisar y Finalizar Codificación */}
             {showPreFinalizacion && (() => {
                 const val = computeValidaciones()
-                const allPassed = val.v1 && val.v2 && val.v3 && val.v4 && val.v5
+                const allPassed = val.v1 && val.v2 && val.v3 && val.v4 && val.v5 && val.v6
                 const failedValidaciones = [
                     !val.v1 && 'Hay RCMs sin código producto asignado',
                     !val.v2 && 'Submuestras con cantidades inconsistentes',
                     !val.v3 && 'Códigos agrupadores sin RCMs vinculados',
                     !val.v4 && 'Códigos con RCMs de distintas áreas',
                     !val.v5 && 'Hay RCMs sin ensayos registrados',
+                    !val.v6 && 'Hay RCMs disponibles para volver a agrupar pendientes de revisar',
                 ].filter(Boolean) as string[]
                 return (
                     <Dialog

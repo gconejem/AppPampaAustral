@@ -21,18 +21,19 @@ import AssignmentIcon from '@mui/icons-material/Assignment'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import CloseIcon from '@mui/icons-material/Close'
+import UndoIcon from '@mui/icons-material/Undo'
 import type { RCMData, CodigoAgrupador } from '../types/rcm-types'
 
 interface RcmSavedListProps {
     rcmsCreados: RCMData[]
     rcmsAgrupados: RCMData[]
+    rcmsDisponiblesReagrupar: RCMData[]
     showRcmCard: boolean
     selectedRcmIds: number[]
     expandedSavedRcms: Record<number, boolean>
     actionBarRcmId: number | null
     codigosAgrupadores: CodigoAgrupador[]
     canAgrupar: boolean
-    savedRcms: RCMData[]
     // Handlers
     onToggleSavedRcm: (id: number) => void
     onToggleRcmSelection: (id: number) => void
@@ -43,16 +44,22 @@ interface RcmSavedListProps {
     onSetActionBarRcmId: (id: number | null) => void
     onSetSelectedRcmIds: (ids: number[]) => void
     onCodigoUnoAUno: (rcmId: number) => void
+    onDismissReusableRcm: (rcmId: number) => void
+    onDismissAllReusableRcms: () => void
+    onUndoLastDismissedReusableRcms: () => void
+    canUndoReusableDismiss: boolean
     isCreatingCodigo: boolean
 }
 
 const RcmSavedList: React.FC<RcmSavedListProps> = ({
-    rcmsCreados, rcmsAgrupados, showRcmCard,
+    rcmsCreados, rcmsAgrupados, rcmsDisponiblesReagrupar, showRcmCard,
     selectedRcmIds, expandedSavedRcms, actionBarRcmId,
-    codigosAgrupadores, canAgrupar, savedRcms,
+    codigosAgrupadores, canAgrupar,
     onToggleSavedRcm, onToggleRcmSelection, onOpenRcmMenu,
     onNewRcmClick, onOpenCodigoPopup, onQuickDuplicate,
-    onSetActionBarRcmId, onSetSelectedRcmIds, onCodigoUnoAUno, isCreatingCodigo,
+    onSetActionBarRcmId, onSetSelectedRcmIds, onCodigoUnoAUno,
+    onDismissReusableRcm, onDismissAllReusableRcms, onUndoLastDismissedReusableRcms,
+    canUndoReusableDismiss, isCreatingCodigo,
 }) => {
 
     const renderVencimientoPill = (rcm: RCMData) => {
@@ -423,7 +430,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
     return (
         <>
             {/* Estado vacío */}
-            {rcmsCreados.length === 0 && !showRcmCard && (
+            {rcmsCreados.length === 0 && rcmsDisponiblesReagrupar.length === 0 && rcmsAgrupados.length === 0 && !showRcmCard && (
                 <Box sx={{ mt: 6, textAlign: 'center', py: 8 }}>
                     <Box sx={{ mb: 3 }}><AssignmentIcon sx={{ fontSize: 64, color: 'text.disabled' }} /></Box>
                     <Typography variant='h6' sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>No hay RCMs creados aún</Typography>
@@ -526,6 +533,99 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                         </Box>
                                     </Box>
                                 )}
+                            </Box>
+                        )
+                    })}
+                </Box>
+            )}
+
+            {/* LISTADO TEMPORAL: DISPONIBLES PARA VOLVER A AGRUPAR */}
+            {(rcmsDisponiblesReagrupar.length > 0 || canUndoReusableDismiss) && (
+                <Box sx={{ mt: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Checkbox
+                                size='small'
+                                disabled={rcmsDisponiblesReagrupar.length === 0}
+                                indeterminate={rcmsDisponiblesReagrupar.some(r => selectedRcmIds.includes(r.id)) && !rcmsDisponiblesReagrupar.every(r => selectedRcmIds.includes(r.id))}
+                                checked={rcmsDisponiblesReagrupar.length > 0 && rcmsDisponiblesReagrupar.every(r => selectedRcmIds.includes(r.id))}
+                                onChange={() => {
+                                    const disponiblesIds = rcmsDisponiblesReagrupar.map(r => r.id)
+                                    const allSelected = disponiblesIds.every(id => selectedRcmIds.includes(id))
+                                    if (allSelected) {
+                                        onSetSelectedRcmIds(selectedRcmIds.filter(id => !disponiblesIds.includes(id)))
+                                    } else {
+                                        onSetSelectedRcmIds([...new Set([...selectedRcmIds, ...disponiblesIds])])
+                                    }
+                                }}
+                            />
+                            <Typography variant='h6' sx={{ fontWeight: 600 }}>Disponibles para volver a agrupar</Typography>
+                            <Chip label={rcmsDisponiblesReagrupar.length} size='small' sx={{ fontWeight: 700, bgcolor: '#E0F2FE', color: '#0369A1', border: '1px solid #7DD3FC', minWidth: 28 }} />
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Button
+                                variant='outlined'
+                                size='small'
+                                onClick={onDismissAllReusableRcms}
+                                disabled={rcmsDisponiblesReagrupar.length === 0}
+                                sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, borderColor: '#0284C7', color: '#0369A1' }}
+                            >
+                                Quitar todos
+                            </Button>
+                            <Button
+                                variant='outlined'
+                                size='small'
+                                startIcon={<UndoIcon />}
+                                onClick={onUndoLastDismissedReusableRcms}
+                                disabled={!canUndoReusableDismiss}
+                                sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600 }}
+                            >
+                                Deshacer
+                            </Button>
+                        </Box>
+                    </Box>
+                    {rcmsDisponiblesReagrupar.length === 0 && (
+                        <Box sx={{ p: 2, borderRadius: '8px', bgcolor: '#F8FAFC', border: '1px dashed #CBD5E1', mb: 2 }}>
+                            <Typography variant='body2' sx={{ color: '#64748B', fontWeight: 600 }}>
+                                Lista temporal vacia
+                            </Typography>
+                        </Box>
+                    )}
+                    {rcmsDisponiblesReagrupar.map(rcm => {
+                        const rcmBorderColor = rcm.rcmType === 'Muestra' ? '#0000b4' : rcm.rcmType === 'Control' ? '#FF0096' : '#3b3b3b'
+                        return (
+                            <Box key={`reusable-${rcm.id}`} sx={{ bgcolor: '#F0F9FF', borderRadius: '8px', overflow: 'hidden', mb: 2, border: `2px solid ${rcmBorderColor}` }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: '#F0F9FF', cursor: 'pointer' }} onClick={() => onToggleSavedRcm(rcm.id)}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
+                                        <Box onClick={(e) => e.stopPropagation()}>
+                                            <Checkbox size='small' checked={selectedRcmIds.includes(rcm.id)} onChange={() => onToggleRcmSelection(rcm.id)} />
+                                        </Box>
+                                        <Chip label={rcm.rcmType.toUpperCase()} sx={{ fontWeight: 'bold', backgroundColor: rcmBorderColor, color: '#ffffff' }} />
+                                        <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                                            {rcm.temporaryCode || (rcm.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : '...')}
+                                        </Typography>
+                                        <Chip label='Disponible para reagrupar' size='small' sx={{ fontWeight: 600, bgcolor: '#BAE6FD', color: '#075985', border: '1px solid #38BDF8' }} />
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', minWidth: 0 }}>
+                                            {renderRcmHeaderFields(rcm)}
+                                        </Box>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+                                        <Button
+                                            variant='text'
+                                            size='small'
+                                            onClick={() => onDismissReusableRcm(rcm.id)}
+                                            sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 600, color: '#64748B', '&:hover': { bgcolor: '#E2E8F0' } }}
+                                        >
+                                            Quitar
+                                        </Button>
+                                        <IconButton size='small' onClick={() => onToggleSavedRcm(rcm.id)}>
+                                            <ExpandMoreIcon sx={{ transform: expandedSavedRcms[rcm.id] ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }} />
+                                        </IconButton>
+                                    </Box>
+                                </Box>
+                                <Collapse in={expandedSavedRcms[rcm.id]}>
+                                    {renderExpandedContent(rcm)}
+                                </Collapse>
                             </Box>
                         )
                     })}

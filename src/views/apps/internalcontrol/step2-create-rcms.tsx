@@ -399,13 +399,13 @@ const Step2CreateRcms = ({
                     <RcmSavedList
                         rcmsCreados={rcmsCreados}
                         rcmsAgrupados={rcmsAgrupados}
+                        rcmsDisponiblesReagrupar={codigoReal.reusableRcmsDisponibles}
                         showRcmCard={form.showRcmCard}
                         selectedRcmIds={codigoReal.selectedRcmIds}
                         expandedSavedRcms={crud.expandedSavedRcms}
                         actionBarRcmId={crud.actionBarRcmId}
                         codigosAgrupadores={codigoReal.codigosAgrupadores}
                         canAgrupar={canAgrupar}
-                        savedRcms={savedRcms}
                         onToggleSavedRcm={crud.handleToggleSavedRcm}
                         onToggleRcmSelection={codigoReal.handleToggleRcmSelection}
                         onOpenRcmMenu={crud.handleOpenRcmMenu}
@@ -415,6 +415,10 @@ const Step2CreateRcms = ({
                         onSetActionBarRcmId={crud.setActionBarRcmId}
                         onSetSelectedRcmIds={codigoReal.setSelectedRcmIds}
                         onCodigoUnoAUno={(rcmId) => codigoReal.handleCodigoUnoAUno(rcmId, form.setErrorVencimiento)}
+                        onDismissReusableRcm={codigoReal.handleDismissReusableRcm}
+                        onDismissAllReusableRcms={codigoReal.handleDismissAllReusableRcms}
+                        onUndoLastDismissedReusableRcms={codigoReal.handleUndoLastDismissedReusableRcms}
+                        canUndoReusableDismiss={codigoReal.dismissedReusableRcmIds.length > 0}
                         isCreatingCodigo={codigoReal.isCreatingCodigo}
                     />
                 </Box>

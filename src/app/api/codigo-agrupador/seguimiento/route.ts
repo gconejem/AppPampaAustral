@@ -4,8 +4,6 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-const lower = (v: unknown) => String(v ?? '').toLowerCase()
-
 const normalizeText = (v: unknown) => {
   try {
     const s = String(v ?? '')
@@ -88,6 +86,47 @@ const extractInformeTexto = (obs: unknown) => {
   return ''
 }
 
+const seguimientoRcmSelect = {
+  id: true,
+  numeroRcm: true,
+  rcmType: true,
+  sede: true,
+  fechaCodificacion: true,
+  fechaMuestreo: true,
+  estadoOperativo: true,
+  estadoAdministrativo: true,
+  ordenTrabajoId: true,
+  codigoAgrupadorId: true,
+  codigoProducto: true,
+  area: { select: { id: true, nombre: true } },
+  familia: { select: { id: true, nombre: true } },
+  cliente: {
+    select: {
+      clienteId: true,
+      razonSocial: true,
+      nombreCliente: true,
+      comuna: true,
+      ciudad: true
+    }
+  },
+  obra: {
+    select: {
+      obraId: true,
+      numeroObra: true,
+      nombreObra: true,
+      mandante: true,
+      comuna: true,
+      region: true
+    }
+  },
+  servicios: { select: { id: true, cantidad: true, estado: true, estadoOperativo: true, codigo: true, nombre: true } },
+  RCMHistory: {
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    select: { estNuevo: true, tipo: true, tipoEstado: true, informe: true, observacion: true, createdAt: true }
+  }
+} as const
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -154,6 +193,16 @@ export async function GET(request: Request) {
       )
     )
 
+    const rcmLinks = agrupadorIds.length > 0
+      ? await prisma.codigoAgrupadorRcm.findMany({
+        where: { codigoAgrupadorId: { in: agrupadorIds } },
+        select: {
+          codigoAgrupadorId: true,
+          rcm: { select: seguimientoRcmSelect }
+        }
+      })
+      : []
+
     // En prod suele existir RCM.codigoProducto (string) con valores tipo PRD-006,
     // aunque no siempre se seteó RCM.codigoAgrupadorId.
     // Para poblar la tabla, traemos RCMs por ambos caminos.
@@ -165,46 +214,7 @@ export async function GET(request: Request) {
           codigoKeys.length ? { codigoProducto: { in: codigoKeys } } : undefined
         ].filter(Boolean) as any,
       },
-      select: {
-        id: true,
-        numeroRcm: true,
-        rcmType: true,
-        sede: true,
-        fechaCodificacion: true,
-        fechaMuestreo: true,
-        estadoOperativo: true,
-        estadoAdministrativo: true,
-        ordenTrabajoId: true,
-        codigoAgrupadorId: true,
-        codigoProducto: true,
-        area: { select: { id: true, nombre: true } },
-        familia: { select: { id: true, nombre: true } },
-        cliente: {
-          select: {
-            clienteId: true,
-            razonSocial: true,
-            nombreCliente: true,
-            comuna: true,
-            ciudad: true
-          }
-        },
-        obra: {
-          select: {
-            obraId: true,
-            numeroObra: true,
-            nombreObra: true,
-            mandante: true,
-            comuna: true,
-            region: true
-          }
-        },
-        servicios: { select: { id: true, cantidad: true, estado: true, estadoOperativo: true, codigo: true, nombre: true } },
-        RCMHistory: {
-          orderBy: { createdAt: 'desc' },
-          take: 20,
-          select: { estNuevo: true, tipo: true, tipoEstado: true, informe: true, observacion: true, createdAt: true }
-        }
-      }
+      select: seguimientoRcmSelect
     })
 
     // index: prefer match by (ordenTrabajoId + codigoNombre)
@@ -222,12 +232,20 @@ export async function GET(request: Request) {
       if (codigoId && !agrupadorByCodigo.has(codigoId)) agrupadorByCodigo.set(codigoId, a.id)
     }
 
-    const rcmsByAgrupadorId = new Map<number, typeof rcms>()
+    const rcmsByAgrupadorId = new Map<number, any[]>()
     for (const a of agrupadores) rcmsByAgrupadorId.set(a.id, [])
+
+    const agrupadoresWithLinks = new Set<number>()
+    for (const link of rcmLinks) {
+      agrupadoresWithLinks.add(link.codigoAgrupadorId)
+      rcmsByAgrupadorId.get(link.codigoAgrupadorId)?.push(link.rcm)
+    }
 
     for (const r of rcms) {
       if (r.codigoAgrupadorId && rcmsByAgrupadorId.has(r.codigoAgrupadorId)) {
-        rcmsByAgrupadorId.get(r.codigoAgrupadorId)!.push(r)
+        if (!agrupadoresWithLinks.has(r.codigoAgrupadorId)) {
+          rcmsByAgrupadorId.get(r.codigoAgrupadorId)!.push(r)
+        }
         continue
       }
 
@@ -238,6 +256,7 @@ export async function GET(request: Request) {
       const byOtKey = otId ? agrupadorByOtAndCodigo.get(`${otId}::${codigo}`) : undefined
       const targetId = byOtKey ?? agrupadorByCodigo.get(codigo)
       if (!targetId) continue
+      if (agrupadoresWithLinks.has(targetId)) continue
 
       rcmsByAgrupadorId.get(targetId)?.push(r)
     }

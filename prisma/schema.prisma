@@ -739,6 +739,7 @@ model RCM {
   area                 Area?            @relation(fields: [areaId], references: [id])
   familia              Familia?         @relation(fields: [familiaId], references: [id])
   codigoAgrupador      CodigoAgrupador? @relation(fields: [codigoAgrupadorId], references: [id])
+  codigoAgrupadorLinks CodigoAgrupadorRcm[]
   servicios            ServicioRCM[]
   RCMHistory           RCMHistory[]
 
@@ -1037,9 +1038,23 @@ model CodigoAgrupador {
   updatedAt           DateTime                @updatedAt
   ordenTrabajo        OrdenTrabajo?           @relation(fields: [ordenTrabajoId], references: [id])
   rcms                RCM[]
+  rcmLinks            CodigoAgrupadorRcm[]
   ensayos             CodigoAgrupadorEnsayo[]
 
   @@index([ordenTrabajoId])
+}
+
+model CodigoAgrupadorRcm {
+  id                Int             @id @default(autoincrement())
+  codigoAgrupadorId Int
+  rcmId             Int
+  createdAt         DateTime        @default(now())
+  codigoAgrupador   CodigoAgrupador @relation(fields: [codigoAgrupadorId], references: [id], onDelete: Cascade)
+  rcm               RCM             @relation(fields: [rcmId], references: [id], onDelete: Cascade)
+
+  @@unique([codigoAgrupadorId, rcmId])
+  @@index([codigoAgrupadorId])
+  @@index([rcmId])
 }
 
 model CodigoAgrupadorEnsayo {

@@ -154,26 +154,6 @@ function renderInformeDensidadHTML(input: {
       .join('')
     : `<tr><td colspan="13" class="empty">Sin datos de controles</td></tr>`
 
-  const ensayosHtml = (input.ensayos ?? []).length
-    ? `
-      <table class="table" style="margin-top: 10px;">
-        <thead>
-          <tr>
-            <th style="width: 22%;">SKU</th>
-            <th>ENSAYO</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${input.ensayos
-      .map(e => {
-        return `<tr><td>${escapeHtml(e.sku)}</td><td>${escapeHtml(e.nombre)}</td></tr>`
-      })
-      .join('')}
-        </tbody>
-      </table>
-    `
-    : ''
-
   return `
   <html>
     <head>
@@ -314,12 +294,26 @@ export async function GET(request: Request) {
       : null
 
     const codigo = await prisma.codigoAgrupador.findFirst({
-      where: codigoAgrupadorId ? { id: codigoAgrupadorId } : { rcms: { some: { id: rcmId! } } },
+      where: codigoAgrupadorId
+        ? { id: codigoAgrupadorId }
+        : {
+          OR: [
+            { rcmLinks: { some: { rcmId: rcmId! } } },
+            { rcms: { some: { id: rcmId! } } }
+          ]
+        },
       select: {
         id: true,
         codigoNombre: true,
         descripcionServicio: true,
         ensayos: { select: { sku: true, nombre: true } },
+        rcmLinks: {
+          select: {
+            rcm: { select: { id: true } }
+          },
+          take: 1,
+          orderBy: { rcmId: 'asc' }
+        },
         rcms: {
           select: {
             id: true
@@ -486,7 +480,7 @@ export async function GET(request: Request) {
         `
       })
 
-      const historyRcmId = rcm?.id ?? codigo.rcms?.[0]?.id ?? null
+      const historyRcmId = rcm?.id ?? codigo.rcmLinks?.[0]?.rcm?.id ?? codigo.rcms?.[0]?.id ?? null
       const informeParsed = Number.parseInt(informeNumero.replace(/[^\d]/g, '').trim(), 10)
 
       if (historyRcmId && Number.isFinite(informeParsed) && informeParsed > 0) {

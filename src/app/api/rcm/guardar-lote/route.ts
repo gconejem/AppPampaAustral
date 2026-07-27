@@ -307,8 +307,9 @@ export async function POST(request: Request) {
                 const rcmIdsVinculados = (ag.rcmsVinculados ?? [])
                     .map(r => rcmIdMap[r.id])
                     .filter((id): id is number => id !== undefined)
+                const uniqueRcmIdsVinculados = Array.from(new Set(rcmIdsVinculados))
 
-                if (rcmIdsVinculados.length === 0) return null
+                if (uniqueRcmIdsVinculados.length === 0) return null
 
                 const ensayosData = (ag.ensayos ?? [])
                     .filter(e => productosMap[e.sku] !== undefined)
@@ -321,6 +322,26 @@ export async function POST(request: Request) {
                 // Check if agrupador already exists (has dbId)
                 if (ag.dbId) {
                     // Update existing agrupador
+                    await tx.codigoAgrupadorRcm.deleteMany({ where: { codigoAgrupadorId: ag.dbId } })
+                    await tx.rCM.updateMany({
+                        where: {
+                            codigoAgrupadorId: ag.dbId,
+                            id: { notIn: uniqueRcmIdsVinculados },
+                        },
+                        data: { codigoAgrupadorId: null },
+                    })
+                    await tx.codigoAgrupadorRcm.createMany({
+                        data: uniqueRcmIdsVinculados.map(rcmId => ({ codigoAgrupadorId: ag.dbId!, rcmId })),
+                        skipDuplicates: true,
+                    })
+                    await tx.rCM.updateMany({
+                        where: {
+                            id: { in: uniqueRcmIdsVinculados },
+                            codigoAgrupadorId: null,
+                        },
+                        data: { codigoAgrupadorId: ag.dbId },
+                    })
+
                     return tx.codigoAgrupador.update({
                         where: { id: ag.dbId },
                         data: {
@@ -332,14 +353,13 @@ export async function POST(request: Request) {
                                 deleteMany: {},
                                 create: ensayosData,
                             },
-                            rcms: { connect: rcmIdsVinculados.map(id => ({ id })) },
                         },
                         select: { id: true, codigoId: true, codigoNombre: true },
                     })
                 }
 
                 // Create new agrupador con codigoNombre/codigoId pre-asignados
-                return tx.codigoAgrupador.create({
+                const created = await tx.codigoAgrupador.create({
                     data: {
                         codigoId: codigoId!,
                         codigoNombre: codigoNombre!,
@@ -351,12 +371,23 @@ export async function POST(request: Request) {
                         ensayos: {
                             create: ensayosData,
                         },
-                        rcms: {
-                            connect: rcmIdsVinculados.map(id => ({ id })),
-                        },
                     },
                     select: { id: true, codigoId: true, codigoNombre: true },
                 })
+
+                await tx.codigoAgrupadorRcm.createMany({
+                    data: uniqueRcmIdsVinculados.map(rcmId => ({ codigoAgrupadorId: created.id, rcmId })),
+                    skipDuplicates: true,
+                })
+                await tx.rCM.updateMany({
+                    where: {
+                        id: { in: uniqueRcmIdsVinculados },
+                        codigoAgrupadorId: null,
+                    },
+                    data: { codigoAgrupadorId: created.id },
+                })
+
+                return created
             })
 
             const agrupadoresResultados = await Promise.all(agrupadorTasks)

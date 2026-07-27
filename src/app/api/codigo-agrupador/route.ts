@@ -4,6 +4,38 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
+const rcmListSelect = {
+    id: true,
+    numeroRcm: true,
+    rcmType: true,
+    numeroTarjeta: true,
+} as const
+
+const mergeLinkedRcms = (agrupador: any) => {
+    if (!agrupador) return agrupador
+
+    const linkedRcms = Array.isArray(agrupador.rcmLinks)
+        ? agrupador.rcmLinks.map((link: any) => link.rcm).filter(Boolean)
+        : []
+    const sourceRcms = linkedRcms.length > 0 ? linkedRcms : (agrupador.rcms ?? [])
+
+    const rcmsById = new Map<number, any>()
+    for (const rcm of sourceRcms) rcmsById.set(rcm.id, rcm)
+
+    const rest = { ...agrupador }
+    delete rest.rcmLinks
+
+    return {
+        ...rest,
+        rcms: Array.from(rcmsById.values()).sort((a, b) => {
+            const aNum = Number(a.numeroRcm)
+            const bNum = Number(b.numeroRcm)
+            if (Number.isFinite(aNum) && Number.isFinite(bNum)) return aNum - bNum
+            return Number(a.id) - Number(b.id)
+        }),
+    }
+}
+
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
@@ -15,12 +47,13 @@ export async function GET(request: Request) {
             where,
             include: {
                 ensayos: { include: { producto: true } },
-                rcms: { select: { id: true, numeroRcm: true, rcmType: true, numeroTarjeta: true } },
+                rcms: { select: rcmListSelect },
+                rcmLinks: { include: { rcm: { select: rcmListSelect } } },
             },
             orderBy: { createdAt: 'asc' },
         })
 
-        return NextResponse.json(agrupadores)
+        return NextResponse.json(agrupadores.map(mergeLinkedRcms))
     } catch (error) {
         console.error('Error al obtener agrupadores:', error)
         return NextResponse.json({ error: 'Error al obtener los agrupadores' }, { status: 500 })
@@ -31,6 +64,7 @@ export async function POST(request: Request) {
     try {
         const body = await request.json()
         const { descripcionServicio, cantidad, unidad, facturacion, ordenTrabajoId, ensayos = [], rcmIds = [] } = body
+        const uniqueRcmIds = Array.from(new Set((rcmIds as number[]).map(id => Number(id)).filter(Number.isFinite)))
 
         // Crear el CodigoAgrupador atómicamente con número PRD único
         const agrupador = await prisma.$transaction(async (tx) => {
@@ -81,20 +115,31 @@ export async function POST(request: Request) {
                                 producto: { connect: { productoId: productosMap[e.sku] } },
                             })),
                     },
-                    rcms: rcmIds.length > 0
-                        ? { connect: (rcmIds as number[]).map(id => ({ id })) }
+                    rcmLinks: uniqueRcmIds.length > 0
+                        ? { create: uniqueRcmIds.map(id => ({ rcm: { connect: { id } } })) }
                         : undefined,
                 },
                 include: {
                     ensayos: { include: { producto: true } },
-                    rcms: { select: { id: true, numeroRcm: true, rcmType: true, numeroTarjeta: true } },
+                    rcms: { select: rcmListSelect },
+                    rcmLinks: { include: { rcm: { select: rcmListSelect } } },
                 },
             })
+
+            if (uniqueRcmIds.length > 0) {
+                await tx.rCM.updateMany({
+                    where: {
+                        id: { in: uniqueRcmIds },
+                        codigoAgrupadorId: null,
+                    },
+                    data: { codigoAgrupadorId: created.id },
+                })
+            }
 
             return created
         })
 
-        return NextResponse.json(agrupador, { status: 201 })
+        return NextResponse.json(mergeLinkedRcms(agrupador), { status: 201 })
     } catch (error) {
         console.error('Error al crear agrupador:', error)
         return NextResponse.json(

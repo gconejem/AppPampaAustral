@@ -1,8 +1,25 @@
-import { useState, useEffect } from 'react'
-import type { CodigoAgrupador, RCMData, EnsayoAsociado, AreaType, FamiliaType, ProductoType } from '../types/rcm-types'
+import { useState, useEffect, useMemo } from 'react'
+import type { CodigoAgrupador, RCMData, EnsayoAsociado, AreaType, ProductoType } from '../types/rcm-types'
 import { generateTemporaryProductCode } from '../utils/temporaryCodes'
 
 type AgrupadorEnsayo = { productoId: number; sku: string; nombre: string; cantidad?: number }
+
+const normalizeText = (value?: string) =>
+    (value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+
+export const isReusableHormigonAridosRcm = (rcm: RCMData) => {
+    const area = normalizeText(rcm.area)
+    const tipoServicio = normalizeText(rcm.tipoServicio)
+
+    return rcm.rcmType === 'Muestra' && (
+        (area === 'hormigon' && tipoServicio === 'dosificaciones hormigon') ||
+        (area === 'asfalto' && tipoServicio === 'dosificaciones asfalto')
+    )
+}
 
 interface UseCodigoAgrupadorParams {
     savedRcms: RCMData[]
@@ -21,7 +38,6 @@ export function useCodigoAgrupador({
     savedRcms,
     ensayosAsociados,
     areas,
-    otData,
     area,
     agrupadorSearchAnchor,
     setAgrupadorSearchAnchor,
@@ -52,6 +68,8 @@ export function useCodigoAgrupador({
     const [dialogMode, setDialogMode] = useState<'nuevo' | 'existente' | 'editar'>('nuevo')
     const [selectedExistingAgrupadorId, setSelectedExistingAgrupadorId] = useState<string>('')
     const [showPreFinalizacion, setShowPreFinalizacion] = useState(false)
+    const [dismissedReusableRcmIds, setDismissedReusableRcmIds] = useState<number[]>([])
+    const [lastDismissedReusableRcmIds, setLastDismissedReusableRcmIds] = useState<number[]>([])
 
     // Códigos existentes de la OT
     const [codigosOT, setCodigosOT] = useState<Array<{ id: string; nombre: string; tipo: string; descripcion: string }>>([
@@ -112,6 +130,54 @@ export function useCodigoAgrupador({
         }
     }, [dialogFacturacion, dialogMode, dialogSkus.length])
 
+    const rcmIdsAgrupados = useMemo(() => {
+        const groupedIds = new Set<number>()
+        codigosAgrupadores.forEach(ag => ag.rcmsVinculados.forEach(rcm => groupedIds.add(rcm.id)))
+        return groupedIds
+    }, [codigosAgrupadores])
+
+    const reusableRcmsDisponibles = useMemo(() => {
+        const dismissedIds = new Set(dismissedReusableRcmIds)
+
+        return savedRcms
+            .filter(rcm => isReusableHormigonAridosRcm(rcm))
+            .filter(rcm => rcmIdsAgrupados.has(rcm.id))
+            .filter(rcm => !dismissedIds.has(rcm.id))
+            .sort((a, b) => b.id - a.id)
+    }, [dismissedReusableRcmIds, rcmIdsAgrupados, savedRcms])
+
+    useEffect(() => {
+        const validReusableIds = new Set(savedRcms.filter(isReusableHormigonAridosRcm).map(rcm => rcm.id))
+        setDismissedReusableRcmIds(prev => prev.filter(id => validReusableIds.has(id)))
+        setLastDismissedReusableRcmIds(prev => prev.filter(id => validReusableIds.has(id)))
+    }, [savedRcms])
+
+    const handleDismissReusableRcm = (rcmId: number) => {
+        setDismissedReusableRcmIds(prev => prev.includes(rcmId) ? prev : [...prev, rcmId])
+        setLastDismissedReusableRcmIds([rcmId])
+        setSelectedRcmIds(prev => prev.filter(id => id !== rcmId))
+    }
+
+    const handleDismissAllReusableRcms = () => {
+        const ids = reusableRcmsDisponibles.map(rcm => rcm.id)
+        if (ids.length === 0) return
+
+        setDismissedReusableRcmIds(prev => [...new Set([...prev, ...ids])])
+        setLastDismissedReusableRcmIds(ids)
+        setSelectedRcmIds(prev => prev.filter(id => !ids.includes(id)))
+    }
+
+    const handleUndoLastDismissedReusableRcms = () => {
+        const idsToRestore = lastDismissedReusableRcmIds.length > 0
+            ? lastDismissedReusableRcmIds
+            : dismissedReusableRcmIds
+
+        if (idsToRestore.length === 0) return
+
+        setDismissedReusableRcmIds(prev => prev.filter(id => !idsToRestore.includes(id)))
+        setLastDismissedReusableRcmIds([])
+    }
+
     const handleToggleRcmSelection = (rcmId: number) => {
         setSelectedRcmIds(prev =>
             prev.includes(rcmId)
@@ -120,7 +186,7 @@ export function useCodigoAgrupador({
         )
     }
 
-    const handleOpenCodigoPopup = (_event: React.MouseEvent<HTMLElement>) => {
+    const handleOpenCodigoPopup = () => {
         setOpenCodigoDialog(true)
         setShowNewCodigoForm(false)
         setSelectedCodigo('')
@@ -311,6 +377,17 @@ export function useCodigoAgrupador({
     }
 
     const handleDeleteAgrupador = async (agrupadorId: string) => {
+        const agrupador = codigosAgrupadores.find(a => a.id === agrupadorId)
+        const reusableIdsInDeletedAgrupador = (agrupador?.rcmsVinculados ?? [])
+            .map(rcmRef => savedRcms.find(rcm => rcm.id === rcmRef.id))
+            .filter((rcm): rcm is RCMData => Boolean(rcm) && isReusableHormigonAridosRcm(rcm))
+            .map(rcm => rcm.id)
+
+        if (reusableIdsInDeletedAgrupador.length > 0) {
+            setDismissedReusableRcmIds(prev => prev.filter(id => !reusableIdsInDeletedAgrupador.includes(id)))
+            setLastDismissedReusableRcmIds(prev => prev.filter(id => !reusableIdsInDeletedAgrupador.includes(id)))
+        }
+
         // In-memory only: no database deletion until finalization
         setCodigosAgrupadores(prev => prev.filter(a => a.id !== agrupadorId))
     }
@@ -547,6 +624,7 @@ export function useCodigoAgrupador({
         })
 
         const v5 = savedRcms.every(rcm => rcm.ensayos.length > 0)
+        const v6 = reusableRcmsDisponibles.length === 0
 
         const totalRcms = savedRcms.length
         const tipoControl = savedRcms.filter(r => r.rcmType === 'Control').length
@@ -556,7 +634,7 @@ export function useCodigoAgrupador({
         const modoPxQ = codigosAgrupadores.filter(a => a.facturacion === 'Unitario').length
         const modoFijo = codigosAgrupadores.filter(a => a.facturacion === 'Fijo').length
 
-        return { v1, v2, v3, v4, v5, totalRcms, tipoControl, tipoMuestra, tipoServicio: tipoServicioCount, codigosProducto, modoPxQ, modoFijo }
+        return { v1, v2, v3, v4, v5, v6, totalRcms, tipoControl, tipoMuestra, tipoServicio: tipoServicioCount, codigosProducto, modoPxQ, modoFijo }
     }
 
     return {
@@ -584,6 +662,9 @@ export function useCodigoAgrupador({
         dialogMode, setDialogMode,
         selectedExistingAgrupadorId, setSelectedExistingAgrupadorId,
         showPreFinalizacion, setShowPreFinalizacion,
+        dismissedReusableRcmIds,
+        lastDismissedReusableRcmIds,
+        reusableRcmsDisponibles,
         codigosOT,
         // Handlers
         handleToggleRcmSelection,
@@ -609,6 +690,9 @@ export function useCodigoAgrupador({
         handleCrearNuevoCodigo,
         handleCodigoUnoAUno,
         handleUpdateAgrupadorForRcm,
+        handleDismissReusableRcm,
+        handleDismissAllReusableRcms,
+        handleUndoLastDismissedReusableRcms,
         computeValidaciones,
     }
 }
