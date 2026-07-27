@@ -22,6 +22,20 @@ import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
 import BiotechOutlinedIcon from '@mui/icons-material/BiotechOutlined'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import type { RCMData, CodigoAgrupador } from '../types/rcm-types'
+import { formatDateOnly } from '@/utils/dateUtils'
+
+const getVencimientoLabel = (rcm?: RCMData) => {
+    const fechas = rcm?.submuestrasVencimiento
+        ?.map(submuestra => submuestra.fechaVencimiento)
+        .filter(Boolean) ?? []
+
+    const fechasUnicas = [...new Set(fechas)].sort()
+    if (fechasUnicas.length === 0) return ''
+
+    return fechasUnicas.length === 1
+        ? formatDateOnly(fechasUnicas[0])
+        : `${formatDateOnly(fechasUnicas[0])} → ${formatDateOnly(fechasUnicas[fechasUnicas.length - 1])}`
+}
 
 interface RcmDialogsProps {
     // Error snackbar
@@ -377,6 +391,7 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                                 tipoMaterial: rcm?.tipoMaterial || '',
                                                 item: rcm?.item || '',
                                                 tomaMuestra: rcm?.tomaMuestra || '',
+                                                vencimiento: getVencimientoLabel(rcm),
                                             }
                                         })
                                         const skuItems = ag.ensayos || []
@@ -458,6 +473,22 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                                                     <Typography variant='caption' sx={{ fontWeight: 700, color: 'primary.main', fontFamily: 'monospace', fontSize: '0.75rem' }}>
                                                                         ~{rcmInfo.code}
                                                                     </Typography>
+                                                                    {rcmInfo.vencimiento && (
+                                                                        <>
+                                                                            <Typography variant='body2' color='text.secondary'>|</Typography>
+                                                                            <Chip
+                                                                                label={rcmInfo.vencimiento}
+                                                                                size='small'
+                                                                                sx={{
+                                                                                    fontWeight: 600,
+                                                                                    bgcolor: '#FFF9C4',
+                                                                                    color: '#7B6A00',
+                                                                                    border: '1px solid #F9E21B',
+                                                                                    fontSize: '0.75rem',
+                                                                                }}
+                                                                            />
+                                                                        </>
+                                                                    )}
                                                                 </Box>
                                                                 <Typography variant='caption' sx={{ color: '#9CA3AF', fontSize: '0.68rem', display: 'block', pl: 0.5, whiteSpace: 'normal', wordBreak: 'break-word' }}>
                                                                     {detailParts.join(' \u00B7 ')}
