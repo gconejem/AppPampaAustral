@@ -317,6 +317,8 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         // tomaMuestra ya se estableció arriba según el modo (edit/duplicate)
         setCantidadMuestras(normalizeCantidadMuestras(rcm.cantidadMuestras))
         setFechaServicio(rcm.fechaServicio)
+        setFechaIngreso(rcm.fechaIngreso || '')
+        setFechaEntrega(rcm.fechaEntrega || '')
 
         // En duplicado, las submuestras pertenecen a la muestra original.
         // El vencimiento/submuestras automáticos se recalculan por área y tipo de servicio.
