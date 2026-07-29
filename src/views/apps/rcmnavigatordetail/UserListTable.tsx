@@ -2441,9 +2441,30 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               producto?.familiaNombre ??  // ÔåÉ CORREGIDO
               (typeof producto?.familia === 'string' ? producto.familia : null)
 
+            const toLabel = (value: any): string | null => {
+              if (typeof value === 'string') {
+                const v = value.trim()
+
+                return v || null
+              }
+
+              if (value && typeof value === 'object') {
+                const fromObj = String(value?.nombre ?? value?.name ?? '').trim()
+
+                return fromObj || null
+              }
+
+              return null
+            }
+
+            const areaRcm = toLabel(r.area)
+            const familiaRcm = toLabel(r.familia)
+            const tipoServicioRcm = toLabel((r as any).tipoServicio)
+            const tipoServicioMuestra = toLabel(muestra?.tipoServicio)
+
             // Fallbacks finales desde RCM ra├¡z
-            const areaFinal = areaProducto ?? r.area ?? null
-            const familiaFinal = familiaProducto ?? r.familia ?? null
+            const areaFinal = areaRcm ?? areaProducto ?? null
+            const familiaFinal = familiaRcm ?? familiaProducto ?? null
             const serviciosMuestra = Array.isArray(muestra.servicios) ? muestra.servicios : []
             const totalEnsayos = serviciosMuestra.reduce((acc: number, servicioItem: any) => acc + Number(servicioItem?.cantidad ?? 1), 0)
 
@@ -2487,12 +2508,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               .sort((left: any, right: any) => compareDateOnly(left.fechaVencimiento, right.fechaVencimiento))[0] ?? null
 
             const tipoServicio =
-              r.tipoServicio ??
-              muestra?.tipoServicio ??
+              tipoServicioMuestra ??
+              familiaFinal ??
+              tipoServicioRcm ??
               servicio?.nombre ??
               servicioRCM?.nombre ??
               serviciosMuestra[0]?.nombre ??
-              familiaFinal ??
               null
 
             const ensayoServicioNombres = Array.from(
@@ -3515,10 +3536,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       {
         id: 'areaTipoServicio',
         header: 'Área / Servicio',
-        accessorFn: row => `${row.area ?? ''} ${row.tipoServicio ?? row.familia ?? ''}`.trim(),
+        accessorFn: row => `${row.area ?? ''} ${row.familia ?? row.tipoServicio ?? ''}`.trim(),
         cell: ({ row }) => {
           const area = row.original.area
-          const tipoServicio = row.original.tipoServicio ?? row.original.familia
+          const tipoServicio = row.original.familia ?? row.original.tipoServicio
 
           return (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.4 }}>
@@ -3892,7 +3913,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         row.numeroTarjeta ?? '-',
         row.ot ?? '-',
         row.area ?? '-',
-        row.tipoServicio ?? row.familia ?? '-',
+        row.familia ?? row.tipoServicio ?? '-',
         row.fechaCodificacion ? formatDateDDMMYYYYDateOnlyDash(row.fechaCodificacion) : '-',
         row.proximoVencimiento ? formatDateDDMMYYYYDateOnlyDash(row.proximoVencimiento) : '-',
         getEnsayosMeta(row.ensayos).total,
@@ -4571,14 +4592,30 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             return { color: '#334155', borderColor: 'rgba(148, 163, 184, 0.5)', bgcolor: 'rgba(148, 163, 184, 0.18)' }
           }
 
-          const area = rcmData?.area?.nombre ?? row?.area ?? '-'
-          const familia = rcmData?.familia?.nombre ?? row?.familia ?? '-'
+          const toLabel = (value: any): string | null => {
+            if (typeof value === 'string') {
+              const v = value.trim()
+
+              return v || null
+            }
+
+            if (value && typeof value === 'object') {
+              const fromObj = String(value?.nombre ?? value?.name ?? '').trim()
+
+              return fromObj || null
+            }
+
+            return null
+          }
+
+          const area = toLabel((rcmData as any)?.area) ?? toLabel(row?.area) ?? '-'
+          const familia = toLabel((rcmData as any)?.familia) ?? toLabel(row?.familia) ?? '-'
 
           const tipoServicio =
-            row?.tipoServicio ??
-            (rcmData as any)?.tipoServicio ??
-            row?.familia ??
-            ((rcmData as any)?.familia?.nombre ?? (rcmData as any)?.familia) ??
+            toLabel(row?.familia) ??
+            toLabel((rcmData as any)?.familia) ??
+            toLabel(row?.tipoServicio) ??
+            toLabel((rcmData as any)?.tipoServicio) ??
             '-'
 
           const agendaObra = (rcmData as any)?.ordenTrabajo?.agenda?.obra ?? null
@@ -5074,13 +5111,29 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               ? { bgcolor: '#fef9c3', color: '#92400e', borderColor: '#fde68a' }
               : { bgcolor: '#dcfce7', color: '#166534', borderColor: '#bbf7d0' }
 
-          const areaLabel = rcmData?.area?.nombre ?? row?.area ?? '-'
+          const toLabel = (value: any): string | null => {
+            if (typeof value === 'string') {
+              const v = value.trim()
+
+              return v || null
+            }
+
+            if (value && typeof value === 'object') {
+              const fromObj = String(value?.nombre ?? value?.name ?? '').trim()
+
+              return fromObj || null
+            }
+
+            return null
+          }
+
+          const areaLabel = toLabel((rcmData as any)?.area) ?? toLabel(row?.area) ?? '-'
 
           const tipoServicioLabel =
-            row?.tipoServicio ??
-            (rcmData as any)?.tipoServicio ??
-            row?.familia ??
-            ((rcmData as any)?.familia?.nombre ?? (rcmData as any)?.familia) ??
+            toLabel(row?.familia) ??
+            toLabel((rcmData as any)?.familia) ??
+            toLabel(row?.tipoServicio) ??
+            toLabel((rcmData as any)?.tipoServicio) ??
             '-'
 
           const materialLabel = gestionarMuestra?.tipoMaterial || gestionarMuestra?.item

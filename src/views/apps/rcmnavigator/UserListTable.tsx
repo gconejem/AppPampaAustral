@@ -653,6 +653,12 @@ const UserListTable2 = ({
     numeroMuestraCliente: string
   }
 
+  type AutoInformePersist = {
+    saved: boolean
+    isEditing: boolean
+    historyId: number | null
+  }
+
   const getTodayInputDate = () => {
     const now = new Date()
     const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
@@ -723,6 +729,15 @@ const UserListTable2 = ({
     return out
   }
 
+  const isManualInformeBlocked = (meta: any) => {
+    if (Boolean(meta?.manualInformeBlocked)) return true
+
+    const total = Number(meta?.skuCoberturaDigital?.total ?? 0)
+    const cubiertos = Number(meta?.skuCoberturaDigital?.cubiertos ?? 0)
+
+    return total > 0 && cubiertos === total
+  }
+
   const [autoInformeExisting, setAutoInformeExisting] = useState<Record<AutoTemplateKey, number | null>>({
     DENSIDAD: null,
     HORMIGON: null
@@ -731,6 +746,11 @@ const UserListTable2 = ({
   const [autoInformeDrafts, setAutoInformeDrafts] = useState<Record<AutoTemplateKey, AutoInformeDraft>>({
     DENSIDAD: createEmptyAutoDraft(),
     HORMIGON: createEmptyAutoDraft()
+  })
+
+  const [autoInformePersist, setAutoInformePersist] = useState<Record<AutoTemplateKey, AutoInformePersist>>({
+    DENSIDAD: { saved: false, isEditing: false, historyId: null },
+    HORMIGON: { saved: false, isEditing: false, historyId: null }
   })
 
   const [informeDrafts, setInformeDrafts] = useState<
@@ -752,6 +772,8 @@ const UserListTable2 = ({
   const [informeDialogErrors, setInformeDialogErrors] = useState<{ general?: string; numero?: string }>({})
   const [savingInformeDialog, setSavingInformeDialog] = useState(false)
   const [savingDraftId, setSavingDraftId] = useState<string | null>(null)
+  const [manualUpdatedHistoryIds, setManualUpdatedHistoryIds] = useState<number[]>([])
+  const [informeDialogStatusNotice, setInformeDialogStatusNotice] = useState<string | null>(null)
 
   // Dialog: Ficha Código Producto (nuevo)
   const [codigoDialogOpen, setCodigoDialogOpen] = useState(false)
@@ -802,6 +824,12 @@ const UserListTable2 = ({
     setInformeDrafts([])
     setAutoInformeExisting({ DENSIDAD: null, HORMIGON: null })
     setAutoInformeDrafts({ DENSIDAD: createEmptyAutoDraft(), HORMIGON: createEmptyAutoDraft() })
+    setAutoInformePersist({
+      DENSIDAD: { saved: false, isEditing: false, historyId: null },
+      HORMIGON: { saved: false, isEditing: false, historyId: null }
+    })
+    setManualUpdatedHistoryIds([])
+    setInformeDialogStatusNotice(null)
     setInformeDialogErrors({})
     setHideEnsayosByRcm(true)
     setInformeDialogOpen(true)
@@ -824,6 +852,19 @@ const UserListTable2 = ({
         })
         : Promise.resolve(null)
 
+      const seguimientoMetaPromise = codigoAgrupadorId
+        ? fetch(`/api/codigo-agrupador/seguimiento?id=${codigoAgrupadorId}&ts=${Date.now()}`, { cache: 'no-store' })
+          .then(async res => {
+            if (!res.ok) return null
+            const json = await res.json().catch(() => null)
+
+            if (!Array.isArray(json) || json.length === 0) return null
+
+            return json[0]
+          })
+          .catch(() => null)
+        : Promise.resolve(null)
+
       const historyPromise = (async () => {
         historyCache.delete(representativeRcmId)
 
@@ -841,9 +882,17 @@ const UserListTable2 = ({
         return arr
       })()
 
-      const [detail, rows] = await Promise.all([detailPromise, historyPromise])
+      const [detail, rows, seguimientoMeta] = await Promise.all([detailPromise, historyPromise, seguimientoMetaPromise])
 
       if (detail) setInformeDialogData(detail)
+
+      if (seguimientoMeta) {
+        setInformeDialogMeta((prev: any) => ({
+          ...(prev ?? {}),
+          ...(seguimientoMeta ?? {})
+        }))
+      }
+
       setInformeDialogHistory(Array.isArray(rows) ? rows : [])
 
       // detectar informes automáticos existentes (guardados en historial)
@@ -863,6 +912,53 @@ const UserListTable2 = ({
       }
 
       const existing: Record<AutoTemplateKey, number | null> = { DENSIDAD: null, HORMIGON: null }
+
+      const autoDraftsFromHistory: Record<AutoTemplateKey, AutoInformeDraft> = {
+        DENSIDAD: createEmptyAutoDraft(),
+        HORMIGON: createEmptyAutoDraft()
+      }
+
+      const autoPersistFromHistory: Record<AutoTemplateKey, AutoInformePersist> = {
+        DENSIDAD: { saved: false, isEditing: false, historyId: null },
+        HORMIGON: { saved: false, isEditing: false, historyId: null }
+      }
+
+      const parseAutoObservacion = (obs: string | null, key: AutoTemplateKey) => {
+        const parsed: AutoInformeDraft = {
+          numero: extractInformeTextFromObservacion(obs),
+          anexoPrev: '',
+          fechaEmision: '',
+          resultadoAnalisis: '',
+          observacionGeneral: '',
+          numeroMuestraLab: '',
+          numeroMuestraCliente: ''
+        }
+
+        const text = String(obs ?? '').trim()
+
+        if (!text) return parsed
+
+        const parts = text.split(' | ')
+
+        for (const part of parts) {
+          if (part.startsWith('N° Informe: ')) parsed.numero = part.slice(12).trim()
+          else if (part.startsWith('Fecha Emisión: ')) parsed.fechaEmision = normalizeToInputDate(part.slice(14).trim())
+          else if (part.startsWith('Resultado Análisis: ')) parsed.resultadoAnalisis = part.slice(19).trim()
+          else if (part.startsWith('Observación General: ')) parsed.observacionGeneral = part.slice(20).trim()
+          else if (part.startsWith('N° Muestra Lab: ')) parsed.numeroMuestraLab = part.slice(15).trim()
+          else if (part.startsWith('N° Muestra Cliente: ')) parsed.numeroMuestraCliente = part.slice(19).trim()
+          else if (part.startsWith('Anexo Prev: ')) parsed.anexoPrev = part.slice(12).trim()
+        }
+
+        if (!parsed.fechaEmision) parsed.fechaEmision = getTodayInputDate()
+
+        if (key === 'DENSIDAD') {
+          parsed.numeroMuestraLab = ''
+          parsed.numeroMuestraCliente = ''
+        }
+
+        return parsed
+      }
 
       for (const t of AUTO_TEMPLATES) {
         const hits = (rows ?? []).filter((h: any) => {
@@ -885,9 +981,34 @@ const UserListTable2 = ({
           .reduce((acc: number | null, n: number) => (acc === null || n > acc ? n : acc), null)
 
         existing[t.key] = max
+
+        const latest = hits[0] ?? null
+
+        if (latest) {
+          const parsed = parseAutoObservacion(String(latest?.observacion ?? ''), t.key)
+
+          if (!parsed.numero) {
+            const n = Number(latest?.informe)
+
+            if (Number.isFinite(n) && n > 0) parsed.numero = String(n)
+          }
+
+          autoDraftsFromHistory[t.key] = {
+            ...autoDraftsFromHistory[t.key],
+            ...parsed
+          }
+
+          autoPersistFromHistory[t.key] = {
+            saved: true,
+            isEditing: false,
+            historyId: Number.isFinite(Number(latest?.id)) ? Number(latest.id) : null
+          }
+        }
       }
 
       setAutoInformeExisting(existing)
+      setAutoInformeDrafts(autoDraftsFromHistory)
+      setAutoInformePersist(autoPersistFromHistory)
 
       // Reconstruir informes manuales guardados desde el historial
       const manualEntries = (rows ?? []).filter((h: any) =>
@@ -972,6 +1093,12 @@ const UserListTable2 = ({
     setInformeDrafts([])
     setAutoInformeExisting({ DENSIDAD: null, HORMIGON: null })
     setAutoInformeDrafts({ DENSIDAD: createEmptyAutoDraft(), HORMIGON: createEmptyAutoDraft() })
+    setAutoInformePersist({
+      DENSIDAD: { saved: false, isEditing: false, historyId: null },
+      HORMIGON: { saved: false, isEditing: false, historyId: null }
+    })
+    setManualUpdatedHistoryIds([])
+    setInformeDialogStatusNotice(null)
     setInformeDialogErrors({})
     setHideEnsayosByRcm(true)
   }
@@ -1271,6 +1398,7 @@ const UserListTable2 = ({
 
     const applicableAutoKeys = getApplicableAutoTemplateKeys(informeDialogMeta)
     const requiresAutos = applicableAutoKeys.length > 0
+    const manualesBloqueados = isManualInformeBlocked(informeDialogMeta)
 
     const getAutoDraft = (key: AutoTemplateKey): AutoInformeDraft => {
       const draft = autoInformeDrafts?.[key]
@@ -1294,14 +1422,21 @@ const UserListTable2 = ({
       return Boolean(String(draft.numeroMuestraLab ?? '').trim())
     }
 
+    const getAutoPersist = (key: AutoTemplateKey): AutoInformePersist => {
+      const p = autoInformePersist?.[key]
+
+      return p ?? { saved: false, isEditing: false, historyId: null }
+    }
+
     const autoCreates = AUTO_TEMPLATES.flatMap(t => {
       const applies = applicableAutoKeys.includes(t.key)
 
       if (!applies) return []
 
       const existing = autoInformeExisting?.[t.key]
+      const persist = getAutoPersist(t.key)
 
-      if (existing != null) return []
+      if (existing != null && !persist.isEditing) return []
 
       const draft = getAutoDraft(t.key)
       const n = parseInformeNumber(draft.numero)
@@ -1309,13 +1444,15 @@ const UserListTable2 = ({
       if (n == null) return []
       if (!isAutoDraftComplete(t.key)) return []
 
-      // sólo se puede subir automático si ya finalizaron todos los ensayos
-      if (pendientes > 0) return []
+      // sólo se puede subir automático nuevo si ya finalizaron todos los ensayos
+      if (existing == null && pendientes > 0) return []
 
       return [
         {
           key: t.key,
           label: t.label,
+          isUpdate: existing != null,
+          historyId: persist.historyId,
           numero: n,
           numeroRaw: String(draft.numero ?? '').trim(),
           anexoPrev: String(draft.anexoPrev ?? '').trim(),
@@ -1331,6 +1468,8 @@ const UserListTable2 = ({
     const manualCreates = informeDrafts
       .map(d => ({
         id: d.id,
+        saved: Boolean((d as any)?.saved),
+        isEditing: Boolean((d as any)?.isEditing),
         numero: parseInformeNumber(d.numero),
         numeroRaw: String((d as any).numero ?? '').trim(),
         tipoInforme: String((d as any).tipoInforme ?? '').trim(),
@@ -1344,6 +1483,8 @@ const UserListTable2 = ({
       }))
       .filter(d => d.numero != null) as Array<{
         id: string
+        saved: boolean
+        isEditing: boolean
         numero: number
         numeroRaw: string
         tipoInforme: string
@@ -1354,8 +1495,15 @@ const UserListTable2 = ({
         rcms: string[]
       }>
 
+    const pendingManualCreates = manualCreates.filter(m => !m.saved || m.isEditing)
+
+    if (manualesBloqueados && pendingManualCreates.length > 0) {
+      errors.general = [errors.general, 'Este Código Producto tiene cobertura digital total por plantilla; no se permiten informes manuales.'].filter(Boolean).join(' · ')
+      errors.numero = 'Informes manuales no permitidos para este Código Producto.'
+    }
+
     // Si un informe manual tiene N°, debe seleccionar al menos 1 RCM.
-    const manualMissingRcms = manualCreates.filter(m => (m.rcms ?? []).length === 0)
+    const manualMissingRcms = pendingManualCreates.filter(m => (m.rcms ?? []).length === 0)
 
     if (manualMissingRcms.length) {
       const msg = 'Selecciona al menos 1 RCM para cada informe manual con N°.'
@@ -1376,13 +1524,16 @@ const UserListTable2 = ({
     if (requiresAutos) {
       const missingAutos = applicableAutoKeys.filter(k => {
         const existing = autoInformeExisting?.[k]
+        const persist = getAutoPersist(k)
 
-        if (existing != null) return false
+        if (existing != null && !persist.isEditing) return false
 
         if (!isAutoDraftComplete(k)) return true
 
-        // aunque esté el número, no se considera completo si aún hay ensayos pendientes (no se puede subir)
-        return pendientes > 0
+        // Para nuevos: exigir ensayos completos. Para edición de existentes: permitir ajuste.
+        if (existing == null) return pendientes > 0
+
+        return false
       })
 
       if (missingAutos.length) {
@@ -1403,6 +1554,7 @@ const UserListTable2 = ({
       ok: Object.keys(errors).length === 0,
       pendientes,
       requiresAutos,
+      manualesBloqueados,
       applicableAutoKeys,
       primary: primaryCandidate as number | null,
       autoCreates,
@@ -1411,6 +1563,15 @@ const UserListTable2 = ({
   }
 
   const handleSaveInformeDraft = async (draftId: string) => {
+    if (isManualInformeBlocked(informeDialogMeta)) {
+      setInformeDialogErrors(prev => ({
+        ...prev,
+        general: 'Este Código Producto tiene cobertura digital total por plantilla; no se permiten informes manuales.'
+      }))
+
+      return
+    }
+
     const draft = informeDrafts.find(d => d.id === draftId)
 
     if (!draft) return
@@ -1436,9 +1597,13 @@ const UserListTable2 = ({
     try {
       setSavingDraftId(draftId)
       setInformeDialogErrors(prev => ({ ...prev, general: undefined }))
+      setInformeDialogStatusNotice(null)
 
       const historyId = Number((draft as any).historyId)
       const isUpdate = Boolean((draft as any).saved && Number.isFinite(historyId) && historyId > 0)
+      const prevState = getCurrentStateForRow(rcmId)
+      const prevNormUpper = String(normalizeStateForCompare(prevState) ?? '').trim().toUpperCase()
+      const shouldRollbackToDigitado = isUpdate && ['REVISADO', 'FIRMADO', 'ENVIADO'].includes(prevNormUpper)
 
       const funcionario = getCurrentUserName() ?? 'Usuario'
       const aplicadoA = getAppliedAForRow(rcmId)
@@ -1494,6 +1659,10 @@ const UserListTable2 = ({
         historyId: isUpdate ? historyId : (Number.isFinite(Number(created?.id)) ? Number(created.id) : d.historyId ?? null)
       } : d))
 
+      if (isUpdate && Number.isFinite(historyId) && historyId > 0) {
+        setManualUpdatedHistoryIds(prev => (prev.includes(historyId) ? prev : [...prev, historyId]))
+      }
+
       // Actualizar caché de historial
       const entry = created ?? {
         id: isUpdate ? historyId : undefined,
@@ -1540,6 +1709,58 @@ const UserListTable2 = ({
         }
       }
 
+      if (shouldRollbackToDigitado) {
+        const payloadEvent: any = {
+          tipo: 'Evento Abierto',
+          tipoEstado: 'EVENTO',
+          motivo: 'Edición informe manual',
+          observacion: 'Retorno a DIGITADO por edición de informe manual. Debe reingresar al flujo secuencial.',
+          funcionario,
+          estPrev: prevState ?? null,
+          estNuevo: 'DIGITADO',
+          aplicadoA,
+          informe: numero
+        }
+
+        const resEvent = await fetch(`/api/rcm/${rcmId}/history`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payloadEvent)
+        })
+
+        if (!resEvent.ok) {
+          const txt = await resEvent.text().catch(() => '')
+
+          console.error('Failed to save rollback event for manual edit:', resEvent.status, txt)
+          throw new Error('No se pudo registrar el retorno a DIGITADO tras editar informe manual.')
+        }
+
+        const createdEvent = await resEvent.json().catch(() => null)
+
+        const eventEntry = createdEvent ?? {
+          tipo: payloadEvent.tipo,
+          funcionario,
+          estAnterior: payloadEvent.estPrev ?? null,
+          estNuevo: payloadEvent.estNuevo ?? null,
+          informe: payloadEvent.informe ?? null,
+          fechaAccion: new Date().toISOString(),
+          observacion: payloadEvent.observacion,
+          motivo: payloadEvent.motivo,
+          tipoEstado: payloadEvent.tipoEstado
+        }
+
+        const refreshed = historyCache.get(rcmId) ?? []
+
+        historyCache.set(rcmId, [eventEntry, ...refreshed])
+
+        if (histDialogOpen && histRowId === rcmId) {
+          setHistRows(prev => [eventEntry, ...prev])
+        }
+
+        setInformeDialogMeta((prev: any) => (prev ? { ...prev, estadoOperativo: 'DIGITADO' } : prev))
+        setInformeDialogStatusNotice('Estado actualizado a DIGITADO por edición de informe manual. Debe continuar el flujo secuencial.')
+      }
+
       // Actualizar columna N° Informe de la tabla con el máximo entre todos los guardados
       const allSaved = informeDrafts.map(d => {
         if (d.id === draftId) return numero
@@ -1570,7 +1791,13 @@ const UserListTable2 = ({
               [numeroRaw || String(maxNum)]
             )
 
-            return { ...d, informe: maxNum, informeTexto: merged[merged.length - 1] ?? null, informeTextos: merged }
+            return {
+              ...d,
+              estadoOperativo: shouldRollbackToDigitado ? 'DIGITADO' : (d as any).estadoOperativo,
+              informe: maxNum,
+              informeTexto: merged[merged.length - 1] ?? null,
+              informeTextos: merged
+            }
           })()
           : d
       ))
@@ -1582,7 +1809,13 @@ const UserListTable2 = ({
               [numeroRaw || String(maxNum)]
             )
 
-            return { ...d, informe: maxNum, informeTexto: merged[merged.length - 1] ?? null, informeTextos: merged }
+            return {
+              ...d,
+              estadoOperativo: shouldRollbackToDigitado ? 'DIGITADO' : (d as any).estadoOperativo,
+              informe: maxNum,
+              informeTexto: merged[merged.length - 1] ?? null,
+              informeTextos: merged
+            }
           })()
           : d
       ))
@@ -1726,7 +1959,28 @@ const UserListTable2 = ({
           informe: a.numero
         }
 
-        const created = await postHistory(payload)
+        if (a.isUpdate && Number.isFinite(Number(a.historyId)) && Number(a.historyId) > 0) {
+          payload.historyId = Number(a.historyId)
+        }
+
+        const created = await (async () => {
+          const method = payload.historyId ? 'PUT' : 'POST'
+
+          const res = await fetch(`/api/rcm/${rcmId}/history`, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          })
+
+          if (!res.ok) {
+            const txt = await res.text().catch(() => '')
+
+            console.error('Failed to save auto history:', res.status, txt)
+            throw new Error('Error al guardar historial de informe automático')
+          }
+
+          return await res.json().catch(() => null)
+        })()
 
         createdEntries.push(
           created ?? {
@@ -1739,6 +1993,57 @@ const UserListTable2 = ({
             observacion: payload.observacion,
             motivo: payload.motivo,
             tipoEstado: payload.tipoEstado
+          }
+        )
+      }
+
+      const autoEditedLabels = (autoCreates ?? [])
+        .filter((a: any) => Boolean(a?.isUpdate))
+        .map((a: any) => String(a?.label ?? '').trim())
+        .filter(Boolean)
+
+      const manualEditedCount = manualUpdatedHistoryIds.length
+
+      const prevNorm = normalizeStateForCompare(prevState)
+      const prevNormUpper = String(prevNorm ?? '').trim().toUpperCase()
+      const editedAutoOrManual = autoEditedLabels.length > 0 || manualEditedCount > 0
+      const editedFromFutureState = editedAutoOrManual && ['REVISADO', 'FIRMADO', 'ENVIADO'].includes(prevNormUpper)
+
+      if (editedFromFutureState) {
+        const eventoPartes = [
+          autoEditedLabels.length > 0
+            ? `Automático: ${autoEditedLabels.join(', ')}`
+            : '',
+          manualEditedCount > 0
+            ? `Manual(es) editado(s): ${manualEditedCount}`
+            : ''
+        ].filter(Boolean)
+
+        const payloadEvent: any = {
+          tipo: 'Evento Abierto',
+          tipoEstado: 'EVENTO',
+          motivo: `Edición de informe${eventoPartes.length ? ` - ${eventoPartes.join(' | ')}` : ''}`,
+          observacion: 'Retorno a DIGITADO por edición de informe (manual/automático). Debe reingresar al flujo secuencial.',
+          funcionario,
+          estPrev: prevState ?? null,
+          estNuevo: 'DIGITADO',
+          aplicadoA,
+          informe: informeToPersist
+        }
+
+        const createdEvent = await postHistory(payloadEvent)
+
+        createdEntries.push(
+          createdEvent ?? {
+            tipo: payloadEvent.tipo,
+            funcionario,
+            estAnterior: payloadEvent.estPrev ?? null,
+            estNuevo: payloadEvent.estNuevo ?? null,
+            informe: payloadEvent.informe ?? null,
+            fechaAccion: new Date().toISOString(),
+            observacion: payloadEvent.observacion,
+            motivo: payloadEvent.motivo,
+            tipoEstado: payloadEvent.tipoEstado
           }
         )
       }
@@ -1782,7 +2087,6 @@ const UserListTable2 = ({
       }
 
       // 3) Marcar como DIGITADO (si corresponde)
-      const prevNorm = normalizeStateForCompare(prevState)
       let digitadoEntry: any = null
 
       const candidates = [
@@ -1794,7 +2098,7 @@ const UserListTable2 = ({
       const informeTextoToPersist = topCandidate?.text || String(informeToPersist)
       const informeTextosToPersist = mergeInformeTexts([], candidates.map(c => c.text || String(c.num)))
 
-      if (prevNorm !== 'DIGITADO') {
+      if (prevNorm !== 'DIGITADO' && !editedFromFutureState) {
         const payload: any = {
           tipo: 'Ope',
           tipoEstado: 'DIGITADO',
@@ -1964,6 +2268,8 @@ const UserListTable2 = ({
       familia: (agg as any).familia,
       ensayos: (agg as any).ensayos,
       autoTemplates: (agg as any).autoTemplates,
+      manualInformeBlocked: (agg as any).manualInformeBlocked,
+      skuCoberturaDigital: (agg as any).skuCoberturaDigital,
       rcmNumeros: (agg as any).rcmNumeros,
       estadoOperativo: (agg as any).estadoOperativo
     })
@@ -3572,6 +3878,9 @@ const UserListTable2 = ({
                 // - ENSAYADO
                 // - ENVIADO_DIGITACION
                 // - DIGITADO
+                // - REVISADO
+                // - FIRMADO
+                // - ENVIADO
                 if (!op) return true
 
                 if (op === 'EN_PROCESO') {
@@ -3582,7 +3891,7 @@ const UserListTable2 = ({
                   return !(Number.isFinite(ensayadoCount) && ensayadoCount > 0)
                 }
 
-                return !['ENSAYADO', 'ENVIADO_DIGITACION', 'DIGITADO'].includes(op)
+                return !['ENSAYADO', 'ENVIADO_DIGITACION', 'DIGITADO', 'REVISADO', 'FIRMADO', 'ENVIADO'].includes(op)
               })()}
               onClick={e => {
                 e.stopPropagation()
@@ -3597,6 +3906,8 @@ const UserListTable2 = ({
                   familia: row.original.familia,
                   ensayos: row.original.ensayos,
                   autoTemplates: (row.original as any).autoTemplates,
+                  manualInformeBlocked: (row.original as any).manualInformeBlocked,
+                  skuCoberturaDigital: (row.original as any).skuCoberturaDigital,
                   rcmNumeros: (row.original as any).rcmNumeros,
                   estadoOperativo: row.original.estadoOperativo
                 })
@@ -5272,6 +5583,22 @@ const UserListTable2 = ({
             </Typography>
           )}
 
+          {informeDialogStatusNotice && (
+            <Paper
+              variant='outlined'
+              sx={theme => ({
+                p: 1.25,
+                mb: 2,
+                borderColor: alpha(theme.palette.success.main, 0.45),
+                bgcolor: alpha(theme.palette.success.main, 0.08)
+              })}
+            >
+              <Typography variant='caption' sx={theme => ({ fontWeight: 800, color: theme.palette.success.dark })}>
+                {informeDialogStatusNotice}
+              </Typography>
+            </Paper>
+          )}
+
           <Paper
             variant='outlined'
             sx={theme => ({
@@ -5632,6 +5959,11 @@ const UserListTable2 = ({
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 2 }}>
                   {AUTO_TEMPLATES.filter(t => applicableKeys.includes(t.key)).map(t => {
                     const existing = autoInformeExisting?.[t.key]
+                    const autoPersist = autoInformePersist?.[t.key] ?? { saved: false, isEditing: false, historyId: null }
+                    const opMetaKey = normalizeStateForCompare(informeDialogMeta?.estadoOperativo)
+                    const opRowKey = normalizeStateForCompare(getCurrentStateForRow(informeDialogRcmId))
+                    const opKey = (opMetaKey || opRowKey || '').toUpperCase()
+                    const canEditExisting = existing != null && ['DIGITADO', 'REVISADO', 'FIRMADO', 'ENVIADO'].includes(opKey)
                     const blocked = existing == null && pendientes > 0
                     const draft = autoInformeDrafts?.[t.key] ?? emptyAutoDraft
 
@@ -5653,6 +5985,27 @@ const UserListTable2 = ({
                                 🧪
                               </Box>
                               {t.label}
+                              {canEditExisting ? (
+                                <IconButton
+                                  size='small'
+                                  aria-label='Editar informe automático'
+                                  title='Editar informe automático'
+                                  onClick={e => {
+                                    e.stopPropagation()
+                                    setAutoInformePersist(prev => ({
+                                      ...prev,
+                                      [t.key]: {
+                                        ...(prev?.[t.key] ?? { saved: true, isEditing: false, historyId: null }),
+                                        saved: true,
+                                        isEditing: true
+                                      }
+                                    }))
+                                  }}
+                                  sx={{ ml: 0.2 }}
+                                >
+                                  <EditOutlinedIcon fontSize='small' />
+                                </IconButton>
+                              ) : null}
                             </Typography>
 
                             {allRcms.length ? (
@@ -5720,7 +6073,7 @@ const UserListTable2 = ({
                           </Box>
                         </Box>
 
-                        {existing != null || blocked ? null : (
+                        {(existing != null && !autoPersist.isEditing) || blocked ? null : (
                           <>
                             {/* Fila 1: N° Informe · Anexo · Fecha de Emisión */}
                             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
@@ -5849,6 +6202,7 @@ const UserListTable2 = ({
             <Button
               variant='contained'
               size='small'
+              disabled={isManualInformeBlocked(informeDialogMeta)}
               onClick={() => {
                 setInformeDialogErrors(prev => ({ ...prev, numero: undefined }))
 
@@ -5875,6 +6229,22 @@ const UserListTable2 = ({
             </Button>
           </Box>
 
+          {isManualInformeBlocked(informeDialogMeta) ? (
+            <Paper
+              variant='outlined'
+              sx={theme => ({
+                p: 1.5,
+                mb: 1.5,
+                borderColor: alpha(theme.palette.info.main, 0.45),
+                bgcolor: alpha(theme.palette.info.main, 0.08)
+              })}
+            >
+              <Typography variant='caption' sx={{ fontWeight: 700, color: 'text.primary', display: 'block' }}>
+                Este Código Producto tiene cobertura 100% digital por plantilla. Los informes manuales están deshabilitados.
+              </Typography>
+            </Paper>
+          ) : null}
+
           {informeDialogLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
               <CircularProgress size={28} />
@@ -5892,7 +6262,9 @@ const UserListTable2 = ({
               })}
             >
               <Typography variant='body2' color='text.secondary'>
-                Haz click en + Añadir informe para agregar informes manuales.
+                {isManualInformeBlocked(informeDialogMeta)
+                  ? 'Los informes manuales están deshabilitados para este Código Producto.'
+                  : 'Haz click en + Añadir informe para agregar informes manuales.'}
               </Typography>
             </Paper>
           ) : (
@@ -6189,7 +6561,7 @@ const UserListTable2 = ({
                             variant='contained'
                             color='primary'
                             size='small'
-                            disabled={!isOk || !hasRcmsSelected || savingDraftId === d.id}
+                            disabled={isManualInformeBlocked(informeDialogMeta) || !isOk || !hasRcmsSelected || savingDraftId === d.id}
                             onClick={() => handleSaveInformeDraft(d.id)}
                             startIcon={<CheckBoxOutlinedIcon sx={{ fontSize: '0.9rem !important' }} />}
                             sx={{ textTransform: 'none', borderRadius: 2, fontSize: '0.75rem', py: 0.4 }}
@@ -6210,6 +6582,7 @@ const UserListTable2 = ({
               <Button
                 variant='outlined'
                 fullWidth
+                disabled={isManualInformeBlocked(informeDialogMeta)}
                 onClick={() => {
                   setInformeDialogErrors(prev => ({ ...prev, numero: undefined }))
 
@@ -6311,7 +6684,6 @@ const UserListTable2 = ({
               return pendientes === 0
             }).length
 
-            const manualTotal = informeDrafts.length
             const manualAssigned = informeDrafts.filter(d => parseInformeNumber(d.numero) != null).length
 
             return (
@@ -6340,6 +6712,14 @@ const UserListTable2 = ({
           {(() => {
             const opMeta = normalizeStateForCompare(informeDialogMeta?.estadoOperativo)
             const opRow = normalizeStateForCompare(getCurrentStateForRow(informeDialogRcmId))
+            const applicableKeys = getApplicableAutoTemplateKeys(informeDialogMeta)
+
+            const hasAutoEditPending = applicableKeys.some((k: AutoTemplateKey) => {
+              const existing = autoInformeExisting?.[k]
+              const persist = autoInformePersist?.[k]
+
+              return existing != null && Boolean(persist?.isEditing)
+            })
 
             const digitadoByHistory = (informeDialogHistory ?? []).some((h: any) => {
               const k1 = normalizeStateForCompare(h?.tipoEstado)
@@ -6351,7 +6731,7 @@ const UserListTable2 = ({
 
             const isDigitado = opMeta === 'DIGITADO' || opRow === 'DIGITADO' || digitadoByHistory
 
-            if (isDigitado) return null
+            if (isDigitado && !hasAutoEditPending) return null
 
             return (
               <Button
@@ -6389,12 +6769,21 @@ const UserListTable2 = ({
 
                   // si hay automáticos aplicables, deben estar completos
                   const missingAuto = applicableKeys.some(k => {
-                    if (autoInformeExisting?.[k] != null) return false
+                    const existing = autoInformeExisting?.[k]
+                    const persist = autoInformePersist?.[k]
+
+                    if (existing != null && !Boolean(persist?.isEditing)) return false
                     const n = parseInformeNumber(autoInformeDrafts?.[k]?.numero)
 
                     if (n == null) return true
 
-                    return pendientes > 0
+                    if (existing == null) return pendientes > 0
+
+                    const isComplete = k === 'DENSIDAD'
+                      ? Boolean(String(autoInformeDrafts?.[k]?.resultadoAnalisis ?? '').trim())
+                      : Boolean(String(autoInformeDrafts?.[k]?.numeroMuestraLab ?? '').trim())
+
+                    return !isComplete
                   })
 
                   return missingAuto
@@ -6702,12 +7091,12 @@ const UserListTable2 = ({
                   return (
                     <>
                       <Box
-                        sx={theme => ({
+                        sx={{
                           display: 'grid',
                           gridTemplateColumns: '1fr',
                           gap: 1,
                           '& .MuiChip-root': { fontWeight: 800 }
-                        })}
+                        }}
                       >
                         {visible.map(opt => {
                           const st = OPERATIONAL_STATES.find(s => s.value === opt.value)

@@ -28,6 +28,22 @@ const AUTO_SKU_COMPRESION = '2006'
 // Paquetes que incluyen compresión (ej: 2014); se puede extender.
 const AUTO_SKUS_COMPRESION_PACKAGES = new Set<string>(['2014'])
 
+const getAutoTemplateForServicio = (servicio: { codigo?: unknown; nombre?: unknown }) => {
+  const sku = normSku(servicio?.codigo)
+  const nm = normalizeText(servicio?.nombre ?? '')
+
+  // (1) Informe Densidad -> SKU 1000 “Densidad en terreno - Método Nuclear”
+  if (sku === AUTO_SKU_DENSIDAD) return 'DENSIDAD' as const
+  if (nm.includes('densidad') && (nm.includes('terreno') || nm.includes('nuclear'))) return 'DENSIDAD' as const
+
+  // (2) Informe Hormigón -> SKU 2006 “Compresión” (directo o dentro de paquete con compresión)
+  if (sku === AUTO_SKU_COMPRESION) return 'HORMIGON' as const
+  if (AUTO_SKUS_COMPRESION_PACKAGES.has(sku)) return 'HORMIGON' as const
+  if (nm.includes('compresion')) return 'HORMIGON' as const
+
+  return null
+}
+
 const isEnsayadoEstado = (estadoOperativo?: string | null) => {
   return String(estadoOperativo ?? '').trim().toUpperCase() === 'ENSAYADO'
 }
@@ -350,6 +366,7 @@ export async function GET(request: Request) {
       // Informes automáticos aplicables (se detecta por SKU/código de ServicioRCM)
       let autoDensidad = false
       let autoHormigon = false
+      const skuCoverage = new Map<string, { sku: string; nombre: string; autoKey: 'DENSIDAD' | 'HORMIGON' | null }>()
       for (const r of rcmsForAg) {
         const rcmAutoCompletado = isControlOrServicioAutoCompletado(r)
 
@@ -362,22 +379,38 @@ export async function GET(request: Request) {
           if (isEnsayadoEstado(s.estadoOperativo) || rcmAutoCompletado) ensayosEnsayados += qty
 
           const sku = normSku((s as any)?.codigo)
-          const nm = normalizeText((s as any)?.nombre ?? '')
+          const nombreRaw = String((s as any)?.nombre ?? '').trim()
+          const nombreNorm = normalizeText(nombreRaw)
+          const key = sku || (nombreNorm ? `N:${nombreNorm}` : '')
+          const autoKey = getAutoTemplateForServicio({ codigo: (s as any)?.codigo, nombre: (s as any)?.nombre })
 
-          // (1) Informe Densidad -> SKU 1000 “Densidad en terreno - Método Nuclear”
-          if (!autoDensidad) {
-            if (sku === AUTO_SKU_DENSIDAD) autoDensidad = true
-            else if (nm.includes('densidad') && (nm.includes('terreno') || nm.includes('nuclear'))) autoDensidad = true
-          }
+          if (autoKey === 'DENSIDAD') autoDensidad = true
+          if (autoKey === 'HORMIGON') autoHormigon = true
 
-          // (2) Informe Hormigón -> SKU 2006 “Compresión” (directo o dentro de paquete con compresión)
-          if (!autoHormigon) {
-            if (sku === AUTO_SKU_COMPRESION) autoHormigon = true
-            else if (AUTO_SKUS_COMPRESION_PACKAGES.has(sku)) autoHormigon = true
-            else if (nm.includes('compresion')) autoHormigon = true
+          if (key) {
+            const prev = skuCoverage.get(key)
+
+            if (!prev) {
+              skuCoverage.set(key, {
+                sku,
+                nombre: nombreRaw,
+                autoKey
+              })
+            } else if (!prev.autoKey && autoKey) {
+              prev.autoKey = autoKey
+            }
           }
         }
       }
+
+      const skuCoverageRows = Array.from(skuCoverage.values())
+      const totalSkusCp = skuCoverageRows.length
+      const skusConPlantillaDigital = skuCoverageRows.filter(s => s.autoKey != null).length
+      const skusSinPlantillaDigital = skuCoverageRows
+        .filter(s => s.autoKey == null)
+        .map(s => s.sku || s.nombre)
+        .filter(Boolean)
+      const manualInformeBlocked = totalSkusCp > 0 && skusConPlantillaDigital === totalSkusCp
 
       // N° Informe: conservar máximo para orden y lista textual completa para mostrar en UI.
       let informeMax: number | null = null
@@ -431,6 +464,12 @@ export async function GET(request: Request) {
         estadoAdministrativoCounts,
         ensayos: { ensayados: ensayosEnsayados, total: ensayosTotal },
         autoTemplates: { DENSIDAD: autoDensidad, HORMIGON: autoHormigon },
+        manualInformeBlocked,
+        skuCoberturaDigital: {
+          total: totalSkusCp,
+          cubiertos: skusConPlantillaDigital,
+          faltantes: skusSinPlantillaDigital
+        },
         informe: informeMax,
         informeTexto,
         informeTextos,

@@ -42,16 +42,17 @@ type Servicio = {
     cantidad?: number | null
     estadoOperativo?: string | null
     estado?: string | null
-    producto?: { sku?: string | null; nombre?: string | null; norma?: string | null } | null
+    producto?: { sku?: string | null; nombre?: string | null; norma?: string | null; tipo?: string | null } | null
   }> | null
   producto?: {
     sku?: string | null
     nombre?: string | null
     norma?: string | null
+    tipo?: string | null
     esPaquete?: boolean | null
     productosEnPaquete?: Array<{
       cantidad?: number | null
-      producto?: { sku?: string | null; nombre?: string | null; norma?: string | null } | null
+      producto?: { sku?: string | null; nombre?: string | null; norma?: string | null; tipo?: string | null } | null
     }> | null
   } | null
 }
@@ -71,6 +72,7 @@ type RcmRow = {
   numeroRcm?: string | null
   fechaMuestreo?: string | null
   fechaServicio?: string | null
+  fechaIngreso?: string | null
   numeroTarjeta?: string | null
   rcmType?: string | null
   estadoOperativo?: string | null
@@ -196,6 +198,12 @@ const isAutoCompletedRcm = (rcmType?: string | null, estadoOperativo?: string | 
   return false
 }
 
+const isTipoEnsayo = (raw?: string | null) => {
+  const t = String(raw ?? '').trim().toUpperCase()
+  if (!t) return false
+  return t === 'ENSAYO' || t === 'ENSAYOS' || t.includes('ENSAYO')
+}
+
 const computeEnsayos = (servicios?: Servicio[], opts?: { rcmType?: string | null; estadoOperativo?: string | null }) => {
   let total = 0
   let ensayados = 0
@@ -204,9 +212,39 @@ const computeEnsayos = (servicios?: Servicio[], opts?: { rcmType?: string | null
   const type = String(opts?.rcmType ?? '').trim().toUpperCase()
 
   for (const s of servicios ?? []) {
-    const qty = Number(s.cantidad ?? 0)
-    total += qty
-    if (autoCompleted || String(s.estadoOperativo ?? '').trim().toUpperCase() === 'ENSAYADO') ensayados += qty
+    const estadoServicio = String(s?.estadoOperativo ?? s?.estado ?? '').trim().toUpperCase()
+    const parentQtyRaw = Number(s?.cantidad ?? 0)
+    const parentQty = Number.isFinite(parentQtyRaw) && parentQtyRaw > 0 ? parentQtyRaw : 0
+    const explicitChildren = Array.isArray(s?.subProductos) ? s.subProductos : []
+    const masterChildren = Array.isArray(s?.producto?.productosEnPaquete)
+      ? s.producto.productosEnPaquete
+      : []
+    const esPaquete = Boolean(s?.esPaquete) || Boolean(s?.producto?.esPaquete) || explicitChildren.length > 0 || masterChildren.length > 0
+
+    if (esPaquete) {
+      const children = explicitChildren.length > 0 ? explicitChildren : masterChildren
+
+      for (const child of children) {
+        const childTipo = (child as any)?.producto?.tipo ?? null
+        if (!isTipoEnsayo(childTipo)) continue
+
+        const childQtyRaw = Number((child as any)?.cantidad ?? 0)
+        const childQty = Number.isFinite(childQtyRaw) && childQtyRaw > 0 ? childQtyRaw : 0
+        const qty = childQty * (parentQty > 0 ? parentQty : 1)
+
+        total += qty
+
+        const childEstado = String((child as any)?.estadoOperativo ?? (child as any)?.estado ?? estadoServicio).trim().toUpperCase()
+        if (autoCompleted || childEstado === 'ENSAYADO') ensayados += qty
+      }
+
+      continue
+    }
+
+    if (!isTipoEnsayo(s?.producto?.tipo ?? null)) continue
+
+    total += parentQty
+    if (autoCompleted || estadoServicio === 'ENSAYADO') ensayados += parentQty
   }
 
   // En MUESTRA, si el RCM padre ya fue movido a ENSAYADO o a estados posteriores,

@@ -229,6 +229,44 @@ export async function GET(request: Request, { params }: Params) {
                                     estado: true,
                                     codigo: true,
                                     nombre: true,
+                                    esPaquete: true,
+                                    producto: {
+                                        select: {
+                                            productoId: true,
+                                            sku: true,
+                                            nombre: true,
+                                            tipo: true,
+                                            esPaquete: true,
+                                            productosEnPaquete: {
+                                                select: {
+                                                    cantidad: true,
+                                                    producto: {
+                                                        select: {
+                                                            productoId: true,
+                                                            sku: true,
+                                                            nombre: true,
+                                                            tipo: true,
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    subProductos: {
+                                        select: {
+                                            cantidad: true,
+                                            sku: true,
+                                            nombre: true,
+                                            producto: {
+                                                select: {
+                                                    productoId: true,
+                                                    sku: true,
+                                                    nombre: true,
+                                                    tipo: true,
+                                                }
+                                            }
+                                        }
+                                    }
                                 },
                             },
                             muestras: {
@@ -296,6 +334,44 @@ export async function GET(request: Request, { params }: Params) {
                                             estado: true,
                                             codigo: true,
                                             nombre: true,
+                                            esPaquete: true,
+                                            producto: {
+                                                select: {
+                                                    productoId: true,
+                                                    sku: true,
+                                                    nombre: true,
+                                                    tipo: true,
+                                                    esPaquete: true,
+                                                    productosEnPaquete: {
+                                                        select: {
+                                                            cantidad: true,
+                                                            producto: {
+                                                                select: {
+                                                                    productoId: true,
+                                                                    sku: true,
+                                                                    nombre: true,
+                                                                    tipo: true,
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            subProductos: {
+                                                select: {
+                                                    cantidad: true,
+                                                    sku: true,
+                                                    nombre: true,
+                                                    producto: {
+                                                        select: {
+                                                            productoId: true,
+                                                            sku: true,
+                                                            nombre: true,
+                                                            tipo: true,
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         },
                                     },
                                     muestras: {
