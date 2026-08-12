@@ -277,23 +277,23 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
         setGrado(joinGradeValues(values))
     }
 
-    const handleCopyFechaConfeccion = async () => {
-        if (!fechaConfeccion || typeof navigator === 'undefined' || !navigator.clipboard) return
+    const handleCopyFechaMuestreoToConfeccion = () => {
+        if (!fechaServicio) return
 
-        await navigator.clipboard.writeText(fechaConfeccion).catch(() => undefined)
+        setFechaConfeccion(fechaServicio)
     }
 
     const renderFechaConfeccionField = (required = false) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <TextField label='Fecha Confección' type='date' value={fechaConfeccion}
                 onChange={(e) => setFechaConfeccion(e.target.value)} required={required} fullWidth InputLabelProps={{ shrink: true }} />
-            <Tooltip title={fechaConfeccion ? 'Copiar fecha de confección' : 'Sin fecha para copiar'}>
+            <Tooltip title={fechaServicio ? 'Copiar fecha de muestreo a confección' : 'Sin fecha de muestreo para copiar'}>
                 <span>
                     <IconButton
                         size='small'
-                        onClick={handleCopyFechaConfeccion}
-                        disabled={!fechaConfeccion}
-                        aria-label='Copiar fecha de confección'
+                        onClick={handleCopyFechaMuestreoToConfeccion}
+                        disabled={!fechaServicio}
+                        aria-label='Copiar fecha de muestreo a confección'
                     >
                         <ContentCopyIcon fontSize='small' />
                     </IconButton>
