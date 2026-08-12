@@ -391,6 +391,7 @@ const Step2CreateRcms = ({
                         onPageChange={productSearch.setProductsPage}
                         showOnlyPaquetes={productSearch.showOnlyPaquetes}
                         onShowOnlyPaquetesChange={productSearch.handleShowOnlyPaquetesChange}
+                        onResetSearchFilters={productSearch.resetSearchInput}
                         onSelectProduct={ensayoHooks.handleSelectProduct}
                         onAreaChange={handleAreaChange}
                     />

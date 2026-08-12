@@ -127,6 +127,7 @@ interface RcmDraftFormProps {
     onPageChange: (page: number) => void
     showOnlyPaquetes: boolean
     onShowOnlyPaquetesChange: () => void
+    onResetSearchFilters: () => void
     onSelectProduct: (producto: ProductoType) => void
     onAreaChange: (area: number | '') => void
 }
@@ -139,7 +140,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
     searchTerm, onSearchChange, paginatedProductos,
     totalProductos, productsPage, onPageChange,
     showOnlyPaquetes, onShowOnlyPaquetesChange, onSelectProduct,
-    onAreaChange
+    onAreaChange, onResetSearchFilters
 }) => {
 
     const {
@@ -194,6 +195,11 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
             setShowSearch(false)
         }
     }, [area])
+
+    const handleToggleSearch = () => {
+        onResetSearchFilters()
+        setShowSearch(prev => !prev)
+    }
 
     // Recalculate fechaVencimiento for all submuestras when fechaConfeccion changes
     React.useEffect(() => {
@@ -886,7 +892,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                             variant='outlined'
                                             color={showSearch ? 'error' : 'primary'}
                                             startIcon={showSearch ? <CloseIcon /> : <SearchIcon />}
-                                            onClick={() => setShowSearch(!showSearch)}
+                                            onClick={handleToggleSearch}
                                             sx={{ textTransform: 'none' }}
                                             disabled={!area}
                                         >
