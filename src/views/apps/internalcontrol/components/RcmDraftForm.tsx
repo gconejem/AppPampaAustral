@@ -976,11 +976,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                                 {submuestrasVencimiento.map((submuestra) => (
                                                     <tr key={submuestra.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
                                                         <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                            <TextField size='small' type='number' value={submuestra.numero}
-                                                                onChange={(e) => {
-                                                                    const numero = parseInt(e.target.value) || 0
-                                                                    setSubmuestrasVencimiento(submuestrasVencimiento.map(s => s.id === submuestra.id ? { ...s, numero } : s))
-                                                                }} sx={{ width: '70px' }} inputProps={{ min: 1 }} />
+                                                            <Typography variant='body2' sx={{ fontWeight: 500 }}>{submuestra.numero}</Typography>
                                                         </td>
                                                         <td style={{ padding: '12px', textAlign: 'center' }}>
                                                             <TextField size='small' type='number' value={submuestra.dias}
