@@ -128,11 +128,12 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
         if (rcm.rcmType === 'Control') {
             return (
                 <>
+                    {rcm.sede && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.sede}</Typography></>}
                     {rcm.area && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.area}</Typography></>}
                     {rcm.tipoServicio && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.tipoServicio}</Typography></>}
                     <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{formatDateOnly(rcm.fechaServicio)}</Typography></>
-                    {rcm.sede && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.sede}</Typography></>}
                     {rcm.item && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.item}</Typography></>}
+                    {rcm.ensayos[0]?.nombre && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.ensayos[0].nombre}</Typography></>}
                     {cantidadRcm && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>×{cantidadRcm}</Typography></>}
                 </>
             )
@@ -652,7 +653,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                                         </Typography>
                                         <Chip label='Agrupado' size='small' sx={{ fontWeight: 600, bgcolor: '#C8E6C9', color: '#2E7D32', border: '1px solid #81C784' }} />
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                                            {rcm.rcmType === 'Muestra' ? renderRcmHeaderFields(rcm) : (
+                                            {rcm.rcmType !== 'Servicio' ? renderRcmHeaderFields(rcm) : (
                                                 <>
                                                     {rcm.area && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.area}</Typography></>}
                                                     {rcm.tipoServicio && <><Typography variant='body2' color='text.secondary'>|</Typography><Typography variant='body2'>{rcm.tipoServicio}</Typography></>}
