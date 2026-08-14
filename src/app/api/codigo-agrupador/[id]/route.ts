@@ -49,7 +49,19 @@ export async function GET(request: Request, { params }: Params) {
                 codigoNombre: true,
                 descripcionServicio: true,
                 notasInternas: true,
-                ordenTrabajo: { select: { clave: true, correlativ: true } },
+                ordenTrabajo: {
+                    select: {
+                        clave: true,
+                        correlativ: true,
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
                 ensayos: {
                     select: {
                         sku: true,
@@ -81,7 +93,19 @@ export async function GET(request: Request, { params }: Params) {
                     codigoNombre: true,
                     descripcionServicio: true,
                     notasInternas: true,
-                    ordenTrabajo: { select: { clave: true, correlativ: true } },
+                    ordenTrabajo: {
+                        select: {
+                            clave: true,
+                            correlativ: true,
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    email: true,
+                                }
+                            }
+                        }
+                    },
                     ensayos: {
                         select: {
                             sku: true,
@@ -111,10 +135,12 @@ export async function GET(request: Request, { params }: Params) {
                         select: {
                             id: true,
                             servicios: {
+                                orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
                                 select: {
                                     codigo: true,
                                     cantidad: true,
                                     subProductos: {
+                                        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
                                         select: {
                                             sku: true,
                                             nombre: true,
@@ -144,10 +170,12 @@ export async function GET(request: Request, { params }: Params) {
                                 select: {
                                     id: true,
                                     servicios: {
+                                        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
                                         select: {
                                             codigo: true,
                                             cantidad: true,
                                             subProductos: {
+                                                orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
                                                 select: {
                                                     sku: true,
                                                     nombre: true,
@@ -183,6 +211,13 @@ export async function GET(request: Request, { params }: Params) {
                         select: {
                             clave: true,
                             correlativ: true,
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    email: true,
+                                }
+                            }
                         },
                     },
                     ensayos: {

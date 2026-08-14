@@ -34,13 +34,14 @@ export async function GET(
             where: {
                 muestraId: muestraId
             },
+            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
             include: {
                 producto: {
                     include: {
                         productosEnPaquete: {
                             include: {
                                 producto: {
-                                    select: { productoId: true, sku: true, nombre: true, norma: true }
+                                    select: { productoId: true, sku: true, nombre: true, norma: true, tipo: true }
                                 }
                             }
                         }
@@ -128,7 +129,7 @@ export async function GET(
             productoId: s.productoId ?? null,
             codigo: s.producto?.sku ?? (s.producto as any)?.SKU ?? (s.producto as any)?.codigo ?? s.productoId?.toString() ?? s.id.toString(),
             nombre: s.producto?.nombre ?? 'Sin nombre',
-            tipo: s.producto?.familia?.includes('Ensayo') ? 'Ensayo' : 'Análisis',
+            tipo: s.producto?.tipo ?? (s.producto?.familia?.includes('Ensayo') ? 'Ensayo' : 'Análisis'),
             cantidad: s.cantidad ?? 1,
             estado: s.estado ?? 'CODIFICADO',
             ensayador: (ultimaAsignacionByServicio.get(s.id)?.aplicadoA ?? s.history?.[0]?.aplicadoA) ?? null,
@@ -144,6 +145,7 @@ export async function GET(
                 sku: pp.producto?.sku ?? null,
                 nombre: pp.producto?.nombre ?? null,
                 norma: pp.producto?.norma ?? null,
+                tipo: pp.producto?.tipo ?? null,
                 id: pp.producto?.productoId ?? null,
             }))
         }))

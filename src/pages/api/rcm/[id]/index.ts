@@ -55,8 +55,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     where: { id: rcmId },
                     include: {
                         servicios: {
+                            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
                             include: {
-                                subProductos: true,
+                                subProductos: {
+                                    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+                                    include: {
+                                        producto: {
+                                            select: {
+                                                productoId: true,
+                                                sku: true,
+                                                nombre: true,
+                                                tipo: true,
+                                            },
+                                        },
+                                    },
+                                },
                                 producto: {
                                     include: {
                                         productosEnPaquete: {
@@ -77,7 +90,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         },
                         muestras: {
                             include: {
-                                servicios: { include: { producto: true } },
+                                servicios: {
+                                    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+                                    include: { producto: true },
+                                },
                                 probetas: true,
                             },
                         },
@@ -88,6 +104,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                                 id: true,
                                 clave: true,
                                 correlativ: true,
+                                user: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        email: true,
+                                    },
+                                },
                                 agenda: {
                                     include: {
                                         cliente: true,
@@ -109,13 +132,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     where: { id: rcmId },
                     include: {
                         servicios: {
+                            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
                             include: {
+                                subProductos: {
+                                    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+                                    include: {
+                                        producto: {
+                                            select: {
+                                                productoId: true,
+                                                sku: true,
+                                                nombre: true,
+                                                tipo: true,
+                                            },
+                                        },
+                                    },
+                                },
                                 producto: true,
                             }
                         },
                         muestras: {
                             include: {
-                                servicios: { include: { producto: true } },
+                                servicios: {
+                                    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+                                    include: { producto: true },
+                                },
                                 probetas: true,
                             },
                         },
@@ -126,6 +166,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                                 id: true,
                                 clave: true,
                                 correlativ: true,
+                                user: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        email: true,
+                                    },
+                                },
                                 agenda: {
                                     include: {
                                         cliente: true,
@@ -323,8 +370,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     },
                 },
                 include: {
-                    servicios: { include: { subProductos: true, producto: true } },
-                    muestras: { include: { servicios: true, probetas: true } },
+                    servicios: {
+                        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+                        include: { subProductos: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] }, producto: true },
+                    },
+                    muestras: {
+                        include: {
+                            servicios: {
+                                orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+                                include: { producto: true },
+                            },
+                            probetas: true,
+                        },
+                    },
                     area: true,
                     familia: true,
                 },

@@ -164,6 +164,46 @@ function normalizeText(v: any) {
   }
 }
 
+const countDetailedEnsayos = (services: any[] = []) => {
+  const countedSkus = new Set<string>()
+
+  return services.reduce((total, service) => {
+    const rawChildren = Array.isArray(service?.subProductos) && service.subProductos.length > 0
+      ? service.subProductos
+      : Array.isArray(service?.subProductosCodificados) && service.subProductosCodificados.length > 0
+        ? service.subProductosCodificados
+        : Array.isArray(service?.productosEnPaquete) && service.productosEnPaquete.length > 0
+          ? service.productosEnPaquete
+          : (Array.isArray(service?.producto?.productosEnPaquete) ? service.producto.productosEnPaquete : [])
+
+    const children = Array.from(new Map(rawChildren.map((child: any, index: number) => {
+      const key = String(child?.sku ?? child?.producto?.sku ?? child?.id ?? child?.producto?.productoId ?? `${child?.nombre ?? ''}-${index}`).trim()
+
+      return [key, child] as const
+    })).values())
+
+    if (children.length > 0) {
+      return total + children.reduce((count: number, child: any) => {
+        const sku = String(child?.sku ?? child?.producto?.sku ?? child?.id ?? child?.producto?.productoId ?? '').trim()
+
+        if (!sku || countedSkus.has(sku)) return count
+
+        countedSkus.add(sku)
+
+        return count + 1
+      }, 0)
+    }
+
+    const tipo = normalizeText(service?.tipo ?? service?.producto?.tipo)
+    const sku = String(service?.codigo ?? service?.sku ?? service?.producto?.sku ?? service?.productoId ?? '').trim()
+
+    if (sku && countedSkus.has(sku)) return total
+    if (sku) countedSkus.add(sku)
+
+    return total + (tipo.includes('ensayo') ? 1 : 0)
+  }, 0)
+}
+
 // helper: obtener color de estado administrativo (acepta value o label)
 const getAdministrativeStateColor = (raw?: string) => {
   if (!raw) return '#cccccc'
@@ -453,6 +493,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       sku: sp?.sku ?? sp?.producto?.sku ?? null,
       nombre: sp?.nombre ?? sp?.producto?.nombre ?? null,
       norma: sp?.norma ?? sp?.producto?.norma ?? null,
+      tipo: sp?.tipo ?? sp?.producto?.tipo ?? null,
       cantidad: sp?.cantidad ?? 1
     }))
   }
@@ -786,6 +827,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               codigo: sub.sku ?? String(sub.id ?? idx),
               nombre: sub.nombre ?? '-',
               norma: sub.norma ?? null,
+              tipo: sub.tipo ?? null,
               estado: svc.estado,
 
               // No heredar ensayador del padre: cada sub-ensayo se asigna de forma independiente.
@@ -1566,7 +1608,49 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
       })
 
-      const serviciosCombinados = sortServiciosByDetalleOrder(serviciosCombinadosRaw, serviciosOrdenOriginal)
+      const serviciosCombinadosBase = sortServiciosByDetalleOrder(serviciosCombinadosRaw, serviciosOrdenOriginal)
+
+      const packageHistoryRows = await Promise.all(
+        serviciosCombinadosBase
+          .filter((servicio: any) => servicio.esPaquete && servicio.id)
+          .map(async (servicio: any) => {
+            try {
+              const response = await fetch(`/api/servicioMuestra/${servicio.id}/history?ts=${Date.now()}`, {
+                cache: 'no-store',
+                headers: { 'Cache-Control': 'no-cache' }
+              })
+
+              return [servicio.id, response.ok ? await response.json() : []] as const
+            } catch {
+              return [servicio.id, []] as const
+            }
+          })
+      )
+
+      const packageHistoryMap = new Map<number, any[]>(packageHistoryRows)
+
+      const serviciosCombinados = serviciosCombinadosBase.map((servicio: any) => {
+        if (!servicio.esPaquete) return servicio
+
+        const historyRows = packageHistoryMap.get(servicio.id) ?? []
+        const subProductos = Array.isArray(servicio.subProductosCodificados) ? servicio.subProductosCodificados : []
+
+        return {
+          ...servicio,
+          subProductosCodificados: subProductos.map((subProducto: any) => {
+            const historyMatch = historyRows.find((historyRow: any) => normalizeText(historyRow?.ensayoServicio) === normalizeText(subProducto.nombre))
+
+            return historyMatch
+              ? {
+                ...subProducto,
+                ensayador: historyMatch.aplicadoA ?? null,
+                estado: historyMatch.estNuevo ?? servicio.estado,
+                observacion: historyMatch.observacion ?? null
+              }
+              : subProducto
+          })
+        }
+      })
 
       setInlineMuestraDetalle({
         ...(data.muestra ?? {}),
@@ -1679,7 +1763,49 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
       })
 
-      const serviciosCombinados = sortServiciosByDetalleOrder(serviciosCombinadosRaw, serviciosOrdenOriginal)
+      const serviciosCombinadosBase = sortServiciosByDetalleOrder(serviciosCombinadosRaw, serviciosOrdenOriginal)
+
+      const packageHistoryRows = await Promise.all(
+        serviciosCombinadosBase
+          .filter((servicio: any) => servicio.esPaquete && servicio.id)
+          .map(async (servicio: any) => {
+            try {
+              const response = await fetch(`/api/servicioMuestra/${servicio.id}/history?ts=${Date.now()}`, {
+                cache: 'no-store',
+                headers: { 'Cache-Control': 'no-cache' }
+              })
+
+              return [servicio.id, response.ok ? await response.json() : []] as const
+            } catch {
+              return [servicio.id, []] as const
+            }
+          })
+      )
+
+      const packageHistoryMap = new Map<number, any[]>(packageHistoryRows)
+
+      const serviciosCombinados = serviciosCombinadosBase.map((servicio: any) => {
+        if (!servicio.esPaquete) return servicio
+
+        const historyRows = packageHistoryMap.get(servicio.id) ?? []
+        const subProductos = Array.isArray(servicio.subProductosCodificados) ? servicio.subProductosCodificados : []
+
+        return {
+          ...servicio,
+          subProductosCodificados: subProductos.map((subProducto: any) => {
+            const historyMatch = historyRows.find((historyRow: any) => normalizeText(historyRow?.ensayoServicio) === normalizeText(subProducto.nombre))
+
+            return historyMatch
+              ? {
+                ...subProducto,
+                ensayador: historyMatch.aplicadoA ?? null,
+                estado: historyMatch.estNuevo ?? servicio.estado,
+                observacion: historyMatch.observacion ?? null
+              }
+              : subProducto
+          })
+        }
+      })
 
       console.log('Ô£à Datos cargados:', data)
 
@@ -2466,7 +2592,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             const areaFinal = areaRcm ?? areaProducto ?? null
             const familiaFinal = familiaRcm ?? familiaProducto ?? null
             const serviciosMuestra = Array.isArray(muestra.servicios) ? muestra.servicios : []
-            const totalEnsayos = serviciosMuestra.reduce((acc: number, servicioItem: any) => acc + Number(servicioItem?.cantidad ?? 1), 0)
+            const serviciosParaConteo = Array.isArray(r.servicios) && r.servicios.length > 0 ? r.servicios : serviciosMuestra
+            const totalEnsayos = countDetailedEnsayos(serviciosParaConteo)
 
             const rcmTypeNorm = String((r as any)?.rcmType ?? '').toUpperCase().trim()
             const rcmEstadoNorm = String(r.estadoOperativo ?? '').toUpperCase().trim()
@@ -2504,7 +2631,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 ...probeta,
                 fechaVencimiento: probeta?.fechaVencimiento ?? null
               }))
-              .filter((probeta: any) => probeta.fechaVencimiento)
+              .filter((probeta: any) => {
+                if (!probeta.fechaVencimiento) return false
+
+                const estado = String(probeta?.estado ?? 'CODIFICADO').toUpperCase().trim()
+
+                return estado === 'CODIFICADO'
+              })
               .sort((left: any, right: any) => compareDateOnly(left.fechaVencimiento, right.fechaVencimiento))[0] ?? null
 
             const tipoServicio =
@@ -3057,7 +3190,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     const days = diffDaysFromToday(raw)
     const unit = cantidadProbetas === 1 ? 'submuestra' : 'submuestras'
 
-    let suffix = ''
+    let status = ''
     let colors = {
       color: '#b26a00',
       borderColor: 'rgba(237, 168, 32, 0.65)',
@@ -3066,29 +3199,30 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
     if (days !== null) {
       if (days < 0) {
-        suffix = `(${Math.abs(days)}d ATRASO)`
+        status = `Vencido ${Math.abs(days)}d`
         colors = {
           color: '#d84f2a',
           borderColor: 'rgba(255, 112, 67, 0.7)',
           backgroundColor: 'rgba(255, 138, 101, 0.12)'
         }
       } else if (days === 0) {
-        suffix = '(HOY)'
+        status = 'Hoy'
         colors = {
           color: '#d84f2a',
           borderColor: 'rgba(255, 112, 67, 0.7)',
           backgroundColor: 'rgba(255, 138, 101, 0.12)'
         }
       } else if (days === 1) {
-        suffix = '(MAÑANA)'
+        status = 'Mañana'
       } else {
-        suffix = `(${days}d)`
+        status = `En ${days}d`
       }
     }
 
     return {
-      label: formatted ? `${formatted} ${suffix}`.trim() : '-',
-      helper: cantidadProbetas > 0 ? `${cantidadProbetas} ${unit}` : 'Sin submuestras',
+      formatted,
+      status,
+      helper: cantidadProbetas > 0 ? `${cantidadProbetas} ${unit}` : '-',
       colors
     }
   }
@@ -3587,33 +3721,49 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         header: 'Próx. Venc.',
         accessorKey: 'proximoVencimiento',
         cell: ({ row }) => {
+          const meta = getVencimientoMeta(row.original.proximoVencimiento, row.original.cantidadProbetas ?? 0)
+
           if (!row.original.proximoVencimiento) {
             return (
-              <Typography variant='body2' color='text.disabled' sx={{ fontWeight: 500, textAlign: 'center', width: '100%' }}>
-                -
-              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.35, width: '100%' }}>
+                <Typography variant='body2' color='text.disabled' sx={{ fontWeight: 500 }}>
+                  -
+                </Typography>
+                {meta.helper !== '-' ? (
+                  <Typography variant='caption' color='text.secondary' sx={{ textAlign: 'center' }}>
+                    {meta.helper}
+                  </Typography>
+                ) : null}
+              </Box>
             )
           }
 
-          const meta = getVencimientoMeta(row.original.proximoVencimiento, row.original.cantidadProbetas ?? 0)
-
           return (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.35, width: '100%' }}>
-              <Chip
-                size='small'
-                label={meta.label}
-                variant='outlined'
-                sx={{
-                  fontWeight: 800,
-                  color: meta.colors.color,
-                  borderColor: meta.colors.borderColor,
-                  bgcolor: meta.colors.backgroundColor
-                }}
-              />
-              <Typography variant='caption' color='text.secondary' sx={{ textAlign: 'center' }}>
-                {meta.helper}
-              </Typography>
-            </Box>
+            <Tooltip title={`${meta.formatted} · ${meta.status || 'Sin estado'} · ${meta.helper}`} placement='top' arrow>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.35, width: '100%' }}>
+                <Typography variant='body2' sx={{ fontWeight: 800, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                  {meta.formatted}
+                </Typography>
+                {meta.status ? (
+                  <Chip
+                    size='small'
+                    label={meta.status}
+                    variant='outlined'
+                    sx={{
+                      height: 22,
+                      fontWeight: 800,
+                      color: meta.colors.color,
+                      borderColor: meta.colors.borderColor,
+                      bgcolor: meta.colors.backgroundColor,
+                      '& .MuiChip-label': { px: 0.8 }
+                    }}
+                  />
+                ) : null}
+                <Typography variant='caption' color='text.secondary' sx={{ textAlign: 'center' }}>
+                  {meta.helper}
+                </Typography>
+              </Box>
+            </Tooltip>
           )
         }
       },
@@ -4110,7 +4260,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                       ...(header.column.id === 'obraCliente' ? { width: 180 } : {}),
                       ...(header.column.id === 'areaTipoServicio' ? { width: 195 } : {}),
                       ...(header.column.id === 'fechaCod' ? { width: 100 } : {}),
-                      ...(header.column.id === 'proximoVencimiento' ? { width: 150 } : {}),
+                      ...(header.column.id === 'proximoVencimiento' ? { width: 125 } : {}),
                       ...(header.column.id === 'material' ? { width: 140 } : {}),
                       ...(header.column.id === 'ensayos' ? { width: 70 } : {}),
                       ...(header.column.id === 'estOp' ? { width: 130 } : {}),
@@ -4166,7 +4316,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                       ...(cell.column.id === 'obraCliente' ? { width: 180 } : {}),
                       ...(cell.column.id === 'areaTipoServicio' ? { width: 195 } : {}),
                       ...(cell.column.id === 'fechaCod' ? { width: 100, whiteSpace: 'nowrap' } : {}),
-                      ...(cell.column.id === 'proximoVencimiento' ? { width: 150, whiteSpace: 'nowrap' } : {}),
+                      ...(cell.column.id === 'proximoVencimiento' ? { width: 125 } : {}),
                       ...(cell.column.id === 'material' ? { width: 140 } : {}),
                       ...(cell.column.id === 'ensayos' ? { width: 70, whiteSpace: 'nowrap' } : {}),
                       ...(cell.column.id === 'estOp' ? { width: 130, whiteSpace: 'nowrap' } : {}),
@@ -4238,7 +4388,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         const area = rcmData?.area?.nombre ?? row?.area ?? '-'
         const tarjeta = muestra?.numeroTarjeta || row?.numeroTarjeta || rcmData?.numeroTarjeta || '-'
         const numeroMuestra = muestra?.numeroMuestra || '-'
-        const ensayosCount = inlineServicios.length
+        const ensayosCount = countDetailedEnsayos(inlineServicios)
 
         const cp = (() => {
           const candidates = [
@@ -4262,10 +4412,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         })()
 
         const muestreadoPorInline = resolveDisplayPersonName(
-          rcmData?.tomaMuestra,
-          row?.ensayador,
           rcmData?.ordenTrabajo?.user?.name,
-          rcmData?.ordenTrabajo?.user?.email
+          rcmData?.ordenTrabajo?.user?.email,
+          row?.muestreadoPor
         )
 
         const material = muestra?.tipoMaterial || rcmData?.tipoMaterial || row?.tipoMaterial || '-'
@@ -4702,10 +4851,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const nroOt = rcmData?.ordenTrabajo?.correlativo || rcmData?.ordenTrabajo?.correlativ || row?.ot || '-'
 
           const muestreadoPor = resolveDisplayPersonName(
-            rcmData?.tomaMuestra,
-            row?.ensayador,
             rcmData?.ordenTrabajo?.user?.name,
-            rcmData?.ordenTrabajo?.user?.email
+            rcmData?.ordenTrabajo?.user?.email,
+            row?.muestreadoPor
           )
 
           const tipoMaterial = muestra?.tipoMaterial || rcmData?.tipoMaterial || row?.tipoMaterial || '-'
@@ -4720,7 +4868,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const elemento = muestra?.elemento || rcmData?.elemento || '-'
           const grado = muestra?.grado || rcmData?.grado || '-'
           const ensayador = row?.ensayador ?? rcmData?.ordenTrabajo?.user?.name ?? '-'
-          const ensayosCount = serviciosMuestra.length
+          const ensayosCount = countDetailedEnsayos(serviciosMuestra)
           const submuestrasCount = probetas.length
           const observaciones = muestra?.observaciones ?? rcmData?.observaciones ?? '-'
           const areaNorm = normalizeText(area)
@@ -4964,10 +5112,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                     <Typography sx={{ fontSize: '0.95rem', color: '#111827' }}>{servicio.cantidad ?? 1}</Typography>
                                   </TableCell>
                                   <TableCell>
-                                    <Typography sx={{ fontSize: '0.92rem', color: '#374151' }}>{ensayador}</Typography>
+                                    <Typography sx={{ fontSize: '0.92rem', color: servicio.esPaquete ? '#9ca3af' : '#374151' }}>
+                                      {servicio.esPaquete ? '-' : servicio.ensayador ?? ensayador}
+                                    </Typography>
                                   </TableCell>
                                   <TableCell align='center'>
-                                    <Chip label={getOperationalLabel(estadoRaw)} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.74rem', ...estadoPillSx(String(estadoRaw)) }} />
+                                    {servicio.esPaquete ? (
+                                      <Typography sx={{ fontSize: '0.82rem', color: '#9ca3af' }}>-</Typography>
+                                    ) : (
+                                      <Chip label={getOperationalLabel(estadoRaw)} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.74rem', ...estadoPillSx(String(estadoRaw)) }} />
+                                    )}
                                   </TableCell>
                                   <TableCell>
                                     <Typography sx={{ fontSize: '0.9rem', color: '#9ca3af' }}>{servicio.observacion ?? '—'}</Typography>
@@ -4992,7 +5146,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                     <TableCell align='center'>
                                       <Typography sx={{ fontSize: '0.88rem', color: '#6b7280' }}>{sp.cantidad ?? 1}</Typography>
                                     </TableCell>
-                                    <TableCell colSpan={3} />
+                                    <TableCell>
+                                      <Typography sx={{ fontSize: '0.85rem', color: '#374151' }}>{sp.ensayador ?? '-'}</Typography>
+                                    </TableCell>
+                                    <TableCell align='center'>
+                                      <Chip
+                                        label={getOperationalLabel(sp.estado ?? estadoRaw)}
+                                        size='small'
+                                        variant='outlined'
+                                        sx={{ fontWeight: 700, fontSize: '0.72rem', ...estadoPillSx(String(sp.estado ?? estadoRaw)) }}
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography sx={{ fontSize: '0.82rem', color: '#9ca3af' }}>{sp.observacion ?? '—'}</Typography>
+                                    </TableCell>
                                   </TableRow>
                                 ))}
                               </>
@@ -5153,15 +5320,26 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             return { color: '#475569', borderColor: 'rgba(100,116,139,.4)', bgcolor: 'rgba(148,163,184,.14)' }
           }
 
-          const countableServices = gestionarServicios.filter((s: any) => !s._isPaqueteHeader)
-          const totalServicios = countableServices.length
+          const countableServices = gestionarServicios.filter((s: any) => {
+            if (s._isPaqueteHeader) return false
 
-          const completados = countableServices.filter((s: any) => {
+            return normalizeText(s.tipo).includes('ensayo')
+          })
+
+          const getServiceQuantity = (service: any) => {
+            const quantity = Number(service?.cantidad ?? 1)
+
+            return Number.isFinite(quantity) && quantity > 0 ? quantity : 1
+          }
+
+          const totalServicios = countableServices.reduce((total: number, service: any) => total + getServiceQuantity(service), 0)
+
+          const completados = countableServices.reduce((total: number, s: any) => {
             const key = String(s._syntheticKey ?? s.id)
             const estadoCalculado = getEstadoServicioConProbetas(s, gestionarEstados[key] ?? s.estado ?? 'CODIFICADO')
 
-            return String(estadoCalculado ?? '').toUpperCase().includes('ENSAYADO')
-          }).length
+            return total + (String(estadoCalculado ?? '').toUpperCase().includes('ENSAYADO') ? getServiceQuantity(s) : 0)
+          }, 0)
 
           return (
             <>

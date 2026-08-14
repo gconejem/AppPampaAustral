@@ -272,6 +272,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               id: true,
               clave: true,
               correlativ: true,
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                }
+              },
               agenda: {
                 select: {
                   id: true,
@@ -301,11 +308,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
           },
           servicios: {
-            include: { subProductos: true, producto: true },
+            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+            include: {
+              subProductos: {
+                orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+              },
+              producto: true,
+            },
           },
           muestras: {
             include: {
               servicios: {
+                orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
                 include: {
                   producto: true,
                   history: {

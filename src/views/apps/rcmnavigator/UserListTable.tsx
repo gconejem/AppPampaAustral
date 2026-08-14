@@ -5109,7 +5109,28 @@ const UserListTable2 = ({
                 })
               }
 
-              const items = Array.from(map.values())
+              const serviceOrder = new Map<string, number>()
+
+              rcms.forEach((rcm: any) => {
+                const servicios = Array.isArray(rcm?.servicios) ? rcm.servicios : []
+
+                servicios.forEach((servicio: any, index: number) => {
+                  const sku = String(servicio?.codigo ?? servicio?.sku ?? '').trim()
+
+                  if (sku && !serviceOrder.has(sku)) serviceOrder.set(sku, serviceOrder.size)
+                })
+              })
+
+              const items = Array.from(map.values()).sort((a, b) => {
+                const aOrder = serviceOrder.get(a.sku)
+                const bOrder = serviceOrder.get(b.sku)
+
+                if (aOrder == null && bOrder == null) return 0
+                if (aOrder == null) return 1
+                if (bOrder == null) return -1
+
+                return aOrder - bOrder
+              })
 
               if (!items.length) {
                 return (

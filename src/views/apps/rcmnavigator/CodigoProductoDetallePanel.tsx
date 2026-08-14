@@ -96,7 +96,12 @@ type RcmRow = {
   }>
   RCMHistory?: HistoryEntry[]
   ordenTrabajoId?: string | null
-  ordenTrabajo?: { id?: string | null; clave?: string | null; correlativ?: string | null } | null
+  ordenTrabajo?: {
+    id?: string | null
+    clave?: string | null
+    correlativ?: string | null
+    user?: { name?: string | null; email?: string | null } | null
+  } | null
   codigoAgrupador?: { id?: number | null; codigoNombre?: string | null; descripcionServicio?: string | null } | null
 }
 
@@ -207,6 +212,7 @@ const isTipoEnsayo = (raw?: string | null) => {
 const computeEnsayos = (servicios?: Servicio[], opts?: { rcmType?: string | null; estadoOperativo?: string | null }) => {
   let total = 0
   let ensayados = 0
+  const countedSkus = new Set<string>()
 
   const autoCompleted = isAutoCompletedRcm(opts?.rcmType, opts?.estadoOperativo)
   const type = String(opts?.rcmType ?? '').trim().toUpperCase()
@@ -228,6 +234,10 @@ const computeEnsayos = (servicios?: Servicio[], opts?: { rcmType?: string | null
         const childTipo = (child as any)?.producto?.tipo ?? null
         if (!isTipoEnsayo(childTipo)) continue
 
+        const childSku = String((child as any)?.sku ?? (child as any)?.producto?.sku ?? '').trim()
+        if (childSku && countedSkus.has(childSku)) continue
+        if (childSku) countedSkus.add(childSku)
+
         const childQtyRaw = Number((child as any)?.cantidad ?? 0)
         const childQty = Number.isFinite(childQtyRaw) && childQtyRaw > 0 ? childQtyRaw : 0
         const qty = childQty * (parentQty > 0 ? parentQty : 1)
@@ -242,6 +252,10 @@ const computeEnsayos = (servicios?: Servicio[], opts?: { rcmType?: string | null
     }
 
     if (!isTipoEnsayo(s?.producto?.tipo ?? null)) continue
+
+    const serviceSku = String(s?.codigo ?? s?.producto?.sku ?? '').trim()
+    if (serviceSku && countedSkus.has(serviceSku)) continue
+    if (serviceSku) countedSkus.add(serviceSku)
 
     total += parentQty
     if (autoCompleted || estadoServicio === 'ENSAYADO') ensayados += parentQty
@@ -355,6 +369,47 @@ const pickStateFromCounts = (counts: Record<string, number>, priority: string[])
   if (!entries.length) return null
   entries.sort((a, b) => Number(b[1]) - Number(a[1]))
   return entries[0][0]
+}
+
+const getCodigoProductoOperationalState = (rcms: RcmRow[]) => {
+  const states = rcms
+    .map(r => normalizeStateKey(r.estadoOperativo))
+    .filter((state): state is string => Boolean(state))
+    .map(state => (state === 'EJECUTADO' ? 'ENSAYADO' : state))
+
+  if (!states.length) return null
+
+  const allCompleted = states.every(state => [
+    'ENSAYADO',
+    'ENVIADO_DIGITACION',
+    'DIGITADO',
+    'REVISADO',
+    'FIRMADO',
+    'ENVIADO'
+  ].includes(state))
+
+  if (!allCompleted) {
+    return states.some(state => [
+      'EN_PROCESO',
+      'ENSAYADO',
+      'ENVIADO_DIGITACION',
+      'DIGITADO',
+      'REVISADO',
+      'FIRMADO',
+      'ENVIADO'
+    ].includes(state))
+      ? 'EN_PROCESO'
+      : 'CODIFICADO'
+  }
+
+  const ordered = ['ENSAYADO', 'ENVIADO_DIGITACION', 'DIGITADO', 'REVISADO', 'FIRMADO', 'ENVIADO']
+  let best = 'ENSAYADO'
+
+  for (const state of ordered) {
+    if (states.includes(state)) best = state
+  }
+
+  return best
 }
 
 const findStateSince = (rcms: RcmRow[], stateKey: string) => {
@@ -483,7 +538,7 @@ export default function CodigoProductoDetallePanel({
       if (adKey) adCounts[adKey] = (adCounts[adKey] ?? 0) + 1
     }
 
-    const opMain = pickStateFromCounts(opCounts, [
+    const opMain = getCodigoProductoOperationalState(rcms) ?? pickStateFromCounts(opCounts, [
       'EVENTO',
       'EN_PROCESO',
       'CODIFICADO',
@@ -1084,13 +1139,18 @@ export default function CodigoProductoDetallePanel({
           const material = String(r?.tipoMaterial ?? '').trim()
           const item = String(r?.item ?? '').trim()
           const toma = String(r?.tomaMuestra ?? '').trim()
+          const muestreadoPor = String(
+            r?.ordenTrabajo?.user?.name ??
+            r?.ordenTrabajo?.user?.email ??
+            ''
+          ).trim()
           const cantidad = (() => {
             const raw = r?.cantidadMuestras
             const n = raw === null || raw === undefined ? NaN : Number(raw)
             return Number.isFinite(n) && n > 0 ? String(n) : '-'
           })()
 
-          const ensayoCount = servicios.length
+          const ensayoCount = computeEnsayos(servicios, { rcmType: r?.rcmType, estadoOperativo: r?.estadoOperativo }).total
 
           const submuestras = (() => {
             const muestras = Array.isArray(r?.muestras) ? (r.muestras as any[]) : ([] as any[])
@@ -1228,6 +1288,14 @@ export default function CodigoProductoDetallePanel({
                         </Typography>
                         <Typography variant='body2' sx={{ fontWeight: 700 }}>
                           {servicio || '-'}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 900, minWidth: 78 }}>
+                          MUESTREADO POR
+                        </Typography>
+                        <Typography variant='body2' sx={{ fontWeight: 700 }}>
+                          {muestreadoPor || '-'}
                         </Typography>
                       </Box>
                     </Box>
