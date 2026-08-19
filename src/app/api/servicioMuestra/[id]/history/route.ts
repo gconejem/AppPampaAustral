@@ -155,17 +155,25 @@ export async function POST(
             }
         }
 
-        const fechaInicioEnsayo =
-            estadoNuevoUpper === 'EN_PROCESO'
-                ? new Date()
-                : (body?.fechaInicioEnsayo ? new Date(String(body.fechaInicioEnsayo)) : null)
-
         const fechaFinEnsayo =
-            estadoNuevoUpper === 'ENSAYADO'
-                ? new Date()
-                : (body?.fechaFinEnsayo ? new Date(String(body.fechaFinEnsayo)) : null)
+            body?.fechaFinEnsayo
+                ? new Date(String(body.fechaFinEnsayo))
+                : estadoNuevoUpper === 'ENSAYADO'
+                    ? new Date()
+                    : null
 
         const { historyEntry, servicioRcmSyncCount } = await prisma.$transaction(async tx => {
+            const historialInicioPrevio = estadoNuevoUpper === 'ENSAYADO' && !body?.fechaInicioEnsayo
+                ? await tx.servicioMuestraHistorial.findFirst({
+                    where: { servicioMuestraId, fechaInicioEnsayo: { not: null } },
+                    orderBy: { registro: 'desc' },
+                    select: { fechaInicioEnsayo: true }
+                })
+                : null
+            const fechaInicioEnsayo = body?.fechaInicioEnsayo
+                ? new Date(String(body.fechaInicioEnsayo))
+                : historialInicioPrevio?.fechaInicioEnsayo ?? (estadoNuevoUpper === 'EN_PROCESO' ? new Date() : null)
+
             // ✅ Crear registro de historial - servicioMuestraId viene del param, NO del body
             const createdHistoryEntry = await tx.servicioMuestraHistorial.create({
                 data: {

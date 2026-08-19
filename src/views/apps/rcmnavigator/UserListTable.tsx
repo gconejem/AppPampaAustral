@@ -724,8 +724,6 @@ const UserListTable2 = ({
     const out: AutoTemplateKey[] = []
 
     if (norm.includes('densidad')) out.push('DENSIDAD')
-    if (norm.includes('hormigon') || norm.includes('compresion')) out.push('HORMIGON')
-
     return out
   }
 

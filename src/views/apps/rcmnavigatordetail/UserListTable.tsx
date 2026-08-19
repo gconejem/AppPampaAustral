@@ -45,6 +45,10 @@ import DialogActions from '@mui/material/DialogActions'
 import CircularProgress from '@mui/material/CircularProgress'
 import { styled } from '@mui/material/styles'
 import Tooltip from '@mui/material/Tooltip'
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { es } from 'date-fns/locale'
 
 // Icons
 import VisibilityIcon from '@mui/icons-material/Visibility'
@@ -165,8 +169,6 @@ function normalizeText(v: any) {
 }
 
 const countDetailedEnsayos = (services: any[] = []) => {
-  const countedSkus = new Set<string>()
-
   return services.reduce((total, service) => {
     const rawChildren = Array.isArray(service?.subProductos) && service.subProductos.length > 0
       ? service.subProductos
@@ -176,32 +178,127 @@ const countDetailedEnsayos = (services: any[] = []) => {
           ? service.productosEnPaquete
           : (Array.isArray(service?.producto?.productosEnPaquete) ? service.producto.productosEnPaquete : [])
 
-    const children = Array.from(new Map(rawChildren.map((child: any, index: number) => {
-      const key = String(child?.sku ?? child?.producto?.sku ?? child?.id ?? child?.producto?.productoId ?? `${child?.nombre ?? ''}-${index}`).trim()
-
-      return [key, child] as const
-    })).values())
+    const children = rawChildren
 
     if (children.length > 0) {
       return total + children.reduce((count: number, child: any) => {
-        const sku = String(child?.sku ?? child?.producto?.sku ?? child?.id ?? child?.producto?.productoId ?? '').trim()
+        const type = normalizeText(child?.tipo ?? child?.producto?.tipo)
 
-        if (!sku || countedSkus.has(sku)) return count
-
-        countedSkus.add(sku)
-
-        return count + 1
+        return count + (type.includes('ensayo') ? getSkuQuantity(child) : 0)
       }, 0)
     }
 
     const tipo = normalizeText(service?.tipo ?? service?.producto?.tipo)
-    const sku = String(service?.codigo ?? service?.sku ?? service?.producto?.sku ?? service?.productoId ?? '').trim()
 
-    if (sku && countedSkus.has(sku)) return total
-    if (sku) countedSkus.add(sku)
-
-    return total + (tipo.includes('ensayo') ? 1 : 0)
+    return total + (tipo.includes('ensayo') ? getSkuQuantity(service) : 0)
   }, 0)
+}
+
+const getSkuTypeLabel = (raw?: any) => {
+  const type = normalizeText(raw)
+
+  if (type.includes('ensayo')) return 'Ensayo'
+  if (type.includes('terreno')) return 'Terreno'
+  if (type.includes('servicio')) return 'Servicio'
+
+  return null
+}
+
+const getSkuQuantity = (service: any) => {
+  const quantity = Number(service?.cantidad ?? 1)
+
+  return Number.isFinite(quantity) && quantity > 0 ? quantity : 1
+}
+
+const normalizeSkuState = (raw?: any) => {
+  const state = String(raw ?? 'CODIFICADO').toUpperCase()
+
+  if (state.includes('ENSAYADO')) return 'ENSAYADO'
+  if (state.includes('PROCESO')) return 'EN_PROCESO'
+
+  return 'CODIFICADO'
+}
+
+const consolidateSkuServices = (services: any[] = []) => {
+  const sources: any[] = []
+
+  services.forEach(service => {
+    if (service?._isPaqueteHeader) return
+
+    const children = Array.isArray(service?.subProductosCodificados) && service.subProductosCodificados.length > 0
+      ? service.subProductosCodificados
+      : Array.isArray(service?.subProductos) && service.subProductos.length > 0
+        ? service.subProductos
+        : service?._isPaqueteSubItem
+          ? []
+          : []
+
+    if (service?.esPaquete && children.length > 0) {
+      children.forEach((child: any, index: number) => {
+        sources.push({
+          ...child,
+          _source: child,
+          _sourceKey: String(child?._syntheticKey ?? child?.id ?? `${service.id}-sub-${index}`),
+          tipo: child?.tipo ?? child?.producto?.tipo ?? null
+        })
+      })
+
+      return
+    }
+
+    if (service?._isPaqueteSubItem || !service?.esPaquete) {
+      sources.push({
+        ...service,
+        _source: service,
+        _sourceKey: String(service?._syntheticKey ?? service?.id ?? sources.length),
+        tipo: service?.tipo ?? service?.producto?.tipo ?? null
+      })
+    }
+  })
+
+  const groups = new Map<string, any>()
+
+  sources.forEach(source => {
+    const sku = String(source?.codigo ?? source?.sku ?? source?.producto?.sku ?? '').trim()
+    const type = getSkuTypeLabel(source?.tipo ?? source?.producto?.tipo)
+
+    if (!sku || !type) return
+
+    const existing = groups.get(sku)
+    const sourceState = normalizeSkuState(source?.estado ?? source?.estadoOperativo ?? 'CODIFICADO')
+
+    if (existing) {
+      existing.entries.push(source)
+      existing.cantidad += getSkuQuantity(source)
+      existing.completedQuantity += sourceState === 'ENSAYADO' ? getSkuQuantity(source) : 0
+      existing.nombre = existing.nombre || source?.nombre || source?.producto?.nombre || '-'
+      existing.ensayadores = Array.from(new Set([...existing.ensayadores, String(source?.ensayador ?? '').trim()].filter(Boolean)))
+      existing.estado = existing.completedQuantity >= existing.cantidad
+        ? 'ENSAYADO'
+        : existing.entries.some((entry: any) => normalizeSkuState(entry?.estado ?? entry?.estadoOperativo) === 'EN_PROCESO')
+          ? 'EN_PROCESO'
+          : 'CODIFICADO'
+
+      return
+    }
+
+    groups.set(sku, {
+      key: sku,
+      sku,
+      nombre: source?.nombre ?? source?.producto?.nombre ?? '-',
+      norma: source?.norma ?? source?.producto?.norma ?? null,
+      tipo: type,
+      cantidad: getSkuQuantity(source),
+      completedQuantity: sourceState === 'ENSAYADO' ? getSkuQuantity(source) : 0,
+      estado: sourceState,
+      codigo: sku,
+      ensayador: String(source?.ensayador ?? '').trim() || null,
+      entries: [source],
+      ensayadores: String(source?.ensayador ?? '').trim() ? [String(source.ensayador).trim()] : []
+    })
+  })
+
+  return Array.from(groups.values())
 }
 
 // helper: obtener color de estado administrativo (acepta value o label)
@@ -720,6 +817,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [gestionarEnsayadorGlobal, setGestionarEnsayadorGlobal] = useState('')
   const [gestionarEnsayadores, setGestionarEnsayadores] = useState<Record<string, string>>({})
   const [gestionarFechasAsignacionEnsayador, setGestionarFechasAsignacionEnsayador] = useState<Record<string, string>>({})
+  const [gestionarFechasInicioEnsayo, setGestionarFechasInicioEnsayo] = useState<Record<string, string>>({})
+  const [gestionarFechasFinEnsayo, setGestionarFechasFinEnsayo] = useState<Record<string, string>>({})
   const [gestionarFechasEnsayoOpen, setGestionarFechasEnsayoOpen] = useState<Record<string, boolean>>({})
   const [gestionarEstados, setGestionarEstados] = useState<Record<string, string>>({})
   const [gestionarSaving, setGestionarSaving] = useState(false)
@@ -754,6 +853,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setGestionarEnsayadorGlobal('')
     setGestionarEnsayadores({})
     setGestionarFechasAsignacionEnsayador({})
+    setGestionarFechasInicioEnsayo({})
+    setGestionarFechasFinEnsayo({})
     setGestionarFechasEnsayoOpen({})
     setGestionarEstados({})
     setGestionarObservaciones({})
@@ -801,6 +902,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         return {
           ...s,
           norma: s?.norma ?? match?.produto?.norma ?? match?.producto?.norma ?? null,
+          ensayador: s?.ensayador ?? match?.ensayador ?? null,
           estado: estadoResuelto,
           subProductosCodificados
         }
@@ -895,6 +997,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       const estadosInit: Record<string, string> = {}
       const ensayadoresInit: Record<string, string> = {}
       const fechasAsignacionInit: Record<string, string> = {}
+      const fechasInicioEnsayoInit: Record<string, string> = {}
+      const fechasFinEnsayoInit: Record<string, string> = {}
       const observacionesInit: Record<string, string> = {}
 
       hydratedExpandedCombined.forEach((s: any) => {
@@ -903,6 +1007,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         estadosInit[key] = s.estado ?? 'CODIFICADO'
         if (s.ensayador) ensayadoresInit[key] = s.ensayador
         if (s.fechaAsignacionEnsayador) fechasAsignacionInit[key] = toDateInputValue(s.fechaAsignacionEnsayador)
+        if (s.fechaInicioEnsayo) fechasInicioEnsayoInit[key] = toDateTimeInputValue(s.fechaInicioEnsayo)
+        if (s.fechaFinEnsayo) fechasFinEnsayoInit[key] = toDateTimeInputValue(s.fechaFinEnsayo)
 
         if (typeof s.observacion === 'string' && s.observacion.trim()) {
           observacionesInit[key] = s.observacion
@@ -911,6 +1017,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       setGestionarEstados(estadosInit)
       setGestionarEnsayadores(ensayadoresInit)
       setGestionarFechasAsignacionEnsayador(fechasAsignacionInit)
+      setGestionarFechasInicioEnsayo(fechasInicioEnsayoInit)
+      setGestionarFechasFinEnsayo(fechasFinEnsayoInit)
       setGestionarObservaciones(observacionesInit)
     } catch (e) {
       console.error('Error loading gestionar ensayos:', e)
@@ -975,12 +1083,18 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             const observacionPrev = String(s.observacion ?? '').trim()
             const fechaAsignacionNueva = String(gestionarFechasAsignacionEnsayador[sKey] ?? '').trim()
             const fechaAsignacionPrev = toDateInputValue(s.fechaAsignacionEnsayador)
+            const fechaInicioEnsayoNueva = String(gestionarFechasInicioEnsayo[sKey] ?? '').trim()
+            const fechaInicioEnsayoPrev = toDateTimeInputValue(s.fechaInicioEnsayo)
+            const fechaFinEnsayoNueva = String(gestionarFechasFinEnsayo[sKey] ?? '').trim()
+            const fechaFinEnsayoPrev = toDateTimeInputValue(s.fechaFinEnsayo)
 
             if (
               estadoNuevo === estadoPrev &&
               ensayadorNuevo === ensayadorPrev &&
               observacionNueva === observacionPrev &&
-              fechaAsignacionNueva === fechaAsignacionPrev
+              fechaAsignacionNueva === fechaAsignacionPrev &&
+              fechaInicioEnsayoNueva === fechaInicioEnsayoPrev &&
+              fechaFinEnsayoNueva === fechaFinEnsayoPrev
             ) return
 
             await fetch(`/api/servicioMuestra/${parentId}/history`, {
@@ -995,6 +1109,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 ensayoServicio: s.nombre,
                 observacion: observacionNueva || null,
                 fechaAccion: fechaAsignacionNueva || null,
+                fechaInicioEnsayo: fechaInicioEnsayoNueva || null,
+                fechaFinEnsayo: fechaFinEnsayoNueva || null,
                 skipServicioEstadoUpdate: true
               })
             })
@@ -1014,13 +1130,19 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             const observacionPrev = String(s.observacion ?? '').trim()
             const fechaAsignacionNueva = String(gestionarFechasAsignacionEnsayador[sKey] ?? '').trim()
             const fechaAsignacionPrev = toDateInputValue(s.fechaAsignacionEnsayador)
+            const fechaInicioEnsayoNueva = String(gestionarFechasInicioEnsayo[sKey] ?? '').trim()
+            const fechaInicioEnsayoPrev = toDateTimeInputValue(s.fechaInicioEnsayo)
+            const fechaFinEnsayoNueva = String(gestionarFechasFinEnsayo[sKey] ?? '').trim()
+            const fechaFinEnsayoPrev = toDateTimeInputValue(s.fechaFinEnsayo)
 
             // Guardar si cambió estado, ensayador u observación
             if (
               estadoNuevo === estadoPrev &&
               ensayadorNuevo === ensayadorPrev &&
               observacionNueva === observacionPrev &&
-              fechaAsignacionNueva === fechaAsignacionPrev
+              fechaAsignacionNueva === fechaAsignacionPrev &&
+              fechaInicioEnsayoNueva === fechaInicioEnsayoPrev &&
+              fechaFinEnsayoNueva === fechaFinEnsayoPrev
             ) return
 
             await fetch(`/api/servicioMuestra/${s.id}/history`, {
@@ -1034,7 +1156,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 aplicadoA: ensayadorNuevo || null,
                 ensayoServicio: s.nombre,
                 observacion: observacionNueva || null,
-                fechaAccion: fechaAsignacionNueva || null
+                fechaAccion: fechaAsignacionNueva || null,
+                fechaInicioEnsayo: fechaInicioEnsayoNueva || null,
+                fechaFinEnsayo: fechaFinEnsayoNueva || null
               })
             })
           })
@@ -2976,6 +3100,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return `${y}-${m}-${day}`
   }
 
+  const toDateTimeInputValue = (raw: any) => {
+    if (!raw) return ''
+
+    const date = new Date(raw)
+
+    if (Number.isNaN(date.getTime())) return ''
+
+    const pad = (value: number) => String(value).padStart(2, '0')
+
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  }
+
+  const getNowDateTimeInputValue = () => toDateTimeInputValue(new Date())
+
   const getTodayDateInputValue = () => toDateInputValue(new Date())
 
   const getOperationalLabel = (raw?: string | null) => {
@@ -4671,7 +4809,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                 </TableCell>
                                 <TableCell>
                                   <Typography sx={{ fontSize: '0.84rem', color: '#374151' }}>
-                                    {servicio.ensayador ?? row?.ensayador ?? '-'}
+                                    {servicio.ensayador ?? '-'}
                                   </Typography>
                                 </TableCell>
                                 <TableCell align='center'>
@@ -4725,7 +4863,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             : (Array.isArray(muestraFromRcm?.probetas) ? muestraFromRcm.probetas : [])
 
           const estadoTipo = String(rcmData?.rcmType ?? 'MUESTRA').toUpperCase()
-          const estadoActual = row?.estadoMuestra ?? row?.estadoOperativo ?? 'CODIFICADO'
+          let estadoActual = row?.estadoMuestra ?? row?.estadoOperativo ?? 'CODIFICADO'
 
           const closeModal = () => {
             resetSelectedDetail()
@@ -4867,8 +5005,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const informeEnsayo = rcmData?.informeEnsayo ?? true
           const elemento = muestra?.elemento || rcmData?.elemento || '-'
           const grado = muestra?.grado || rcmData?.grado || '-'
-          const ensayador = row?.ensayador ?? rcmData?.ordenTrabajo?.user?.name ?? '-'
-          const ensayosCount = countDetailedEnsayos(serviciosMuestra)
+          const displayServices = consolidateSkuServices(serviciosMuestra)
+          const ensayosCount = displayServices.length
+          const ensayosPendientes = displayServices.some((service: any) => service.tipo === 'Ensayo' && service.completedQuantity < service.cantidad)
+
+          if (displayServices.some((service: any) => service.tipo === 'Ensayo')) {
+            estadoActual = ensayosPendientes ? 'EN_PROCESO' : 'ENSAYADO'
+          }
+
           const submuestrasCount = probetas.length
           const observaciones = muestra?.observaciones ?? rcmData?.observaciones ?? '-'
           const areaNorm = normalizeText(area)
@@ -5061,14 +5205,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {serviciosMuestra.length === 0 ? (
+                        {displayServices.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={6} align='center' sx={{ py: 3 }}>
                               <Typography color='text.secondary'>No hay ensayos cargados</Typography>
                             </TableCell>
                           </TableRow>
                         ) : (
-                          serviciosMuestra.map((servicio: any, idx: number) => {
+                          displayServices.map((servicio: any, idx: number) => {
                             const servicioId = servicio.id ?? servicio.servicioMuestraId ?? servicio.servicioId ?? servicio._id ?? null
 
                             const estadoRaw = resolveServiceStateFromRcm(
@@ -5100,9 +5244,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                       <Typography sx={{ fontSize: '0.92rem', fontWeight: 700, color: '#111827', lineHeight: 1.15 }}>
                                         {servicio.nombre ?? servicio.servicio?.nombre ?? '-'}
                                       </Typography>
-                                      {esPaquete && (
-                                        <Chip label='Paquete' size='small' sx={{ height: 18, fontSize: '0.68rem', fontWeight: 700, bgcolor: '#1d4ed8', color: '#fff', borderRadius: '6px', '& .MuiChip-label': { px: 0.75 } }} />
-                                      )}
+                                      <Chip label={servicio.tipo} size='small' variant='outlined' sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }} />
                                     </Box>
                                     <Typography sx={{ fontSize: '0.78rem', color: '#818b9a' }}>
                                       {servicio.norma ?? '-'}
@@ -5113,15 +5255,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                   </TableCell>
                                   <TableCell>
                                     <Typography sx={{ fontSize: '0.92rem', color: servicio.esPaquete ? '#9ca3af' : '#374151' }}>
-                                      {servicio.esPaquete ? '-' : servicio.ensayador ?? ensayador}
+                                      {servicio.ensayadores?.length ? servicio.ensayadores.join(' / ') : servicio.ensayador ?? '-'}
                                     </Typography>
                                   </TableCell>
                                   <TableCell align='center'>
-                                    {servicio.esPaquete ? (
-                                      <Typography sx={{ fontSize: '0.82rem', color: '#9ca3af' }}>-</Typography>
-                                    ) : (
-                                      <Chip label={getOperationalLabel(estadoRaw)} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.74rem', ...estadoPillSx(String(estadoRaw)) }} />
-                                    )}
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.35 }}>
+                                      <Chip label={getOperationalLabel(servicio.estado ?? estadoRaw)} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.74rem', ...estadoPillSx(String(servicio.estado ?? estadoRaw)) }} />
+                                      {servicio.completedQuantity < servicio.cantidad ? (
+                                        <Typography variant='caption' color='text.secondary'>{`${servicio.completedQuantity}/${servicio.cantidad} completados`}</Typography>
+                                      ) : null}
+                                    </Box>
                                   </TableCell>
                                   <TableCell>
                                     <Typography sx={{ fontSize: '0.9rem', color: '#9ca3af' }}>{servicio.observacion ?? '—'}</Typography>
@@ -5270,7 +5413,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const row = gestionarRow
           const rcmData = gestionarRcmData
           const estadoTipo = String(rcmData?.rcmType ?? 'MUESTRA').toUpperCase()
-          const estadoActual = row?.estadoMuestra ?? row?.estadoOperativo ?? 'CODIFICADO'
+          let estadoActual = row?.estadoMuestra ?? row?.estadoOperativo ?? 'CODIFICADO'
 
           const tipoChipSx = estadoTipo === 'MUESTRA'
             ? { bgcolor: '#ede9fe', color: '#5b21b6', borderColor: '#c4b5fd' }
@@ -5320,26 +5463,42 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             return { color: '#475569', borderColor: 'rgba(100,116,139,.4)', bgcolor: 'rgba(148,163,184,.14)' }
           }
 
-          const countableServices = gestionarServicios.filter((s: any) => {
-            if (s._isPaqueteHeader) return false
+          const displayServices = consolidateSkuServices(gestionarServicios).map((group: any) => {
+            const entries = group.entries
 
-            return normalizeText(s.tipo).includes('ensayo')
+            const completedQuantity = entries.reduce((total: number, entry: any) => {
+              const key = String(entry._syntheticKey ?? entry.id)
+              const state = getEstadoServicioConProbetas(entry, gestionarEstados[key] ?? entry.estado ?? 'CODIFICADO')
+
+              return total + (String(state).toUpperCase().includes('ENSAYADO') ? getSkuQuantity(entry) : 0)
+            }, 0)
+
+            const liveState = completedQuantity >= group.cantidad
+              ? 'ENSAYADO'
+              : entries.some((entry: any) => {
+                const key = String(entry._syntheticKey ?? entry.id)
+
+                return String(getEstadoServicioConProbetas(entry, gestionarEstados[key] ?? entry.estado ?? 'CODIFICADO')).toUpperCase().includes('PROCESO')
+              })
+                ? 'EN_PROCESO'
+                : 'CODIFICADO'
+
+            const liveEnsayadores = Array.from(new Set(entries.map((entry: any) => {
+              const key = String(entry._syntheticKey ?? entry.id)
+
+              return String(gestionarEnsayadores[key] ?? entry.ensayador ?? '').trim()
+            }).filter(Boolean)))
+
+            return { ...group, estado: liveState, completedQuantity, ensayadores: liveEnsayadores }
           })
 
-          const getServiceQuantity = (service: any) => {
-            const quantity = Number(service?.cantidad ?? 1)
+          const countableServices = displayServices.filter((service: any) => service.tipo === 'Ensayo')
+          const totalServicios = displayServices.reduce((total: number, service: any) => total + service.cantidad, 0)
+          const completados = displayServices.reduce((total: number, service: any) => total + service.completedQuantity, 0)
 
-            return Number.isFinite(quantity) && quantity > 0 ? quantity : 1
+          if (countableServices.length > 0) {
+            estadoActual = completados < totalServicios ? 'EN_PROCESO' : 'ENSAYADO'
           }
-
-          const totalServicios = countableServices.reduce((total: number, service: any) => total + getServiceQuantity(service), 0)
-
-          const completados = countableServices.reduce((total: number, s: any) => {
-            const key = String(s._syntheticKey ?? s.id)
-            const estadoCalculado = getEstadoServicioConProbetas(s, gestionarEstados[key] ?? s.estado ?? 'CODIFICADO')
-
-            return total + (String(estadoCalculado ?? '').toUpperCase().includes('ENSAYADO') ? getServiceQuantity(s) : 0)
-          }, 0)
 
           return (
             <>
@@ -5497,6 +5656,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                       <Table size='small'>
                         <colgroup>
                           <col style={{ width: 72 }} />
+                          <col style={{ width: 86 }} />
                           <col />
                           <col style={{ width: 74 }} />
                           <col style={{ width: 230 }} />
@@ -5504,29 +5664,35 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                           <col style={{ width: 108 }} />
                           <col style={{ width: 128 }} />
                           <col style={{ width: 112 }} />
+                          <col style={{ width: 72 }} />
                           <col style={{ width: 120 }} />
                         </colgroup>
                         <TableHead>
                           <TableRow sx={{ bgcolor: '#f9fafb' }}>
                             <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 72 }}>SKU</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 86 }}>TIPO</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>ENSAYO / SERVICIO</TableCell>
                             <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 74 }}>CANT</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 230 }}>ENSAYADOR</TableCell>
                             <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 122 }}>F. ASIGN.</TableCell>
                             <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 108 }}>ESTADO</TableCell>
                             <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 120 }}>ACCIÓN</TableCell>
-                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 112 }}>F. ENSAYO</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 220 }}>FECHA ENSAYO</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 72 }}>RES.</TableCell>
                             <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 120 }}>OBS.</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {gestionarServicios.length === 0 ? (
+                          {displayServices.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={9} align='center' sx={{ py: 3, color: '#9ca3af' }}>Sin ensayos registrados</TableCell>
+                              <TableCell colSpan={11} align='center' sx={{ py: 3, color: '#9ca3af' }}>Sin ensayos registrados</TableCell>
                             </TableRow>
                           ) : (
-                            gestionarServicios.map((s: any) => {
-                              const sKey = String(s._syntheticKey ?? s.id)
+                            displayServices.map((group: any) => {
+                              const sourceEntries = group.entries
+                              const s = { ...sourceEntries[0], ...group, _isPaqueteHeader: false, _isPaqueteSubItem: false }
+                              const sKey = group.key
+                              const sourceDateKeys = sourceEntries.map((entry: any) => String(entry._syntheticKey ?? entry.id))
 
                               if (s._isPaqueteHeader) {
                                 const subCount = gestionarServicios.filter((sub: any) => sub._paqueteParentId === s.id).length
@@ -5551,23 +5717,22 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                         {s.cantidad ?? 1}
                                       </Typography>
                                     </TableCell>
-                                    <TableCell colSpan={6} />
+                                    <TableCell colSpan={7} />
                                   </TableRow>
                                 )
                               }
 
-                              const estadoActualServicio = getEstadoServicioConProbetas(s, gestionarEstados[sKey] ?? s.estado ?? 'CODIFICADO')
-                              const ensayadorActual = gestionarEnsayadores[sKey] ?? s.ensayador ?? ''
+                              const estadoActualServicio = group.estado
+
+                              const ensayadorActual = group.ensayadores.join(' / ') || s.ensayador || ''
 
                               const fechaAsignacionActual =
-                                gestionarFechasAsignacionEnsayador[sKey] ??
+                                sourceDateKeys.map(key => gestionarFechasAsignacionEnsayador[key]).find(Boolean) ??
                                 toDateInputValue(s.fechaAsignacionEnsayador) ??
                                 ''
 
-                              const fechaInicioEnsayoActual = s.fechaInicioEnsayo ?? null
-                              const fechaFinEnsayoActual = s.fechaFinEnsayo ?? null
-                              const tieneFechasEnsayo = Boolean(fechaInicioEnsayoActual || fechaFinEnsayoActual)
-                              const fechasEnsayoAbiertas = Boolean(gestionarFechasEnsayoOpen[sKey])
+                              const fechaInicioEnsayoActual = sourceDateKeys.map(key => gestionarFechasInicioEnsayo[key]).find(Boolean) ?? toDateTimeInputValue(s.fechaInicioEnsayo)
+                              const fechaFinEnsayoActual = sourceDateKeys.map(key => gestionarFechasFinEnsayo[key]).find(Boolean) ?? toDateTimeInputValue(s.fechaFinEnsayo)
 
                               const tieneEnsayadorAsignado = hasAssignedEnsayador(s, ensayadorActual)
                               const puedeIniciarServicio = puedeIniciarEnsayos && tieneEnsayadorAsignado
@@ -5584,6 +5749,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                     <Box sx={{ display: 'inline-flex', px: 0.9, py: 0.2, borderRadius: 0.8, bgcolor: s._isPaqueteSubItem ? '#f0f4ff' : '#f1f5f9', fontSize: '0.76rem', fontWeight: 700, color: s._isPaqueteSubItem ? '#3730a3' : '#374151', ml: s._isPaqueteSubItem ? 1.5 : 0 }}>
                                       {s.codigo ?? s.id}
                                     </Box>
+                                  </TableCell>
+                                  <TableCell align='center'>
+                                    <Chip label={group.tipo} size='small' variant='outlined' sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }} />
                                   </TableCell>
                                   <TableCell sx={{ pl: s._isPaqueteSubItem ? 3 : undefined }}>
                                     <Typography sx={{ fontSize: '0.86rem', fontWeight: 600, color: '#111827', lineHeight: 1.3 }}>{s.nombre}</Typography>
@@ -5602,15 +5770,26 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                       onChange={e => {
                                         const nextEnsayador = String(e.target.value)
 
-                                        setGestionarEnsayadores(prev => ({ ...prev, [sKey]: nextEnsayador }))
+                                        setGestionarEnsayadores(prev => {
+                                          const next = { ...prev }
+
+                                          sourceEntries.forEach((entry: any) => {
+                                            next[String(entry._syntheticKey ?? entry.id)] = nextEnsayador
+                                          })
+
+                                          return next
+                                        })
                                         setGestionarFechasAsignacionEnsayador(prev => {
-                                          if (!nextEnsayador.trim()) {
-                                            const { [sKey]: _removed, ...rest } = prev
+                                          const next = { ...prev }
 
-                                            return rest
-                                          }
+                                          sourceEntries.forEach((entry: any) => {
+                                            const key = String(entry._syntheticKey ?? entry.id)
 
-                                          return { ...prev, [sKey]: getTodayDateInputValue() }
+                                            if (!nextEnsayador.trim()) delete next[key]
+                                            else next[key] = getTodayDateInputValue()
+                                          })
+
+                                          return next
                                         })
                                       }}
                                       sx={{
@@ -5672,13 +5851,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                           const nextFecha = String(e.target.value ?? '').trim()
 
                                           setGestionarFechasAsignacionEnsayador(prev => {
-                                            if (!nextFecha) {
-                                              const { [sKey]: _removed, ...rest } = prev
+                                            const next = { ...prev }
 
-                                              return rest
-                                            }
+                                            sourceDateKeys.forEach(key => {
+                                              if (!nextFecha) delete next[key]
+                                              else next[key] = nextFecha
+                                            })
 
-                                            return { ...prev, [sKey]: nextFecha }
+                                            return next
                                           })
                                         }}
                                         style={{
@@ -5699,6 +5879,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                       variant='outlined'
                                       sx={{ fontWeight: 700, fontSize: '0.74rem', ...estadoPillSx(estadoActualServicio) }}
                                     />
+                                    {group.completedQuantity < group.cantidad ? (
+                                      <Typography variant='caption' color='text.secondary'>{`${group.completedQuantity}/${group.cantidad} completados`}</Typography>
+                                    ) : null}
                                   </TableCell>
                                   <TableCell align='center'>
                                     {submuestrasServicio.length > 0 ? (
@@ -5755,7 +5938,26 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                             size='small'
                                             variant='outlined'
                                             disabled={!puedeIniciarServicio}
-                                            onClick={() => setGestionarEstados(prev => ({ ...prev, [sKey]: 'EN_PROCESO' }))}
+                                            onClick={() => {
+                                              const today = getNowDateTimeInputValue()
+
+                                              setGestionarEstados(prev => {
+                                                const next = { ...prev }
+
+                                                sourceEntries.forEach((entry: any) => { next[String(entry._syntheticKey ?? entry.id)] = 'EN_PROCESO' })
+
+                                                return next
+                                              })
+                                              setGestionarFechasInicioEnsayo(prev => {
+                                                const next = { ...prev }
+
+                                                sourceDateKeys.forEach(key => {
+                                                  if (!next[key]) next[key] = today
+                                                })
+
+                                                return next
+                                              })
+                                            }}
                                             sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1, textTransform: 'none', borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff', minWidth: 0 }}
                                           >
                                             <i className='ri-play-fill' style={{ fontSize: 12, marginRight: 3 }} />Iniciar
@@ -5766,7 +5968,26 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                       <Button
                                         size='small'
                                         variant='outlined'
-                                        onClick={() => setGestionarEstados(prev => ({ ...prev, [sKey]: 'ENSAYADO' }))}
+                                        onClick={() => {
+                                          const now = getNowDateTimeInputValue()
+
+                                          setGestionarEstados(prev => {
+                                            const next = { ...prev }
+
+                                            sourceEntries.forEach((entry: any) => { next[String(entry._syntheticKey ?? entry.id)] = 'ENSAYADO' })
+
+                                            return next
+                                          })
+                                          setGestionarFechasFinEnsayo(prev => {
+                                            const next = { ...prev }
+
+                                            sourceDateKeys.forEach(key => {
+                                              if (!next[key]) next[key] = now
+                                            })
+
+                                            return next
+                                          })
+                                        }}
                                         sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1, textTransform: 'none', borderColor: '#bbf7d0', color: '#16a34a', bgcolor: '#f0fdf4', minWidth: 0 }}
                                       >
                                         <i className='ri-check-line' style={{ fontSize: 12, marginRight: 3 }} />Finalizar
@@ -5776,38 +5997,65 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                     )}
                                   </TableCell>
                                   <TableCell align='center'>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.4 }}>
-                                      <Button
-                                        size='small'
-                                        variant='outlined'
-                                        disabled={!tieneFechasEnsayo}
-                                        onClick={() => setGestionarFechasEnsayoOpen(prev => ({ ...prev, [sKey]: !prev[sKey] }))}
-                                        sx={{
-                                          minWidth: 0,
-                                          px: 0.7,
-                                          py: 0.15,
-                                          fontSize: '0.72rem',
-                                          borderColor: tieneFechasEnsayo ? '#93c5fd' : '#d1d5db',
-                                          color: tieneFechasEnsayo ? '#1d4ed8' : '#9ca3af',
-                                          bgcolor: tieneFechasEnsayo ? '#eff6ff' : '#f3f4f6'
-                                        }}
-                                      >
-                                        <i className={fechasEnsayoAbiertas ? 'ri-subtract-line' : 'ri-add-line'} style={{ fontSize: 12 }} />
-                                      </Button>
-                                      {fechasEnsayoAbiertas && (
-                                        <Box sx={{ minWidth: 106, px: 0.6, py: 0.5, borderRadius: 1, border: '1px dashed #cbd5e1', bgcolor: '#f8fafc' }}>
-                                          <Typography sx={{ fontSize: '0.68rem', color: '#334155', whiteSpace: 'nowrap' }}>
-                                            I: {fechaInicioEnsayoActual ? formatDateDDMMYYYY(fechaInicioEnsayoActual) : '-'}
-                                          </Typography>
-                                          <Typography sx={{ fontSize: '0.68rem', color: '#334155', whiteSpace: 'nowrap' }}>
-                                            F: {fechaFinEnsayoActual ? formatDateDDMMYYYY(fechaFinEnsayoActual) : '-'}
-                                          </Typography>
+                                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.45, minWidth: 205 }}>
+                                        <Box sx={{ display: 'grid', gridTemplateColumns: '42px 1fr', alignItems: 'center', gap: 0.5 }}>
+                                          <Typography variant='caption' sx={{ fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Inicio</Typography>
+                                          <DateTimePicker
+                                            value={fechaInicioEnsayoActual ? new Date(fechaInicioEnsayoActual) : null}
+                                            onChange={value => {
+                                              const nextValue = value ? toDateTimeInputValue(value) : ''
+
+                                              setGestionarFechasInicioEnsayo(prev => {
+                                                const next = { ...prev }
+
+                                                sourceDateKeys.forEach(key => {
+                                                  if (nextValue) next[key] = nextValue
+                                                  else delete next[key]
+                                                })
+
+                                                return next
+                                              })
+                                            }}
+                                            format='dd-MM-yy HH:mm'
+                                            ampm={false}
+                                            slotProps={{ textField: { size: 'small', fullWidth: true, sx: { '& .MuiInputBase-input': { py: 0.5, fontSize: '0.72rem' } } } }}
+                                          />
                                         </Box>
-                                      )}
-                                      {!tieneFechasEnsayo && (
-                                        <Typography sx={{ fontSize: '0.68rem', color: '#9ca3af' }}>-</Typography>
-                                      )}
-                                    </Box>
+                                        <Box sx={{ display: 'grid', gridTemplateColumns: '42px 1fr', alignItems: 'center', gap: 0.5 }}>
+                                          <Typography variant='caption' sx={{ fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Fin</Typography>
+                                          <DateTimePicker
+                                            value={fechaFinEnsayoActual ? new Date(fechaFinEnsayoActual) : null}
+                                            onChange={value => {
+                                              const nextValue = value ? toDateTimeInputValue(value) : ''
+
+                                              setGestionarFechasFinEnsayo(prev => {
+                                                const next = { ...prev }
+
+                                                sourceDateKeys.forEach(key => {
+                                                  if (nextValue) next[key] = nextValue
+                                                  else delete next[key]
+                                                })
+
+                                                return next
+                                              })
+                                            }}
+                                            format='dd-MM-yy HH:mm'
+                                            ampm={false}
+                                            slotProps={{ textField: { size: 'small', fullWidth: true, sx: { '& .MuiInputBase-input': { py: 0.5, fontSize: '0.72rem' } } } }}
+                                          />
+                                        </Box>
+                                      </Box>
+                                    </LocalizationProvider>
+                                  </TableCell>
+                                  <TableCell align='center'>
+                                    {['1005', '1006'].includes(String(group.sku)) ? (
+                                      <IconButton size='small' color='primary' aria-label={`Ingresar resultados para SKU ${group.sku}`} title='Ingresar resultados'>
+                                        <i className='ri-add-line' style={{ fontSize: 17 }} />
+                                      </IconButton>
+                                    ) : (
+                                      <Typography variant='body2' color='text.disabled'>-</Typography>
+                                    )}
                                   </TableCell>
                                   <TableCell align='center'>
                                     <TextField

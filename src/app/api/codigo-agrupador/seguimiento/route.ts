@@ -24,9 +24,6 @@ const normSku = (v: unknown) => String(v ?? '').trim()
 
 // Reglas de informes automáticos por SKU (definidas por negocio)
 const AUTO_SKU_DENSIDAD = '1000'
-const AUTO_SKU_COMPRESION = '2006'
-// Paquetes que incluyen compresión (ej: 2014); se puede extender.
-const AUTO_SKUS_COMPRESION_PACKAGES = new Set<string>(['2014'])
 
 const getAutoTemplateForServicio = (servicio: { codigo?: unknown; nombre?: unknown }) => {
   const sku = normSku(servicio?.codigo)
@@ -35,11 +32,6 @@ const getAutoTemplateForServicio = (servicio: { codigo?: unknown; nombre?: unkno
   // (1) Informe Densidad -> SKU 1000 “Densidad en terreno - Método Nuclear”
   if (sku === AUTO_SKU_DENSIDAD) return 'DENSIDAD' as const
   if (nm.includes('densidad') && (nm.includes('terreno') || nm.includes('nuclear'))) return 'DENSIDAD' as const
-
-  // (2) Informe Hormigón -> SKU 2006 “Compresión” (directo o dentro de paquete con compresión)
-  if (sku === AUTO_SKU_COMPRESION) return 'HORMIGON' as const
-  if (AUTO_SKUS_COMPRESION_PACKAGES.has(sku)) return 'HORMIGON' as const
-  if (nm.includes('compresion')) return 'HORMIGON' as const
 
   return null
 }
