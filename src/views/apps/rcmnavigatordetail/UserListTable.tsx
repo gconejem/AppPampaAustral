@@ -819,6 +819,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [gestionarFechasAsignacionEnsayador, setGestionarFechasAsignacionEnsayador] = useState<Record<string, string>>({})
   const [gestionarFechasInicioEnsayo, setGestionarFechasInicioEnsayo] = useState<Record<string, string>>({})
   const [gestionarFechasFinEnsayo, setGestionarFechasFinEnsayo] = useState<Record<string, string>>({})
+  const [gestionarFechasInicioSubmuestra, setGestionarFechasInicioSubmuestra] = useState<Record<string, string>>({})
+  const [gestionarFechasFinSubmuestra, setGestionarFechasFinSubmuestra] = useState<Record<string, string>>({})
   const [gestionarFechasEnsayoOpen, setGestionarFechasEnsayoOpen] = useState<Record<string, boolean>>({})
   const [gestionarEstados, setGestionarEstados] = useState<Record<string, string>>({})
   const [gestionarSaving, setGestionarSaving] = useState(false)
@@ -855,6 +857,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setGestionarFechasAsignacionEnsayador({})
     setGestionarFechasInicioEnsayo({})
     setGestionarFechasFinEnsayo({})
+    setGestionarFechasInicioSubmuestra({})
+    setGestionarFechasFinSubmuestra({})
     setGestionarFechasEnsayoOpen({})
     setGestionarEstados({})
     setGestionarObservaciones({})
@@ -986,6 +990,36 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
       })
 
+      const servicioSubmuestras = combined.find((service: any) => serviceUsesSubmuestras(service) && service.id)
+      const fechasInicioSubmuestraInit: Record<string, string> = {}
+      const fechasFinSubmuestraInit: Record<string, string> = {}
+
+      if (servicioSubmuestras) {
+        try {
+          const response = await fetch(`/api/servicioMuestra/${servicioSubmuestras.id}/history?ts=${Date.now()}`, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+          })
+
+          const historyRows = response.ok ? await response.json() : []
+
+          if (Array.isArray(historyRows)) {
+            historyRows.forEach((historyRow: any) => {
+              const match = String(historyRow?.ensayoServicio ?? '').match(/Submuestra\s+(\d+)/i)
+
+              if (!match) return
+
+              const subKey = match[1]
+
+              if (historyRow?.fechaInicioEnsayo) fechasInicioSubmuestraInit[subKey] = toDateTimeInputValue(historyRow.fechaInicioEnsayo)
+              if (historyRow?.fechaFinEnsayo) fechasFinSubmuestraInit[subKey] = toDateTimeInputValue(historyRow.fechaFinEnsayo)
+            })
+          }
+        } catch {
+          // La ausencia de historial no impide abrir el modal.
+        }
+      }
+
       const probetas = Array.isArray(muestraFromRcm?.probetas) ? muestraFromRcm.probetas : []
 
       setGestionarServicios(hydratedExpandedCombined)
@@ -1019,6 +1053,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       setGestionarFechasAsignacionEnsayador(fechasAsignacionInit)
       setGestionarFechasInicioEnsayo(fechasInicioEnsayoInit)
       setGestionarFechasFinEnsayo(fechasFinEnsayoInit)
+      setGestionarFechasInicioSubmuestra(fechasInicioSubmuestraInit)
+      setGestionarFechasFinSubmuestra(fechasFinSubmuestraInit)
       setGestionarObservaciones(observacionesInit)
     } catch (e) {
       console.error('Error loading gestionar ensayos:', e)
@@ -1034,6 +1070,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     try {
       const user = getCurrentUserName() ?? 'Usuario'
       const probetasOriginales = Array.isArray(gestionarMuestra?.probetas) ? gestionarMuestra.probetas : []
+      const servicioSubmuestras = gestionarServicios.find((service: any) => serviceUsesSubmuestras(service) && service.id)
 
       const getEstadoDerivedFromSubs = (parentId: number): string => {
         const subItems = gestionarServicios.filter((sub: any) => sub._paqueteParentId === parentId)
@@ -1055,6 +1092,34 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       await Promise.all(
         [
+          ...(servicioSubmuestras
+            ? gestionarProbetas.map(async (probeta: any) => {
+              const subKey = String(probeta?.id ?? probeta?.numero ?? '')
+              const fechaInicio = String(gestionarFechasInicioSubmuestra[subKey] ?? '').trim()
+              const fechaFin = String(gestionarFechasFinSubmuestra[subKey] ?? '').trim()
+
+              if (!fechaInicio && !fechaFin) return
+
+              const response = await fetch(`/api/servicioMuestra/${servicioSubmuestras.id}/history`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tipo: 'Ens',
+                  estAnterior: probeta?.estado ?? 'CODIFICADO',
+                  estNuevo: probeta?.estado ?? 'CODIFICADO',
+                  funcionario: user,
+                  ensayoServicio: `${servicioSubmuestras.nombre} · Submuestra ${probeta?.numero ?? subKey}`,
+                  fechaInicioEnsayo: fechaInicio || null,
+                  fechaFinEnsayo: fechaFin || null,
+                  skipServicioEstadoUpdate: true
+                })
+              })
+
+              if (!response.ok) {
+                throw new Error(`No se pudo guardar la fecha de la submuestra ${subKey}`)
+              }
+            })
+            : []),
           ...gestionarProbetas.map(async (probeta: any) => {
             const probetaId = Number(probeta?.id)
             const estadoNuevo = probeta?.estado ?? 'CODIFICADO'
@@ -1168,7 +1233,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       // Actualizar tabla principal: recalcular estado operativo del RCM
       const subItemsYRegulares = gestionarServicios.filter((s: any) => !s._isPaqueteHeader)
 
-      const todosEstadosServicios = subItemsYRegulares.map((s: any) => {
+      const serviciosSinSubmuestras = subItemsYRegulares.filter((service: any) => !serviceUsesSubmuestras(service))
+
+      const todosEstadosServicios = serviciosSinSubmuestras.map((s: any) => {
         const key = String(s._syntheticKey ?? s.id)
 
         return getEstadoServicioConProbetas(s, gestionarEstados[key] ?? s.estado ?? 'CODIFICADO')
@@ -3228,6 +3295,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return daysToDue === null || daysToDue <= 0
   }
 
+  const canProcessProbetaInOrder = (probeta?: any) => {
+    if (!probeta || !canMarkProbetaAsReady(probeta)) return false
+
+    const pending = gestionarProbetas
+      .filter((item: any) => !String(item?.estado ?? '').toUpperCase().includes('ENSAYADO'))
+      .sort((left: any, right: any) => compareDateOnly(left?.fechaVencimiento, right?.fechaVencimiento))
+
+    return pending.length === 0 || Number(pending[0]?.id) === Number(probeta?.id)
+  }
+
   const createEmptySubmuestraFicha = () => ({
     codigoBalanza: '',
     codigoPrensa: '',
@@ -3245,7 +3322,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   })
 
   const serviceUsesSubmuestras = (service?: any) => {
-    if (!service || service._isPaqueteHeader || service._isPaqueteSubItem || gestionarProbetas.length === 0) return false
+    if (!service || service._isPaqueteHeader || service._isPaqueteSubItem) return false
     const normalizedName = normalizeText(service?.nombre)
 
     return normalizedName.includes('probeta') || normalizedName.includes('compresion')
@@ -3272,6 +3349,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const getSubmuestraFichaKey = (service?: any, probeta?: any) => `${String(service?._syntheticKey ?? service?.id ?? 'svc')}_${String(probeta?.id ?? probeta?.numero ?? 'prob')}`
 
   const handleOpenGestionarSubmuestra = (service: any, probeta: any) => {
+    if (!canProcessProbetaInOrder(probeta)) return
+
     const fichaKey = getSubmuestraFichaKey(service, probeta)
 
     setGestionarSubmuestraServicio(service)
@@ -3291,6 +3370,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
   const handleSaveGestionarSubmuestra = () => {
     if (!gestionarSubmuestraServicio || !gestionarSubmuestraActiva) return
+    if (!canProcessProbetaInOrder(gestionarSubmuestraActiva)) return
 
     const serviceKey = String(gestionarSubmuestraServicio._syntheticKey ?? gestionarSubmuestraServicio.id)
 
@@ -5500,6 +5580,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             estadoActual = completados < totalServicios ? 'EN_PROCESO' : 'ENSAYADO'
           }
 
+          const submuestraEnsayador = displayServices
+            .flatMap((service: any) => service.ensayadores ?? [])
+            .find((name: string) => Boolean(name)) ?? ''
+
+          const submuestraPermiteResultados = displayServices.some((service: any) => ['1005', '1006'].includes(String(service.sku)))
+          const submuestraService = gestionarServicios.find((service: any) => serviceUsesSubmuestras(service) && service.id) ?? null
+
           return (
             <>
               {/* Header */}
@@ -5885,47 +5972,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                   </TableCell>
                                   <TableCell align='center'>
                                     {submuestrasServicio.length > 0 ? (
-                                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.45 }}>
-                                        {submuestrasServicio.map((probeta: any) => {
-                                          const probetaEnsayada = String(probeta?.estado ?? 'CODIFICADO').toUpperCase().includes('ENSAYADO')
-                                          const puedeEnsayarSubmuestra = canMarkProbetaAsReady(probeta)
-                                          const actionLabel = `${probetaEnsayada ? 'Ver' : 'Ens.'} ${probeta?.dias ?? '-'}d · ${probeta?.cantidad ?? '-'} prob.`
-
-                                          return (
-                                            <Tooltip
-                                              key={probeta?.id ?? probeta?.numero}
-                                              title={puedeEnsayarSubmuestra || probetaEnsayada ? '' : `Disponible desde ${formatDateDDMMYYYYDateOnlyDash(probeta?.fechaVencimiento)}`}
-                                            >
-                                              <Box component='span'>
-                                                <Button
-                                                  size='small'
-                                                  variant='outlined'
-                                                  disabled={!probetaEnsayada && !puedeEnsayarSubmuestra}
-                                                  onClick={() => handleOpenGestionarSubmuestra(s, probeta)}
-                                                  sx={{
-                                                    fontSize: '0.73rem',
-                                                    fontWeight: 700,
-                                                    py: 0.22,
-                                                    px: 0.9,
-                                                    textTransform: 'none',
-                                                    minWidth: 0,
-                                                    borderColor: probetaEnsayada ? '#86efac' : '#c4b5fd',
-                                                    color: probetaEnsayada ? '#047857' : '#4338ca',
-                                                    bgcolor: probetaEnsayada ? '#f0fdf4' : '#eef2ff',
-                                                    '&:hover': {
-                                                      borderColor: probetaEnsayada ? '#4ade80' : '#a5b4fc',
-                                                      bgcolor: probetaEnsayada ? '#dcfce7' : '#e0e7ff'
-                                                    }
-                                                  }}
-                                                >
-                                                  <i className={probetaEnsayada ? 'ri-file-list-3-line' : 'ri-flask-line'} style={{ fontSize: 11, marginRight: 4 }} />
-                                                  {actionLabel}
-                                                </Button>
-                                              </Box>
-                                            </Tooltip>
-                                          )
-                                        })}
-                                      </Box>
+                                      <Button
+                                        size='small'
+                                        variant='text'
+                                        onClick={() => document.getElementById('gestionar-submuestras-table')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                                        sx={{ minWidth: 0, px: 0.7, py: 0.2, fontSize: '0.75rem', fontWeight: 800, textTransform: 'none', color: '#334e9b' }}
+                                      >
+                                        ↓ subs
+                                      </Button>
                                     ) : esEnsayado ? (
                                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, justifyContent: 'center', color: '#16a34a', fontWeight: 700, fontSize: '0.82rem' }}>
                                         <i className='ri-checkbox-circle-fill' style={{ fontSize: 14 }} />
@@ -6081,15 +6135,28 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                         <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: '#374151', mb: 1, letterSpacing: 0.3 }}>
                           {`SUBMUESTRAS (${gestionarProbetas.length})`}
                         </Typography>
-                        <TableContainer component={Paper} variant='outlined' sx={{ borderColor: '#e5e7eb', borderRadius: 1.5 }}>
+                        <TableContainer id='gestionar-submuestras-table' component={Paper} variant='outlined' sx={{ borderColor: '#e5e7eb', borderRadius: 1.5 }}>
                           <Table size='small'>
                             <TableHead>
                               <TableRow sx={{ bgcolor: '#f9fafb' }}>
                                 <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 40 }}>#</TableCell>
                                 <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>DÍAS</TableCell>
-                                <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>FECHA ENSAYO</TableCell>
+                                <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>FECHA PROGRAMADA</TableCell>
                                 <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>CANT.</TableCell>
-                                <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>ESTADO</TableCell>
+                                <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>ENSAYADOR</TableCell>
+                                <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 108 }}>ESTADO</TableCell>
+                                <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 110 }}>ACCIÓN</TableCell>
+                                <TableCell align='center' sx={{ width: 250, py: 0.85 }}>
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.2 }}>
+                                    <Typography sx={{ fontWeight: 800, color: '#64748b', fontSize: '0.72rem', lineHeight: 1.1 }}>
+                                      FECHA ENSAYO
+                                    </Typography>
+                                    <Typography sx={{ color: '#94a3b8', fontSize: '0.62rem', fontWeight: 600, lineHeight: 1.1 }}>
+                                      INICIO · FIN
+                                    </Typography>
+                                  </Box>
+                                </TableCell>
+                                <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>RES.</TableCell>
                                 <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>DÍAS RESTANTES</TableCell>
                               </TableRow>
                             </TableHead>
@@ -6119,7 +6186,80 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                       <Typography sx={{ fontSize: '0.88rem', color: '#374151' }}>{p.cantidad ?? '-'}</Typography>
                                     </TableCell>
                                     <TableCell align='center'>
+                                      <Typography sx={{ fontSize: '0.78rem', color: submuestraEnsayador ? '#374151' : '#9ca3af' }}>
+                                        {submuestraEnsayador || '-'}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell align='center'>
                                       <Chip label={getOperationalLabel(p.estado ?? 'CODIFICADO')} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.73rem', ...estadoPillSx(p.estado ?? 'CODIFICADO') }} />
+                                    </TableCell>
+                                    <TableCell align='center'>
+                                      {String(p.estado ?? 'CODIFICADO').toUpperCase().includes('ENSAYADO') ? (
+                                        <Typography sx={{ color: '#16a34a', fontSize: '0.76rem', fontWeight: 700 }}>Completado</Typography>
+                                      ) : (
+                                        <Tooltip title={!submuestraEnsayador ? 'Asigna ensayador para iniciar' : !canProcessProbetaInOrder(p) ? `Disponible desde ${formatDateDDMMYYYYDateOnlyDash(p.fechaVencimiento)}` : ''}>
+                                          <Box component='span'>
+                                            <Button
+                                              size='small'
+                                              variant='outlined'
+                                              disabled={!submuestraEnsayador || !canProcessProbetaInOrder(p)}
+                                              onClick={() => submuestraService && handleOpenGestionarSubmuestra(submuestraService, p)}
+                                              sx={{ minWidth: 0, px: 0.8, py: 0.25, fontSize: '0.72rem', textTransform: 'none' }}
+                                            >
+                                              <i className='ri-flask-line' style={{ fontSize: 11, marginRight: 3 }} />Ensayar
+                                            </Button>
+                                          </Box>
+                                        </Tooltip>
+                                      )}
+                                    </TableCell>
+                                    <TableCell align='center'>
+                                      {(() => {
+                                        const subKey = String(p.id ?? p.numero ?? i)
+                                        const fechaInicio = gestionarFechasInicioSubmuestra[subKey] ?? ''
+                                        const fechaFin = gestionarFechasFinSubmuestra[subKey] ?? ''
+
+                                        return (
+                                          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.35, minWidth: 220 }}>
+                                              <Box sx={{ display: 'grid', gridTemplateColumns: '42px 1fr', alignItems: 'center', gap: 0.5 }}>
+                                                <Typography variant='caption' sx={{ fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Inicio</Typography>
+                                                <DateTimePicker
+                                                  value={fechaInicio ? new Date(fechaInicio) : null}
+                                                  onChange={value => setGestionarFechasInicioSubmuestra(prev => ({ ...prev, [subKey]: value ? toDateTimeInputValue(value) : '' }))}
+                                                  format='dd-MM-yy HH:mm'
+                                                  ampm={false}
+                                                  slotProps={{ textField: { size: 'small', sx: { '& .MuiInputBase-input': { py: 0.35, fontSize: '0.68rem' } } } }}
+                                                />
+                                              </Box>
+                                              <Box sx={{ display: 'grid', gridTemplateColumns: '42px 1fr', alignItems: 'center', gap: 0.5 }}>
+                                                <Typography variant='caption' sx={{ fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Fin</Typography>
+                                                <DateTimePicker
+                                                  value={fechaFin ? new Date(fechaFin) : null}
+                                                  onChange={value => setGestionarFechasFinSubmuestra(prev => ({ ...prev, [subKey]: value ? toDateTimeInputValue(value) : '' }))}
+                                                  format='dd-MM-yy HH:mm'
+                                                  ampm={false}
+                                                  slotProps={{ textField: { size: 'small', sx: { '& .MuiInputBase-input': { py: 0.35, fontSize: '0.68rem' } } } }}
+                                                />
+                                              </Box>
+                                            </Box>
+                                          </LocalizationProvider>
+                                        )
+                                      })()}
+                                    </TableCell>
+                                    <TableCell align='center'>
+                                      {submuestraPermiteResultados ? (
+                                        <IconButton
+                                          size='small'
+                                          color='primary'
+                                          aria-label={`Ingresar resultados de submuestra ${p.numero ?? i + 1}`}
+                                          title='Ingresar resultados'
+                                          onClick={() => submuestraService && handleOpenGestionarSubmuestra(submuestraService, p)}
+                                        >
+                                          <i className='ri-add-line' style={{ fontSize: 17 }} />
+                                        </IconButton>
+                                      ) : (
+                                        <Typography variant='body2' color='text.disabled'>-</Typography>
+                                      )}
                                     </TableCell>
                                     <TableCell align='center'>
                                       <Typography sx={{ fontSize: '0.86rem', fontWeight: 700, color: isUrgent ? '#dc2626' : '#4b5563' }}>
