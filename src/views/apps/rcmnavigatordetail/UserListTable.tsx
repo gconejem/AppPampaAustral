@@ -831,6 +831,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [gestionarSubmuestraServicio, setGestionarSubmuestraServicio] = useState<any>(null)
   const [gestionarSubmuestraActiva, setGestionarSubmuestraActiva] = useState<any>(null)
   const [gestionarSubmuestraFormData, setGestionarSubmuestraFormData] = useState<Record<string, any>>({})
+  const [resultadoOpen, setResultadoOpen] = useState(false)
+  const [resultadoSku, setResultadoSku] = useState('')
+  const [resultadoData, setResultadoData] = useState({ dmcs: '', drMinima: '', drMaxima: '', notas: '' })
+  const [resultadoError, setResultadoError] = useState('')
+  const [resultadoSaving, setResultadoSaving] = useState(false)
 
   useEffect(() => {
     fetch('/api/users/laboratoristas')
@@ -1022,6 +1027,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       const probetas = Array.isArray(muestraFromRcm?.probetas) ? muestraFromRcm.probetas : []
 
+      probetas.forEach((probeta: any) => {
+        const subKey = String(probeta?.id ?? probeta?.numero ?? '')
+
+        if (probeta?.fechaInicioEnsayo) fechasInicioSubmuestraInit[subKey] = toDateTimeInputValue(probeta.fechaInicioEnsayo)
+        if (probeta?.fechaFinEnsayo) fechasFinSubmuestraInit[subKey] = toDateTimeInputValue(probeta.fechaFinEnsayo)
+      })
+
       setGestionarServicios(hydratedExpandedCombined)
       setGestionarProbetas(probetas)
       setGestionarMuestra({ ...(dataServ.muestra ?? {}), probetas })
@@ -1070,12 +1082,64 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     try {
       const user = getCurrentUserName() ?? 'Usuario'
       const probetasOriginales = Array.isArray(gestionarMuestra?.probetas) ? gestionarMuestra.probetas : []
-      const servicioSubmuestras = gestionarServicios.find((service: any) => serviceUsesSubmuestras(service) && service.id)
+
+      const servicioSubmuestras =
+        gestionarServicios.find((service: any) => Number.isFinite(Number(service?.id)) && serviceUsesSubmuestras(service)) ??
+        gestionarServicios.find((service: any) => {
+          if (!service?._isPaqueteHeader || !Number.isFinite(Number(service?.id))) return false
+
+          return gestionarServicios.some((sub: any) => Number(sub?._paqueteParentId) === Number(service.id) && normalizeText(sub?.nombre).includes('compresion'))
+        })
+
+      const submuestrasEnsayadas = gestionarProbetas.length > 0 && gestionarProbetas.every((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO') === 'ENSAYADO')
+      let fechaInicioPadreSubmuestras = ''
+      let fechaFinPadreSubmuestras = ''
+
+      if (servicioSubmuestras && submuestrasEnsayadas) {
+        const fechasInicio = gestionarProbetas
+          .map((probeta: any) => gestionarFechasInicioSubmuestra[String(probeta?.id ?? probeta?.numero ?? '')])
+          .filter(Boolean)
+          .map((fecha: string) => new Date(fecha))
+          .filter((fecha: Date) => !Number.isNaN(fecha.getTime()))
+
+        const fechasFin = gestionarProbetas
+          .map((probeta: any) => gestionarFechasFinSubmuestra[String(probeta?.id ?? probeta?.numero ?? '')])
+          .filter(Boolean)
+          .map((fecha: string) => new Date(fecha))
+          .filter((fecha: Date) => !Number.isNaN(fecha.getTime()))
+
+        if (fechasInicio.length > 0) {
+          const inicioPadre = new Date(Math.min(...fechasInicio.map(fecha => fecha.getTime())))
+
+          fechaInicioPadreSubmuestras = toDateTimeInputValue(inicioPadre)
+
+          setGestionarFechasInicioEnsayo(prev => ({ ...prev, [String(servicioSubmuestras.id)]: fechaInicioPadreSubmuestras }))
+        }
+
+        if (fechasFin.length > 0) {
+          const finPadre = new Date(Math.max(...fechasFin.map(fecha => fecha.getTime())))
+
+          fechaFinPadreSubmuestras = toDateTimeInputValue(finPadre)
+
+          setGestionarFechasFinEnsayo(prev => ({ ...prev, [String(servicioSubmuestras.id)]: fechaFinPadreSubmuestras }))
+        }
+      }
 
       const getEstadoDerivedFromSubs = (parentId: number): string => {
         const subItems = gestionarServicios.filter((sub: any) => sub._paqueteParentId === parentId)
 
         if (subItems.length === 0) return gestionarEstados[String(parentId)] ?? 'CODIFICADO'
+
+        const paqueteUsaSubmuestras = subItems.some((sub: any) => normalizeText(sub?.nombre).includes('compresion'))
+
+        if (paqueteUsaSubmuestras && gestionarProbetas.length > 0) {
+          const estadosProbetas = gestionarProbetas.map((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO'))
+
+          if (estadosProbetas.every((estado: string) => estado === 'ENSAYADO')) return 'ENSAYADO'
+          if (estadosProbetas.some((estado: string) => estado !== 'CODIFICADO')) return 'EN_PROCESO'
+
+          return 'CODIFICADO'
+        }
 
         const subStates = subItems.map((sub: any) => gestionarEstados[String(sub._syntheticKey ?? sub.id)] ?? 'CODIFICADO')
 
@@ -1125,14 +1189,27 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             const estadoNuevo = probeta?.estado ?? 'CODIFICADO'
             const original = probetasOriginales.find((item: any) => Number(item?.id) === probetaId)
             const estadoPrev = original?.estado ?? 'CODIFICADO'
+            const subKey = String(probeta?.id ?? probeta?.numero ?? '')
+            const fechaInicioNueva = String(gestionarFechasInicioSubmuestra[subKey] ?? '').trim()
+            const fechaFinNueva = String(gestionarFechasFinSubmuestra[subKey] ?? '').trim()
+            const fechaInicioPrev = toDateTimeInputValue(original?.fechaInicioEnsayo)
+            const fechaFinPrev = toDateTimeInputValue(original?.fechaFinEnsayo)
 
-            if (!probetaId || estadoNuevo === estadoPrev) return
+            if (!probetaId || (estadoNuevo === estadoPrev && fechaInicioNueva === fechaInicioPrev && fechaFinNueva === fechaFinPrev)) return
 
-            await fetch(`/api/probeta/${probetaId}`, {
+            const response = await fetch(`/api/probeta/${probetaId}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ estado: estadoNuevo })
+              body: JSON.stringify({
+                estado: estadoNuevo,
+                fechaInicioEnsayo: fechaInicioNueva || null,
+                fechaFinEnsayo: fechaFinNueva || null
+              })
             })
+
+            if (!response.ok) {
+              throw new Error(`No se pudo guardar la submuestra ${subKey}`)
+            }
           }),
           ...subItemsParaGuardar.map(async (s: any) => {
             const sKey = String(s._syntheticKey ?? s.id)
@@ -1195,9 +1272,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             const observacionPrev = String(s.observacion ?? '').trim()
             const fechaAsignacionNueva = String(gestionarFechasAsignacionEnsayador[sKey] ?? '').trim()
             const fechaAsignacionPrev = toDateInputValue(s.fechaAsignacionEnsayador)
-            const fechaInicioEnsayoNueva = String(gestionarFechasInicioEnsayo[sKey] ?? '').trim()
+
+            const fechaInicioEnsayoNueva = s.id === servicioSubmuestras?.id && fechaInicioPadreSubmuestras
+              ? fechaInicioPadreSubmuestras
+              : String(gestionarFechasInicioEnsayo[sKey] ?? '').trim()
+
             const fechaInicioEnsayoPrev = toDateTimeInputValue(s.fechaInicioEnsayo)
-            const fechaFinEnsayoNueva = String(gestionarFechasFinEnsayo[sKey] ?? '').trim()
+
+            const fechaFinEnsayoNueva = s.id === servicioSubmuestras?.id && fechaFinPadreSubmuestras
+              ? fechaFinPadreSubmuestras
+              : String(gestionarFechasFinEnsayo[sKey] ?? '').trim()
+
             const fechaFinEnsayoPrev = toDateTimeInputValue(s.fechaFinEnsayo)
 
             // Guardar si cambió estado, ensayador u observación
@@ -1230,25 +1315,38 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         ]
       )
 
-      // Actualizar tabla principal: recalcular estado operativo del RCM
-      const subItemsYRegulares = gestionarServicios.filter((s: any) => !s._isPaqueteHeader)
+      // El estado persistido del RCM usa los mismos SKU consolidados que muestra el modal.
+      const ensayosAplicables = consolidateSkuServices(gestionarServicios)
+        .filter((group: any) => group.tipo === 'Ensayo')
+        .map((group: any) => {
+          const usaSubmuestras = group.entries.some((entry: any) => serviceUsesSubmuestras(entry))
 
-      const serviciosSinSubmuestras = subItemsYRegulares.filter((service: any) => !serviceUsesSubmuestras(service))
+          if (usaSubmuestras) {
+            const estadosProbetas = gestionarProbetas.map((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO'))
 
-      const todosEstadosServicios = serviciosSinSubmuestras.map((s: any) => {
-        const key = String(s._syntheticKey ?? s.id)
+            return estadosProbetas.length > 0 && estadosProbetas.every((estado: string) => estado === 'ENSAYADO')
+              ? 'ENSAYADO'
+              : estadosProbetas.some((estado: string) => estado !== 'CODIFICADO')
+                ? 'EN_PROCESO'
+                : 'CODIFICADO'
+          }
 
-        return getEstadoServicioConProbetas(s, gestionarEstados[key] ?? s.estado ?? 'CODIFICADO')
-      })
+          const estadosEntradas = group.entries.map((entry: any) => {
+            const key = String(entry._syntheticKey ?? entry.id)
 
-      const todosEstadosProbetas = gestionarProbetas.map((probeta: any) => probeta?.estado ?? 'CODIFICADO')
-      const todosEstados = [...todosEstadosServicios, ...todosEstadosProbetas]
+            return normalizeEnsayoState(gestionarEstados[key] ?? entry.estado ?? 'CODIFICADO')
+          })
 
-      const normalizedEstados = todosEstados.map((estado: string) => normalizeEnsayoState(estado))
+          return estadosEntradas.length > 0 && estadosEntradas.every((estado: string) => estado === 'ENSAYADO')
+            ? 'ENSAYADO'
+            : estadosEntradas.some((estado: string) => estado !== 'CODIFICADO')
+              ? 'EN_PROCESO'
+              : 'CODIFICADO'
+        })
 
-      const estadoFinal = normalizedEstados.length > 0 && normalizedEstados.every((estado: string) => estado === 'ENSAYADO')
+      const estadoFinal = ensayosAplicables.length > 0 && ensayosAplicables.every((estado: string) => estado === 'ENSAYADO')
         ? 'ENSAYADO'
-        : normalizedEstados.some((estado: string) => estado !== 'CODIFICADO')
+        : ensayosAplicables.some((estado: string) => estado !== 'CODIFICADO')
           ? 'EN_PROCESO'
           : 'CODIFICADO'
 
@@ -1275,7 +1373,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       // Ensayador predominante (del primer servicio con ensayador asignado)
       const ensayadorFinal =
-        subItemsYRegulares
+        gestionarServicios
+          .filter((service: any) => !service._isPaqueteHeader)
           .map((s: any) => gestionarEnsayadores[String(s._syntheticKey ?? s.id)] ?? s.ensayador ?? '')
           .find((e: string) => Boolean(e.trim())) ?? (gestionarRow?.ensayador ?? '')
 
@@ -3322,10 +3421,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   })
 
   const serviceUsesSubmuestras = (service?: any) => {
-    if (!service || service._isPaqueteHeader || service._isPaqueteSubItem) return false
+    if (!service || service._isPaqueteHeader) return false
     const normalizedName = normalizeText(service?.nombre)
 
-    return normalizedName.includes('probeta') || normalizedName.includes('compresion')
+    return normalizedName.includes('compresion')
   }
 
   const getSubmuestrasForService = (service?: any) => {
@@ -3368,6 +3467,77 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setGestionarSubmuestraActiva(null)
   }
 
+  const openResultado = async (sku: string) => {
+    if (!gestionarMuestra?.id) return
+
+    setResultadoSku(sku)
+    setResultadoError('')
+    setResultadoData({ dmcs: '', drMinima: '', drMaxima: '', notas: '' })
+    setResultadoOpen(true)
+
+    try {
+      const response = await fetch(`/api/muestra/${gestionarMuestra.id}/resultados/${sku}`, { cache: 'no-store' })
+      const data = response.ok ? await response.json() : null
+
+      if (data) {
+        setResultadoData({
+          dmcs: data.dmcs == null ? '' : String(data.dmcs),
+          drMinima: data.drMinima == null ? '' : String(data.drMinima),
+          drMaxima: data.drMaxima == null ? '' : String(data.drMaxima),
+          notas: data.notas ?? ''
+        })
+      }
+    } catch {
+      setResultadoError('No se pudo cargar el resultado.')
+    }
+  }
+
+  const saveResultado = async () => {
+    if (!gestionarMuestra?.id || !resultadoSku) return
+
+    setResultadoSaving(true)
+    setResultadoError('')
+
+    try {
+      const response = await fetch(`/api/muestra/${gestionarMuestra.id}/resultados/${resultadoSku}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(resultadoData)
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        setResultadoError(data.error ?? 'No se pudo guardar el resultado.')
+
+        return
+      }
+
+      setGestionarEstados(prev => {
+        const next = { ...prev }
+
+        gestionarServicios.filter((service: any) => String(service.codigo ?? '') === resultadoSku).forEach((service: any) => {
+          next[String(service._syntheticKey ?? service.id)] = 'ENSAYADO'
+        })
+
+        return next
+      })
+      const now = getNowDateTimeInputValue()
+
+      gestionarServicios.filter((service: any) => String(service.codigo ?? '') === resultadoSku).forEach((service: any) => {
+        const key = String(service._syntheticKey ?? service.id)
+
+        setGestionarFechasInicioEnsayo(prev => ({ ...prev, [key]: prev[key] || now }))
+        setGestionarFechasFinEnsayo(prev => ({ ...prev, [key]: now }))
+      })
+      setResultadoOpen(false)
+    } catch {
+      setResultadoError('No se pudo guardar el resultado.')
+    } finally {
+      setResultadoSaving(false)
+    }
+  }
+
   const handleSaveGestionarSubmuestra = () => {
     if (!gestionarSubmuestraServicio || !gestionarSubmuestraActiva) return
     if (!canProcessProbetaInOrder(gestionarSubmuestraActiva)) return
@@ -3379,6 +3549,23 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       : probeta))
     setGestionarEstados(prev => ({ ...prev, [serviceKey]: 'ENSAYADO' }))
     handleCloseGestionarSubmuestra()
+  }
+
+  const updateSubmuestraState = (probeta: any, targetState: 'EN_PROCESO' | 'ENSAYADO') => {
+    if (!canProcessProbetaInOrder(probeta)) return
+
+    const subKey = String(probeta?.id ?? probeta?.numero ?? '')
+    const now = getNowDateTimeInputValue()
+
+    setGestionarProbetas(prev => prev.map((item: any) => Number(item?.id) === Number(probeta?.id)
+      ? { ...item, estado: targetState }
+      : item))
+
+    if (targetState === 'EN_PROCESO') {
+      setGestionarFechasInicioSubmuestra(prev => ({ ...prev, [subKey]: prev[subKey] || now }))
+    } else {
+      setGestionarFechasFinSubmuestra(prev => ({ ...prev, [subKey]: prev[subKey] || now }))
+    }
   }
 
   const proximaProbetaPendiente = useMemo(() => {
@@ -5085,7 +5272,29 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const informeEnsayo = rcmData?.informeEnsayo ?? true
           const elemento = muestra?.elemento || rcmData?.elemento || '-'
           const grado = muestra?.grado || rcmData?.grado || '-'
-          const displayServices = consolidateSkuServices(serviciosMuestra)
+
+          const displayServices = consolidateSkuServices(serviciosMuestra).map((group: any) => {
+            const isCompresion = group.entries.some((entry: any) => normalizeText(entry?.nombre).includes('compresion'))
+
+            if (!isCompresion || probetas.length === 0) return group
+
+            const cantidad = probetas.reduce((total: number, probeta: any) => total + getSkuQuantity(probeta), 0)
+
+            const completedQuantity = probetas.reduce((total: number, probeta: any) => {
+              const ensayada = normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO') === 'ENSAYADO'
+
+              return total + (ensayada ? getSkuQuantity(probeta) : 0)
+            }, 0)
+
+            const estado = cantidad > 0 && completedQuantity >= cantidad
+              ? 'ENSAYADO'
+              : probetas.some((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO') !== 'CODIFICADO')
+                ? 'EN_PROCESO'
+                : 'CODIFICADO'
+
+            return { ...group, cantidad, completedQuantity, estado }
+          })
+
           const ensayosCount = displayServices.length
           const ensayosPendientes = displayServices.some((service: any) => service.tipo === 'Ensayo' && service.completedQuantity < service.cantidad)
 
@@ -5545,17 +5754,36 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
           const displayServices = consolidateSkuServices(gestionarServicios).map((group: any) => {
             const entries = group.entries
+            const entriesConSubmuestras = entries.filter((entry: any) => serviceUsesSubmuestras(entry))
 
-            const completedQuantity = entries.reduce((total: number, entry: any) => {
+            const entriesRegulares = entriesConSubmuestras.length > 0
+              ? []
+              : entries
+
+            const submuestras = entriesConSubmuestras.length > 0 ? getSubmuestrasForService(entriesConSubmuestras[0]) : []
+            const cantidadSubmuestras = submuestras.reduce((total: number, probeta: any) => total + getSkuQuantity(probeta), 0)
+
+            const completadasSubmuestras = submuestras.reduce((total: number, probeta: any) => {
+              const ensayada = normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO') === 'ENSAYADO'
+
+              return total + (ensayada ? getSkuQuantity(probeta) : 0)
+            }, 0)
+
+            const cantidadRegular = entriesRegulares.reduce((total: number, entry: any) => total + getSkuQuantity(entry), 0)
+
+            const completadasRegulares = entriesRegulares.reduce((total: number, entry: any) => {
               const key = String(entry._syntheticKey ?? entry.id)
               const state = getEstadoServicioConProbetas(entry, gestionarEstados[key] ?? entry.estado ?? 'CODIFICADO')
 
               return total + (String(state).toUpperCase().includes('ENSAYADO') ? getSkuQuantity(entry) : 0)
             }, 0)
 
-            const liveState = completedQuantity >= group.cantidad
+            const cantidad = cantidadRegular + cantidadSubmuestras
+            const completedQuantity = completadasRegulares + completadasSubmuestras
+
+            const liveState = cantidad > 0 && completedQuantity >= cantidad
               ? 'ENSAYADO'
-              : entries.some((entry: any) => {
+              : submuestras.some((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO') !== 'CODIFICADO') || entriesRegulares.some((entry: any) => {
                 const key = String(entry._syntheticKey ?? entry.id)
 
                 return String(getEstadoServicioConProbetas(entry, gestionarEstados[key] ?? entry.estado ?? 'CODIFICADO')).toUpperCase().includes('PROCESO')
@@ -5569,7 +5797,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               return String(gestionarEnsayadores[key] ?? entry.ensayador ?? '').trim()
             }).filter(Boolean)))
 
-            return { ...group, estado: liveState, completedQuantity, ensayadores: liveEnsayadores }
+            return { ...group, cantidad, estado: liveState, completedQuantity, ensayadores: liveEnsayadores }
           })
 
           const countableServices = displayServices.filter((service: any) => service.tipo === 'Ensayo')
@@ -5818,8 +6046,33 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                 toDateInputValue(s.fechaAsignacionEnsayador) ??
                                 ''
 
-                              const fechaInicioEnsayoActual = sourceDateKeys.map(key => gestionarFechasInicioEnsayo[key]).find(Boolean) ?? toDateTimeInputValue(s.fechaInicioEnsayo)
-                              const fechaFinEnsayoActual = sourceDateKeys.map(key => gestionarFechasFinEnsayo[key]).find(Boolean) ?? toDateTimeInputValue(s.fechaFinEnsayo)
+                              const submuestrasServicio = getSubmuestrasForService(s)
+                              const submuestrasEnsayadas = submuestrasServicio.length > 0 && submuestrasServicio.every((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO') === 'ENSAYADO')
+
+                              const inicioSubmuestras = submuestrasServicio
+                                .map((probeta: any) => gestionarFechasInicioSubmuestra[String(probeta?.id ?? probeta?.numero ?? '')])
+                                .filter(Boolean)
+                                .map((fecha: string) => new Date(fecha))
+                                .filter((fecha: Date) => !Number.isNaN(fecha.getTime()))
+
+                              const finSubmuestras = submuestrasServicio
+                                .map((probeta: any) => gestionarFechasFinSubmuestra[String(probeta?.id ?? probeta?.numero ?? '')])
+                                .filter(Boolean)
+                                .map((fecha: string) => new Date(fecha))
+                                .filter((fecha: Date) => !Number.isNaN(fecha.getTime()))
+
+                              const esEnsayoPadreSubmuestras = normalizeText(s.nombre).includes('compresion')
+
+                              const fechaInicioDerivada = submuestrasEnsayadas && esEnsayoPadreSubmuestras && inicioSubmuestras.length > 0
+                                ? toDateTimeInputValue(new Date(Math.min(...inicioSubmuestras.map(fecha => fecha.getTime()))))
+                                : ''
+
+                              const fechaFinDerivada = submuestrasEnsayadas && esEnsayoPadreSubmuestras && finSubmuestras.length > 0
+                                ? toDateTimeInputValue(new Date(Math.max(...finSubmuestras.map(fecha => fecha.getTime()))))
+                                : ''
+
+                              const fechaInicioEnsayoActual = fechaInicioDerivada || sourceDateKeys.map(key => gestionarFechasInicioEnsayo[key]).find(Boolean) || toDateTimeInputValue(s.fechaInicioEnsayo)
+                              const fechaFinEnsayoActual = fechaFinDerivada || sourceDateKeys.map(key => gestionarFechasFinEnsayo[key]).find(Boolean) || toDateTimeInputValue(s.fechaFinEnsayo)
 
                               const tieneEnsayadorAsignado = hasAssignedEnsayador(s, ensayadorActual)
                               const puedeIniciarServicio = puedeIniciarEnsayos && tieneEnsayadorAsignado
@@ -5827,7 +6080,6 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                               const esEnProceso = String(estadoActualServicio).toUpperCase().includes('PROCESO')
                               const esCodificado = !esEnsayado && !esEnProceso
                               const calendarioFechaHabilitado = String(ensayadorActual ?? '').trim().length > 0 && esCodificado
-                              const submuestrasServicio = getSubmuestrasForService(s)
 
 
                               return (
@@ -6104,7 +6356,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                   </TableCell>
                                   <TableCell align='center'>
                                     {['1005', '1006'].includes(String(group.sku)) ? (
-                                      <IconButton size='small' color='primary' aria-label={`Ingresar resultados para SKU ${group.sku}`} title='Ingresar resultados'>
+                                      <IconButton size='small' color='primary' aria-label={`Ingresar resultados para SKU ${group.sku}`} title='Ingresar resultados' onClick={() => openResultado(String(group.sku))}>
                                         <i className='ri-add-line' style={{ fontSize: 17 }} />
                                       </IconButton>
                                     ) : (
@@ -6196,6 +6448,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                     <TableCell align='center'>
                                       {String(p.estado ?? 'CODIFICADO').toUpperCase().includes('ENSAYADO') ? (
                                         <Typography sx={{ color: '#16a34a', fontSize: '0.76rem', fontWeight: 700 }}>Completado</Typography>
+                                      ) : String(p.estado ?? 'CODIFICADO').toUpperCase().includes('PROCESO') ? (
+                                        <Tooltip title={!canProcessProbetaInOrder(p) ? `Disponible desde ${formatDateDDMMYYYYDateOnlyDash(p.fechaVencimiento)}` : ''}>
+                                          <Box component='span'>
+                                            <Button
+                                              size='small'
+                                              variant='outlined'
+                                              disabled={!canProcessProbetaInOrder(p)}
+                                              onClick={() => updateSubmuestraState(p, 'ENSAYADO')}
+                                              sx={{ minWidth: 0, px: 0.8, py: 0.25, fontSize: '0.72rem', textTransform: 'none', borderColor: '#bbf7d0', color: '#15803d', bgcolor: '#f0fdf4' }}
+                                            >
+                                              <i className='ri-check-line' style={{ fontSize: 11, marginRight: 3 }} />Finalizar
+                                            </Button>
+                                          </Box>
+                                        </Tooltip>
                                       ) : (
                                         <Tooltip title={!submuestraEnsayador ? 'Asigna ensayador para iniciar' : !canProcessProbetaInOrder(p) ? `Disponible desde ${formatDateDDMMYYYYDateOnlyDash(p.fechaVencimiento)}` : ''}>
                                           <Box component='span'>
@@ -6203,10 +6469,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                               size='small'
                                               variant='outlined'
                                               disabled={!submuestraEnsayador || !canProcessProbetaInOrder(p)}
-                                              onClick={() => submuestraService && handleOpenGestionarSubmuestra(submuestraService, p)}
+                                              onClick={() => updateSubmuestraState(p, 'EN_PROCESO')}
                                               sx={{ minWidth: 0, px: 0.8, py: 0.25, fontSize: '0.72rem', textTransform: 'none' }}
                                             >
-                                              <i className='ri-flask-line' style={{ fontSize: 11, marginRight: 3 }} />Ensayar
+                                              <i className='ri-play-fill' style={{ fontSize: 11, marginRight: 3 }} />Iniciar
                                             </Button>
                                           </Box>
                                         </Tooltip>
@@ -6296,6 +6562,34 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             </>
           )
         })()}
+      </Dialog>
+
+      <Dialog open={resultadoOpen} onClose={() => !resultadoSaving && setResultadoOpen(false)} maxWidth='sm' fullWidth>
+        <DialogTitle sx={{ fontWeight: 800 }}>
+          {resultadoSku === '1005' ? 'Próctor Modificado' : 'Densidad Relativa'}
+          <Typography component='span' sx={{ display: 'block', color: 'text.secondary', fontSize: '0.85rem', fontWeight: 500 }}>
+            {resultadoSku === '1005' ? 'SKU 1005 · NCh 1534/2:1979' : 'SKU 1006 · ASTM D4253-16'}
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers>
+          {resultadoSku === '1005' ? (
+            <Box sx={{ display: 'grid', gap: 1.5 }}>
+              <TextField label='DMCS (Kg/m³)' type='number' required value={resultadoData.dmcs} onChange={event => setResultadoData(prev => ({ ...prev, dmcs: event.target.value }))} inputProps={{ min: 0, step: 'any' }} />
+              <TextField label='Notas del resultado (opcional)' value={resultadoData.notas} onChange={event => setResultadoData(prev => ({ ...prev, notas: event.target.value }))} multiline minRows={2} />
+            </Box>
+          ) : (
+            <Box sx={{ display: 'grid', gap: 1.5 }}>
+              <TextField label='DR Mínima (Kg/m³)' type='number' required value={resultadoData.drMinima} onChange={event => setResultadoData(prev => ({ ...prev, drMinima: event.target.value }))} inputProps={{ min: 0, step: 'any' }} />
+              <TextField label='DR Máxima (Kg/m³)' type='number' required value={resultadoData.drMaxima} onChange={event => setResultadoData(prev => ({ ...prev, drMaxima: event.target.value }))} inputProps={{ min: 0, step: 'any' }} />
+              <TextField label='Notas del resultado (opcional)' value={resultadoData.notas} onChange={event => setResultadoData(prev => ({ ...prev, notas: event.target.value }))} multiline minRows={2} />
+            </Box>
+          )}
+          {resultadoError && <Typography sx={{ mt: 1.5, color: 'error.main', fontSize: '0.82rem' }}>{resultadoError}</Typography>}
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={resultadoSaving} onClick={() => setResultadoOpen(false)} sx={{ textTransform: 'none' }}>Cancelar</Button>
+          <Button disabled={resultadoSaving} variant='contained' onClick={saveResultado} sx={{ textTransform: 'none' }}>{resultadoSaving ? 'Guardando...' : 'Guardar resultado'}</Button>
+        </DialogActions>
       </Dialog>
 
       <Dialog

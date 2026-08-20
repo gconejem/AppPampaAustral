@@ -148,6 +148,7 @@ model Producto {
   serviciosMuestra        ServicioMuestra[]
   serviciosRCM            ServicioRCM[]
   subProductosServicioRCM SubProductoServicioRCM[]
+  resultadosEnsayo        ResultadoEnsayoMuestra[]
   codigoAgrupadorEnsayos  CodigoAgrupadorEnsayo[]
 
   @@index([sku])
@@ -694,19 +695,19 @@ model RetiroProbeta {
 }
 
 model RCM {
-  id                   Int              @id @default(autoincrement())
-  numeroRcm            String           @unique
+  id                   Int                  @id @default(autoincrement())
+  numeroRcm            String               @unique
   fechaCodificacion    DateTime
   fechaMuestreo        DateTime
   fechaIngreso         DateTime
   fechaEntrega         DateTime?
-  estadoOperativo      String?          @map("estado_operativo")
-  estadoAdministrativo String?          @map("estado_administrativo")
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  estadoOperativo      String?              @map("estado_operativo")
+  estadoAdministrativo String?              @map("estado_administrativo")
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
   clienteId            Int?
-  obraId               Int?             @map("obraId")
-  ordenTrabajoId       String?          @map("ordenTrabajoId")
+  obraId               Int?                 @map("obraId")
+  ordenTrabajoId       String?              @map("ordenTrabajoId")
   observaciones        String?
   // Campos del Control Interno
   rcmType              String? // 'Muestra' | 'Control' | 'Servicio'
@@ -721,24 +722,24 @@ model RCM {
   grado                String?
   elemento             String?
   cantidadMuestras     Int?
-  vencimiento          Boolean          @default(false)
+  vencimiento          Boolean              @default(false)
   fechaServicio        DateTime?
   fechaConfeccion      DateTime?
   tomaMuestra          String?
   codigoProducto       String?
-  informeEnsayo        Boolean          @default(true)
+  informeEnsayo        Boolean              @default(true)
   observacionItem      String?
   cota1                String?
   cota2                String?
   codigoAgrupadorId    Int?
   // Relaciones
   muestras             Muestra[]
-  cliente              Cliente?         @relation(fields: [clienteId], references: [clienteId])
-  obra                 Obra?            @relation(fields: [obraId], references: [obraId])
-  ordenTrabajo         OrdenTrabajo?    @relation(fields: [ordenTrabajoId], references: [id])
-  area                 Area?            @relation(fields: [areaId], references: [id])
-  familia              Familia?         @relation(fields: [familiaId], references: [id])
-  codigoAgrupador      CodigoAgrupador? @relation(fields: [codigoAgrupadorId], references: [id])
+  cliente              Cliente?             @relation(fields: [clienteId], references: [clienteId])
+  obra                 Obra?                @relation(fields: [obraId], references: [obraId])
+  ordenTrabajo         OrdenTrabajo?        @relation(fields: [ordenTrabajoId], references: [id])
+  area                 Area?                @relation(fields: [areaId], references: [id])
+  familia              Familia?             @relation(fields: [familiaId], references: [id])
+  codigoAgrupador      CodigoAgrupador?     @relation(fields: [codigoAgrupadorId], references: [id])
   codigoAgrupadorLinks CodigoAgrupadorRcm[]
   servicios            ServicioRCM[]
   RCMHistory           RCMHistory[]
@@ -769,9 +770,9 @@ model ServicioRCM {
 }
 
 model Muestra {
-  id               Int               @id @default(autoincrement())
+  id               Int                      @id @default(autoincrement())
   rcmId            Int
-  numeroMuestra    String            @unique
+  numeroMuestra    String                   @unique
   numeroTarjeta    String?
   tipoMaterial     String?
   elemento         String?
@@ -780,15 +781,16 @@ model Muestra {
   procedencia      String?
   cotas            String?
   ubicacionSector  String?
-  vencimiento      Boolean           @default(true)
+  vencimiento      Boolean                  @default(true)
   observaciones    String?
   cantidadMuestras Int?
   estadoMuestra    String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  rcm              RCM               @relation(fields: [rcmId], references: [id])
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  rcm              RCM                      @relation(fields: [rcmId], references: [id])
   probetas         Probeta[]
   servicios        ServicioMuestra[]
+  resultadosEnsayo ResultadoEnsayoMuestra[]
 }
 
 model ServicioMuestra {
@@ -807,17 +809,37 @@ model ServicioMuestra {
 }
 
 model Probeta {
-  id               Int      @id @default(autoincrement())
-  muestraId        Int
-  numero           Int
-  fechaConfeccion  DateTime
-  cantidad         Int
-  dias             Int
-  fechaVencimiento DateTime
-  estado           String   @default("CODIFICADO")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  muestra          Muestra  @relation(fields: [muestraId], references: [id])
+  id                Int       @id @default(autoincrement())
+  muestraId         Int
+  numero            Int
+  fechaConfeccion   DateTime
+  cantidad          Int
+  dias              Int
+  fechaVencimiento  DateTime
+  fechaInicioEnsayo DateTime?
+  fechaFinEnsayo    DateTime?
+  estado            String    @default("CODIFICADO")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  muestra           Muestra   @relation(fields: [muestraId], references: [id])
+}
+
+model ResultadoEnsayoMuestra {
+  id         Int      @id @default(autoincrement())
+  muestraId  Int
+  productoId Int
+  sku        String
+  dmcs       Float?
+  drMinima   Float?
+  drMaxima   Float?
+  notas      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  muestra    Muestra  @relation(fields: [muestraId], references: [id])
+  producto   Producto @relation(fields: [productoId], references: [productoId])
+
+  @@unique([muestraId, productoId])
+  @@index([sku])
 }
 
 model Area {
