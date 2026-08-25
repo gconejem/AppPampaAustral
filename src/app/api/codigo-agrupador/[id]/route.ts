@@ -135,7 +135,7 @@ export async function GET(request: Request, { params }: Params) {
                         select: {
                             id: true,
                             servicios: {
-                                orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+                                orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
                                 select: {
                                     codigo: true,
                                     cantidad: true,
@@ -170,7 +170,7 @@ export async function GET(request: Request, { params }: Params) {
                                 select: {
                                     id: true,
                                     servicios: {
-                                        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+                                        orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
                                         select: {
                                             codigo: true,
                                             cantidad: true,
@@ -258,6 +258,7 @@ export async function GET(request: Request, { params }: Params) {
                             area: { select: { nombre: true } },
                             familia: { select: { nombre: true } },
                             servicios: {
+                                orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
                                 select: {
                                     cantidad: true,
                                     estadoOperativo: true,
@@ -363,6 +364,7 @@ export async function GET(request: Request, { params }: Params) {
                                     area: { select: { nombre: true } },
                                     familia: { select: { nombre: true } },
                                     servicios: {
+                                        orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
                                         select: {
                                             cantidad: true,
                                             estadoOperativo: true,

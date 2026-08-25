@@ -223,7 +223,7 @@ export async function POST(request: Request) {
                         servicios: {
                             create: ensayos
                                 .filter(e => productosMap[e.sku] !== undefined)
-                                .map(e => ({
+                                .map((e, orden) => ({
                                     codigo: e.sku,
                                     nombre: e.nombre,
                                     cantidad: e.cantidad,
@@ -232,6 +232,7 @@ export async function POST(request: Request) {
                                     observacion: e.observacion ?? null,
                                     estadoOperativo: e.estadoOperativo ?? estadoInicial,
                                     esPaquete: e.esPaquete ?? false,
+                                    orden,
                                     producto: { connect: { productoId: productosMap[e.sku] } },
                                     subProductos: e.esPaquete && (e.subProductos?.length ?? 0) > 0
                                         ? {
@@ -269,11 +270,12 @@ export async function POST(request: Request) {
                                     servicios: {
                                         create: ensayos
                                             .filter(e => productosMap[e.sku] !== undefined)
-                                            .map(e => ({
+                                            .map((e, orden) => ({
                                                 codigo: e.sku,
                                                 nombre: e.nombre,
                                                 cantidad: e.cantidad,
                                                 estado: e.estadoOperativo ?? estadoInicial,
+                                                orden,
                                                 producto: { connect: { productoId: productosMap[e.sku] } },
                                             })),
                                     },

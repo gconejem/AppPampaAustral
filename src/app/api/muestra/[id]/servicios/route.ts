@@ -34,7 +34,7 @@ export async function GET(
             where: {
                 muestraId: muestraId
             },
-            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+            orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
             include: {
                 producto: {
                     include: {

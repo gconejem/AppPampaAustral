@@ -762,6 +762,7 @@ model ServicioRCM {
   observacion     String?
   estadoOperativo String?
   esPaquete       Boolean                  @default(false)
+  orden           Int?
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   producto        Producto                 @relation(fields: [productoId], references: [productoId])
@@ -801,6 +802,7 @@ model ServicioMuestra {
   nombre     String
   cantidad   Int
   estado     String                     @default("CODIFICADO")
+  orden      Int?
   createdAt  DateTime                   @default(now())
   updatedAt  DateTime                   @updatedAt
   muestra    Muestra                    @relation(fields: [muestraId], references: [id])

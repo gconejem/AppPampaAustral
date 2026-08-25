@@ -146,7 +146,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           servicios: {
             create: ensayos
               .filter((e: Ensayo) => productosMap[e.sku] !== undefined)
-              .map((e: Ensayo) => ({
+              .map((e: Ensayo, orden: number) => ({
                 codigo: e.sku,
                 nombre: e.nombre,
                 cantidad: e.cantidad,
@@ -155,6 +155,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 observacion: e.observacion ?? null,
                 estadoOperativo: e.estadoOperativo ?? estadoInicial,
                 esPaquete: e.esPaquete ?? false,
+                orden,
                 producto: { connect: { productoId: productosMap[e.sku] } },
                 subProductos: e.esPaquete && (e.subProductos?.length ?? 0) > 0
                   ? {
@@ -192,11 +193,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 servicios: {
                   create: ensayos
                     .filter((e: Ensayo) => productosMap[e.sku] !== undefined)
-                    .map((e: Ensayo) => ({
+                    .map((e: Ensayo, orden: number) => ({
                       codigo: e.sku,
                       nombre: e.nombre,
                       cantidad: e.cantidad,
                       estado: e.estadoOperativo ?? estadoInicial,
+                      orden,
                       producto: { connect: { productoId: productosMap[e.sku] } },
                     })),
                 },
@@ -217,8 +219,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         },
         include: {
-          servicios: { include: { subProductos: true, producto: true } },
-          muestras: { include: { servicios: true, probetas: true } },
+          servicios: { orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }], include: { subProductos: true, producto: true } },
+          muestras: { include: { servicios: { orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }] }, probetas: true } },
           area: true,
           familia: true,
         },
@@ -308,7 +310,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
           },
           servicios: {
-            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+            orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
             include: {
               subProductos: {
                 orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
@@ -319,7 +321,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           muestras: {
             include: {
               servicios: {
-                orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+                orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
                 include: {
                   producto: true,
                   history: {
