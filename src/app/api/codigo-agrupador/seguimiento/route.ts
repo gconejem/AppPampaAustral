@@ -94,6 +94,25 @@ const extractInformeTexto = (obs: unknown) => {
   return ''
 }
 
+const parseInformeNumber = (raw: unknown) => {
+  const value = String(raw ?? '').trim()
+
+  if (!value) return null
+
+  const normalized = value.replace(/[\s-]/g, '')
+  const direct = Number(normalized)
+
+  if (Number.isFinite(direct) && direct > 0) return direct
+
+  const trailingNumber = value.match(/(\d+)\s*$/)
+
+  if (!trailingNumber) return null
+
+  const parsed = Number(trailingNumber[1])
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
 const seguimientoRcmSelect = {
   id: true,
   numeroRcm: true,
@@ -368,7 +387,10 @@ export async function GET(request: Request) {
 
           // Regla negocio: en RCM tipo Control/Servicio (1:1) los ensayos parten completados
           // según el estado operativo del RCM (ENSAYADO/EJECUTADO), aunque el servicio venga codificado.
-          if (isEnsayadoEstado(s.estadoOperativo) || rcmAutoCompletado) ensayosEnsayados += qty
+
+          if (isEnsayadoEstado(s.estadoOperativo) || isEnsayadoEstado(s.estado) || rcmAutoCompletado) {
+            ensayosEnsayados += qty
+          }
 
           const sku = normSku((s as any)?.codigo)
           const nombreRaw = String((s as any)?.nombre ?? '').trim()
@@ -410,17 +432,21 @@ export async function GET(request: Request) {
       const informesByNumber = new Map<number, string>()
       for (const r of rcmsForAg) {
         for (const h of r.RCMHistory ?? []) {
-          const inf = (h as any)?.informe ?? null
-          if (inf === null || inf === undefined) continue
-          const n = Number(inf)
-          if (!Number.isFinite(n)) continue
+          const tipoEstado = String((h as any)?.tipoEstado ?? '').trim().toUpperCase()
 
-          const text = extractInformeTexto((h as any)?.observacion) || String(n)
-          if (!informesByNumber.has(n)) informesByNumber.set(n, text)
+          if (tipoEstado !== 'INFORME_AUTO' && tipoEstado !== 'INFORME_MANUAL') continue
+
+          const inf = (h as any)?.informe ?? null
+          const text = extractInformeTexto((h as any)?.observacion)
+          const n = parseInformeNumber(text) ?? (inf == null ? null : Number(inf))
+
+          if (n == null || !Number.isFinite(n) || n <= 0) continue
+
+          if (!informesByNumber.has(n)) informesByNumber.set(n, text || String(n))
 
           if (informeMax === null || n > informeMax) {
             informeMax = n
-            informeTexto = text
+            informeTexto = text || String(n)
           }
         }
       }
@@ -441,6 +467,7 @@ export async function GET(request: Request) {
         rcmNumeros,
         sedes,
         ss: ag.ordenTrabajo?.clave ?? null,
+        otClave: ag.ordenTrabajo?.clave ?? null,
         ot: ag.ordenTrabajo?.correlativ ?? null,
         ordenTrabajoId: ag.ordenTrabajo?.id ?? ag.ordenTrabajoId ?? null,
         fechaCodificacionMin: fechaCodMinIso,
