@@ -187,7 +187,15 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
     const isDosificacionesHormigon =
         isHormigonArea &&
         ['dosificaciones hormigon', 'dosificaciones de hormigon'].includes(normalizedTipoServicioName)
+    const itemOptions = parametrosArea.filter(p => p.areaId === area && p.tipo === 'ITEM')
     const gradoOptions = parametrosArea.filter(p => p.areaId === area && p.tipo === 'GRADO')
+
+    // Mantener estas opciones al final del catálogo, inmediatamente antes de "Otro".
+    if (isHormigonArea) {
+        itemOptions.sort((a, b) => Number(a.descripcion === 'Hormigón de Prueba') - Number(b.descripcion === 'Hormigón de Prueba'))
+        gradoOptions.sort((a, b) => Number(a.descripcion === 'No aplica') - Number(b.descripcion === 'No aplica'))
+    }
+
     const selectedGradeValues = grado === 'Otro' ? ['Otro'] : splitGradeValues(grado)
 
     React.useEffect(() => {
@@ -480,7 +488,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                         <FormControl fullWidth required>
                                             <InputLabel>Ítem</InputLabel>
                                             <Select label='Ítem' value={item} onChange={(e) => setItem(e.target.value)}>
-                                                {parametrosArea.filter(p => p.areaId === area && p.tipo === 'ITEM').map(p =>
+                                                {itemOptions.map(p =>
                                                     <MenuItem key={p.id} value={p.descripcion}>{p.descripcion}</MenuItem>)}
                                                 <MenuItem value='Otro'>Otro</MenuItem>
                                             </Select>
@@ -559,7 +567,7 @@ const RcmDraftForm: React.FC<RcmDraftFormProps> = ({
                                         <FormControl fullWidth required>
                                             <InputLabel>Ítem</InputLabel>
                                             <Select label='Ítem' value={item} onChange={(e) => setItem(e.target.value)}>
-                                                {parametrosArea.filter(p => p.areaId === area && p.tipo === 'ITEM').map(p =>
+                                                {itemOptions.map(p =>
                                                     <MenuItem key={p.id} value={p.descripcion}>{p.descripcion}</MenuItem>)}
                                                 <MenuItem value='Otro'>Otro</MenuItem>
                                             </Select>

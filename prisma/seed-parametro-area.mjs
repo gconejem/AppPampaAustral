@@ -85,7 +85,8 @@ async function main() {
       'Árido Grueso (Grava)',
       'Árido Mediano (Gravilla)',
       'Árido Fino (Arena)',
-      'Árido Polvo Roca'
+      'Árido Polvo Roca',
+      'Hormigón de Prueba'
     ],
     Áridos: ['Árido Grueso (Grava)', 'Árido Mediano (Gravilla)', 'Árido Fino (Arena)', 'Árido Polvo Roca'],
     Asfalto: [
@@ -152,7 +153,8 @@ async function main() {
       'HF-5,5',
       'M 1:2',
       'M 1:3',
-      'M 1:4'
+      'M 1:4',
+      'No aplica'
     ]
   }
 
