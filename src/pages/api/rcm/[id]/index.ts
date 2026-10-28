@@ -33,6 +33,41 @@ interface SubMuestraVenc {
     cantidad: number
 }
 
+const getCodigoProductoOperationalState = (states: Array<string | null | undefined>) => {
+    const normalized = states
+        .map(state => String(state ?? '').trim().toUpperCase())
+        .filter(Boolean)
+        .map(state => state === 'EJECUTADO' ? 'ENSAYADO' : state)
+
+    if (normalized.length === 0) return null
+
+    const completedStates = ['ENSAYADO', 'ENVIADO_DIGITACION', 'DIGITADO', 'REVISADO', 'FIRMADO', 'ENVIADO']
+    const allCompleted = normalized.every(state => completedStates.includes(state))
+
+    if (!allCompleted) {
+        return normalized.some(state => [
+            'EN_PROCESO',
+            'ENSAYADO',
+            'ENVIADO_DIGITACION',
+            'DIGITADO',
+            'REVISADO',
+            'FIRMADO',
+            'ENVIADO'
+        ].includes(state))
+            ? 'EN_PROCESO'
+            : 'CODIFICADO'
+    }
+
+    const orderedStates = ['ENSAYADO', 'ENVIADO_DIGITACION', 'DIGITADO', 'REVISADO', 'FIRMADO', 'ENVIADO']
+    let latestState = 'ENSAYADO'
+
+    for (const state of orderedStates) {
+        if (normalized.includes(state)) latestState = state
+    }
+
+    return latestState
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { id } = req.query
 
@@ -192,7 +227,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 return res.status(404).json({ error: 'RCM no encontrado' })
             }
 
-            res.status(200).json(rcm)
+            const rcmsDelCodigo = await prisma.rCM.findMany({
+                where: rcm.codigoAgrupadorId
+                    ? { codigoAgrupadorId: rcm.codigoAgrupadorId }
+                    : rcm.codigoProducto && rcm.ordenTrabajoId
+                        ? { codigoProducto: rcm.codigoProducto, ordenTrabajoId: rcm.ordenTrabajoId }
+                        : { id: rcmId },
+                select: { estadoOperativo: true }
+            })
+
+            res.status(200).json({
+                ...rcm,
+                estadoCodigoProducto: getCodigoProductoOperationalState(rcmsDelCodigo.map(item => item.estadoOperativo))
+            })
         } catch (error) {
             console.error('Error al obtener RCM:', error)
             res.status(500).json({ error: 'Error al obtener el RCM' })
@@ -416,4 +463,3 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.status(405).json({ error: 'Método no permitido' })
     }
 }
-

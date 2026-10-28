@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+
 import {
   Box,
   Button,
@@ -49,6 +51,10 @@ interface HeaderProps {
 }
 
 const Header = ({ onFiltersChange }: HeaderProps) => {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
   const getIsoDate = (date: Date) => {
     const y = date.getFullYear()
     const m = String(date.getMonth() + 1).padStart(2, '0')
@@ -71,20 +77,40 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
 
   const defaultRange = getDefaultRange()
 
-  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null)
-  const [selectedAreaName, setSelectedAreaName] = useState<string>('')
-  const [selectedEnsayador, setSelectedEnsayador] = useState<string>('')
-  const [selectedServicioEnsayo, setSelectedServicioEnsayo] = useState<string>('')
+  const queryDateField = searchParams?.get('rcmDateField')
+
+  const initialDateField: 'fecha_codificacion' | 'fecha_muestreo' | 'fecha_ingreso' | 'fecha_vencimiento' =
+    queryDateField === 'fecha_muestreo' || queryDateField === 'fecha_ingreso' || queryDateField === 'fecha_vencimiento'
+      ? queryDateField
+      : 'fecha_codificacion'
+
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(() => {
+    const value = Number(searchParams?.get('rcmAreaId') ?? '')
+
+    return Number.isInteger(value) && value > 0 ? value : null
+  })
+
+  const [selectedAreaName, setSelectedAreaName] = useState<string>(() => searchParams?.get('rcmAreaName') ?? '')
+
+  const [selectedEnsayador, setSelectedEnsayador] = useState<string>(() => searchParams?.get('rcmEnsayador') ?? '')
+
+  const [selectedServicioEnsayo, setSelectedServicioEnsayo] = useState<string>(() => searchParams?.get('rcmServicioEnsayo') ?? '')
   const [ensayadorOptions, setEnsayadorOptions] = useState<string[]>([])
   const [areaOptions, setAreaOptions] = useState<Area[]>([])
-  const [selectedFamilia, setSelectedFamilia] = useState<string>('')
+  const [selectedFamilia, setSelectedFamilia] = useState<string>(() => searchParams?.get('rcmFamilia') ?? '')
+
   const [familiaOptions, setFamiliaOptions] = useState<Familia[]>([])
-  const [selectedSede, setSelectedSede] = useState<string>('')
+  const [selectedSede, setSelectedSede] = useState<string>(() => searchParams?.get('rcmSede') ?? '')
   const [sedeOptions, setSedeOptions] = useState<string[]>([])
-  const [fechaTipo, setFechaTipo] = useState<'fecha_codificacion' | 'fecha_muestreo' | 'fecha_ingreso' | 'fecha_vencimiento'>('fecha_codificacion')
-  const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>(defaultRange)
+  const [fechaTipo, setFechaTipo] = useState(initialDateField)
+
+  const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>(() => ({
+    start: searchParams?.get('rcmStart') ?? defaultRange.start,
+    end: searchParams?.get('rcmEnd') ?? defaultRange.end
+  }))
+
   const [rangePickerKey, setRangePickerKey] = useState(0)
-  const [selectedEstadoOp, setSelectedEstadoOp] = useState<string>('')
+  const [selectedEstadoOp, setSelectedEstadoOp] = useState<string>(() => searchParams?.get('rcmEstadoOp') ?? '')
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const informesOpen = Boolean(anchorEl)
@@ -174,8 +200,27 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     const start = dr.start ?? ''
     const end = dr.end ?? ''
 
+    const params = new URLSearchParams(typeof window === 'undefined' ? searchParams?.toString() : window.location.search)
+
+    const filterParams = [
+      'rcmDateField',
+      'rcmStart',
+      'rcmEnd',
+      'rcmAreaId',
+      'rcmAreaName',
+      'rcmEstadoOp',
+      'rcmEnsayador',
+      'rcmServicioEnsayo',
+      'rcmFamilia',
+      'rcmSede'
+    ]
+
     if (!start && !end && !estOp && !areaId && !areaName && !ensayador && !servicioEnsayo && !familia && !sede) {
       onFiltersChange?.(undefined)
+      filterParams.forEach(key => params.delete(key))
+      const query = params.toString()
+
+      router.replace(`${pathname}${query ? `?${query}` : ''}`, { scroll: false })
 
       return
     }
@@ -206,6 +251,22 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
     if (sede) payload.sede = sede
 
     onFiltersChange?.(payload)
+
+    filterParams.forEach(key => params.delete(key))
+    params.set('rcmDateField', df)
+    if (start) params.set('rcmStart', start)
+    if (end) params.set('rcmEnd', end)
+    if (typeof areaId === 'number') params.set('rcmAreaId', String(areaId))
+    if (areaName) params.set('rcmAreaName', areaName)
+    if (estOp) params.set('rcmEstadoOp', estOp)
+    if (ensayador) params.set('rcmEnsayador', ensayador)
+    if (servicioEnsayo) params.set('rcmServicioEnsayo', servicioEnsayo)
+    if (familia) params.set('rcmFamilia', familia)
+    if (sede) params.set('rcmSede', sede)
+
+    const query = params.toString()
+
+    router.replace(`${pathname}${query ? `?${query}` : ''}`, { scroll: false })
   }
 
   const handleFechaTipoChange = (value: string) => {
@@ -292,7 +353,17 @@ const Header = ({ onFiltersChange }: HeaderProps) => {
   }
 
   useEffect(() => {
-    emitFilters('fecha_codificacion', defaultRange, '', null, '', '', '', '', '')
+    emitFilters(
+      fechaTipo,
+      dateRange,
+      selectedEstadoOp,
+      selectedAreaId,
+      selectedAreaName,
+      selectedEnsayador,
+      selectedServicioEnsayo,
+      selectedFamilia,
+      selectedSede
+    )
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

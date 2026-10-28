@@ -314,6 +314,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             include: {
               subProductos: {
                 orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+                include: {
+                  producto: {
+                    select: {
+                      productoId: true,
+                      sku: true,
+                      nombre: true,
+                      norma: true,
+                      tipo: true,
+                    },
+                  },
+                },
               },
               producto: true,
             },
@@ -325,7 +336,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 include: {
                   producto: true,
                   history: {
-                    orderBy: { registro: 'desc' },
+                    orderBy: [{ registro: 'desc' }, { id: 'desc' }],
                     take: 1,
                     select: { aplicadoA: true }
                   }
@@ -340,8 +351,72 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           obra: true,
           cliente: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: 'desc'         },
       })
+
+      const paqueteServicioIds = rcms.flatMap(rcm =>
+        (rcm.muestras ?? []).flatMap(muestra =>
+          muestra.servicios
+            .filter(servicio => servicio.producto?.esPaquete)
+            .map(servicio => servicio.id)
+        )
+      )
+
+      const historialPaquetes = paqueteServicioIds.length
+        ? await prisma.servicioMuestraHistorial.findMany({
+            where: {
+              servicioMuestraId: { in: paqueteServicioIds },
+              ensayoServicio: { not: null },
+            },
+            orderBy: [{ registro: 'desc' }, { id: 'desc' }],
+            select: {
+              servicioMuestraId: true,
+              ensayoServicio: true,
+              estNuevo: true,
+            },
+          })
+        : []
+
+      const historialPaquetePorServicio = new Map<number, Array<{ ensayoServicio: string; estado: string | null }>>()
+      const ensayosVistosPorServicio = new Map<number, Set<string>>()
+
+      for (const historial of historialPaquetes) {
+        const ensayoServicio = String(historial.ensayoServicio ?? '').trim()
+
+        const ensayoKey = ensayoServicio
+          .replace(/&amp;+/g, 'y')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toLowerCase()
+
+        if (!ensayoKey) continue
+
+        const ensayosVistos = ensayosVistosPorServicio.get(historial.servicioMuestraId) ?? new Set<string>()
+
+        if (ensayosVistos.has(ensayoKey)) continue
+
+        ensayosVistos.add(ensayoKey)
+        ensayosVistosPorServicio.set(historial.servicioMuestraId, ensayosVistos)
+
+        const estados = historialPaquetePorServicio.get(historial.servicioMuestraId) ?? []
+
+        estados.push({ ensayoServicio, estado: historial.estNuevo })
+        historialPaquetePorServicio.set(historial.servicioMuestraId, estados)
+      }
+
+      const rcmsConEstadoEnsayosPaquete = rcms.map(rcm => ({
+        ...rcm,
+        muestras: rcm.muestras.map(muestra => ({
+          ...muestra,
+          servicios: muestra.servicios.map(servicio => ({
+            ...servicio,
+            ensayosPaquete: historialPaquetePorServicio.get(servicio.id) ?? [],
+          })),
+        })),
+      }))
 
       const totalMuestras = rcms.reduce((acc, rcm) => acc + (Array.isArray(rcm.muestras) ? rcm.muestras.length : 0), 0)
       const totalServicios = rcms.reduce((acc, rcm) => acc + (Array.isArray(rcm.servicios) ? rcm.servicios.length : 0), 0)
@@ -364,7 +439,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sampleIds: rcms.slice(0, 5).map(item => item.id)
       })
 
-      res.status(200).json(rcms)
+      res.status(200).json(rcmsConEstadoEnsayosPaquete)
     } catch (error) {
       console.error('Error al listar RCMs:', error)
       res.status(500).json({

@@ -1,11 +1,11 @@
 'use client'
 
 // React Imports
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 
 // Next Imports
 import Link from 'next/link'
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 
 // NextAuth Imports
@@ -45,7 +45,7 @@ import DialogActions from '@mui/material/DialogActions'
 import CircularProgress from '@mui/material/CircularProgress'
 import { styled } from '@mui/material/styles'
 import Tooltip from '@mui/material/Tooltip'
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { es } from 'date-fns/locale'
@@ -73,9 +73,13 @@ import {
   getFacetedUniqueValues,
   getFacetedMinMaxValues,
   getPaginationRowModel,
-  getSortedRowModel
+  getSortedRowModel,
+  functionalUpdate,
+  type ColumnDef,
+  type FilterFn,
+  type PaginationState,
+  type SortingState
 } from '@tanstack/react-table'
-import type { ColumnDef, FilterFn, SortingState } from '@tanstack/react-table'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
@@ -105,6 +109,23 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   return itemRank.passed
 }
 
+const getPendingProbetaSummary = (
+  probetas: any[],
+  compareDates: (left: any, right: any) => number
+) => {
+  const pendientes = probetas.filter((probeta: any) => !String(probeta?.estado ?? 'CODIFICADO').toUpperCase().includes('ENSAYADO'))
+
+  const proxima = pendientes
+    .filter((probeta: any) => Boolean(probeta?.fechaVencimiento))
+    .slice()
+    .sort((left: any, right: any) => compareDates(left.fechaVencimiento, right.fechaVencimiento))[0] ?? null
+
+  return {
+    cantidadPendientes: pendientes.length,
+    proximoVencimiento: proxima?.fechaVencimiento ?? null
+  }
+}
+
 const DebouncedInput = ({
   value: initialValue,
   onChange,
@@ -116,14 +137,29 @@ const DebouncedInput = ({
   debounce?: number
 } & Omit<TextFieldProps, 'onChange'>) => {
   const [value, setValue] = useState(initialValue)
+  const skipDebounce = useRef(true)
+  const onChangeRef = useRef(onChange)
 
-  useEffect(() => setValue(initialValue), [initialValue])
   useEffect(() => {
-    const timeout = setTimeout(() => onChange(value), debounce)
+    onChangeRef.current = onChange
+  }, [onChange])
 
+  useEffect(() => {
+    setValue(initialValue)
+    skipDebounce.current = true
+  }, [initialValue])
+
+  useEffect(() => {
+    if (skipDebounce.current) {
+      skipDebounce.current = false
+
+      return
+    }
+
+    const timeout = setTimeout(() => onChangeRef.current(value), debounce)
 
     return () => clearTimeout(timeout)
-  }, [value])
+  }, [value, debounce])
 
   return <TextField {...props} value={value} onChange={e => setValue(e.target.value)} size='small' />
 }
@@ -181,16 +217,74 @@ const countDetailedEnsayos = (services: any[] = []) => {
     const children = rawChildren
 
     if (children.length > 0) {
+      const serviceQuantity = getSkuQuantity(service)
+
       return total + children.reduce((count: number, child: any) => {
         const type = normalizeText(child?.tipo ?? child?.producto?.tipo)
 
-        return count + (type.includes('ensayo') ? getSkuQuantity(child) : 0)
+        return count + (type.includes('ensayo') ? getSkuQuantity(child) * serviceQuantity : 0)
       }, 0)
     }
 
     const tipo = normalizeText(service?.tipo ?? service?.producto?.tipo)
 
     return total + (tipo.includes('ensayo') ? getSkuQuantity(service) : 0)
+  }, 0)
+}
+
+const countCompletedDetailedEnsayos = (configuredServices: any[] = [], sampleServices: any[] = [], autoCompleted = false) => {
+  const configuredEnsayos = configuredServices.flatMap((service: any) => {
+    const children = Array.isArray(service?.subProductos) ? service.subProductos : []
+    const serviceSku = String(service?.codigo ?? service?.producto?.sku ?? '').trim()
+    const serviceQuantity = getSkuQuantity(service)
+
+    if (children.length > 0) {
+      return children.flatMap((child: any) => {
+        const type = normalizeText(child?.tipo ?? child?.producto?.tipo)
+
+        if (!type.includes('ensayo')) return []
+
+        return [{
+          sku: String(child?.sku ?? child?.producto?.sku ?? '').trim(),
+          nombre: String(child?.nombre ?? child?.producto?.nombre ?? '').trim(),
+          cantidad: getSkuQuantity(child) * serviceQuantity,
+          packageSku: serviceSku,
+        }]
+      })
+    }
+
+    const type = normalizeText(service?.tipo ?? service?.producto?.tipo)
+
+    return type.includes('ensayo')
+      ? [{
+          sku: serviceSku,
+          nombre: String(service?.nombre ?? service?.producto?.nombre ?? '').trim(),
+          cantidad: serviceQuantity,
+          packageSku: '',
+        }]
+      : []
+  })
+
+  if (autoCompleted) {
+    return configuredEnsayos.reduce((total: number, ensayo: any) => total + ensayo.cantidad, 0)
+  }
+
+  return configuredEnsayos.reduce((completed, ensayo) => {
+    const sampleService = sampleServices.find((service: any) => {
+      const sku = String(service?.codigo ?? service?.producto?.sku ?? '').trim()
+
+      return ensayo.packageSku ? sku === ensayo.packageSku : sku === ensayo.sku
+    })
+
+    if (!sampleService) return completed
+
+    const packageState = ensayo.packageSku
+      ? sampleService.ensayosPaquete?.find((item: any) => normalizeText(item?.ensayoServicio) === normalizeText(ensayo.nombre))?.estado
+      : null
+
+    const state = String(packageState ?? sampleService.estado ?? '').toUpperCase().trim()
+
+    return completed + (state === 'ENSAYADO' || state === 'EJECUTADO' ? ensayo.cantidad : 0)
   }, 0)
 }
 
@@ -229,14 +323,17 @@ const consolidateSkuServices = (services: any[] = []) => {
       ? service.subProductosCodificados
       : Array.isArray(service?.subProductos) && service.subProductos.length > 0
         ? service.subProductos
-        : service?._isPaqueteSubItem
-          ? []
-          : []
+        : Array.isArray(service?.productosEnPaquete) && service.productosEnPaquete.length > 0
+          ? service.productosEnPaquete
+          : Array.isArray(service?.producto?.productosEnPaquete) && service.producto.productosEnPaquete.length > 0
+            ? service.producto.productosEnPaquete
+            : []
 
     if (service?.esPaquete && children.length > 0) {
       children.forEach((child: any, index: number) => {
         sources.push({
           ...child,
+          cantidad: getSkuQuantity(child) * getSkuQuantity(service),
           _source: child,
           _sourceKey: String(child?._syntheticKey ?? child?.id ?? `${service.id}-sub-${index}`),
           tipo: child?.tipo ?? child?.producto?.tipo ?? null
@@ -332,6 +429,7 @@ interface RCM {
   otDisplay?: string | null
   ss?: string | null
   numeroTarjeta?: string | null
+  tomaMuestra?: string | null
   fechaCodificacion: string
   fechaMuestreo: string
   fechaIngreso?: string | null
@@ -343,6 +441,7 @@ interface RCM {
   proximoVencimiento?: string | null
   diasVencimiento?: number | null
   cantidadProbetas?: number
+  cantidadProbetasPendientes?: number
   ensayador?: string | null
   ensayos?: {
     total: number
@@ -384,6 +483,7 @@ interface RCM {
     cantidad: number
     estado?: string
     numeroTarjeta?: string | null
+    probetas?: any[]
     servicioRCM?: {
       id?: number
       estado?: string
@@ -457,6 +557,7 @@ const getStatesForServicio = (servicioId: number | null, serviciosMuestra: any[]
 const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const { data: session } = useSession()
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const initialRcmIdParam = searchParams ? Number(searchParams.get('rcmId') ?? '') || null : null
 
@@ -618,8 +719,34 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [data, setData] = useState<RCM[]>([])
   const [filteredData, setFilteredData] = useState<RCM[]>([])
   const [loading, setLoading] = useState(true)
-  const [globalFilter, setGlobalFilter] = useState('')
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState(() => searchParams?.get('rcmQ') ?? '')
+
+  const [sorting, setSorting] = useState<SortingState>(() => {
+    const raw = searchParams?.get('rcmSort')
+
+    if (!raw) return []
+
+    try {
+      const parsed = JSON.parse(raw)
+
+      if (!Array.isArray(parsed)) return []
+
+      return parsed.filter(item => item && typeof item.id === 'string' && typeof item.desc === 'boolean')
+    } catch {
+      return []
+    }
+  })
+
+  const [pagination, setPagination] = useState<PaginationState>(() => {
+    const page = Number(searchParams?.get('rcmPage') ?? 0)
+    const pageSize = Number(searchParams?.get('rcmPageSize') ?? 10)
+
+    return {
+      pageIndex: Number.isInteger(page) && page >= 0 ? page : 0,
+      pageSize: [10, 25, 50].includes(pageSize) ? pageSize : 10
+    }
+  })
+
   const [hideControlServicio, setHideControlServicio] = useState(true)
   const [savingHistory, setSavingHistory] = useState(false)
   const [formErrors, setFormErrors] = useState<{ eventType?: string; motivo?: string; informeNumber?: string; general?: string }>({})
@@ -640,6 +767,39 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [inlineActiveTab, setInlineActiveTab] = useState<'detalle' | 'ensayos'>('detalle')
   const inlineDetailRef = useRef<HTMLDivElement | null>(null)
   const tableContainerRef = useRef<HTMLDivElement | null>(null)
+
+  const persistTableQuery = useCallback((next: {
+    globalFilter?: string
+    sorting?: SortingState
+    pagination?: PaginationState
+  }) => {
+    const params = new URLSearchParams(typeof window === 'undefined' ? searchParams?.toString() : window.location.search)
+    const nextFilter = next.globalFilter ?? globalFilter
+    const nextSorting = next.sorting ?? sorting
+    const nextPagination = next.pagination ?? pagination
+
+    if (nextFilter.trim()) params.set('rcmQ', nextFilter)
+    else params.delete('rcmQ')
+
+    if (nextSorting.length) params.set('rcmSort', JSON.stringify(nextSorting))
+    else params.delete('rcmSort')
+
+    params.set('rcmPage', String(nextPagination.pageIndex))
+    params.set('rcmPageSize', String(nextPagination.pageSize))
+
+    const query = params.toString()
+
+    router.replace(`${pathname}${query ? `?${query}` : ''}`, { scroll: false })
+  }, [globalFilter, pathname, pagination, router, searchParams, sorting])
+
+  const updateGlobalFilter = useCallback((value: string) => {
+    setGlobalFilter(value)
+
+    const nextPagination = { ...pagination, pageIndex: 0 }
+
+    setPagination(nextPagination)
+    persistTableQuery({ globalFilter: value, pagination: nextPagination })
+  }, [pagination, persistTableQuery])
 
   // Ô£à AGREGAR: Estados para historial de servicioMuestra
   const [histServicioDialogOpen, setHistServicioDialogOpen] = useState(false)
@@ -810,18 +970,27 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [gestionarOpen, setGestionarOpen] = useState(false)
   const [gestionarRow, setGestionarRow] = useState<RCM | null>(null)
   const [gestionarLoading, setGestionarLoading] = useState(false)
+  const [gestionarErrorCarga, setGestionarErrorCarga] = useState('')
   const [gestionarServicios, setGestionarServicios] = useState<any[]>([])
   const [gestionarProbetas, setGestionarProbetas] = useState<any[]>([])
   const [gestionarMuestra, setGestionarMuestra] = useState<any>(null)
   const [gestionarRcmData, setGestionarRcmData] = useState<any>(null)
   const [gestionarEnsayadorGlobal, setGestionarEnsayadorGlobal] = useState('')
+  const [gestionarTipoFiltro, setGestionarTipoFiltro] = useState<'ENSAYO' | 'TODAS'>('ENSAYO')
   const [gestionarEnsayadores, setGestionarEnsayadores] = useState<Record<string, string>>({})
+  const [gestionarAsignacionesSubmuestra, setGestionarAsignacionesSubmuestra] = useState<Record<string, Record<string, string>>>({})
+  const [gestionarAsignacionesSubmuestraOriginales, setGestionarAsignacionesSubmuestraOriginales] = useState<Record<string, Record<string, string>>>({})
   const [gestionarFechasAsignacionEnsayador, setGestionarFechasAsignacionEnsayador] = useState<Record<string, string>>({})
   const [gestionarFechasInicioEnsayo, setGestionarFechasInicioEnsayo] = useState<Record<string, string>>({})
   const [gestionarFechasFinEnsayo, setGestionarFechasFinEnsayo] = useState<Record<string, string>>({})
   const [gestionarFechasInicioSubmuestra, setGestionarFechasInicioSubmuestra] = useState<Record<string, string>>({})
   const [gestionarFechasFinSubmuestra, setGestionarFechasFinSubmuestra] = useState<Record<string, string>>({})
   const [gestionarFechasEnsayoOpen, setGestionarFechasEnsayoOpen] = useState<Record<string, boolean>>({})
+  const [gestionarFechaAsignacionPendiente, setGestionarFechaAsignacionPendiente] = useState<{
+    fecha: string
+    selectedKeys: string[]
+    otherPendingKeys: string[]
+  } | null>(null)
   const [gestionarEstados, setGestionarEstados] = useState<Record<string, string>>({})
   const [gestionarSaving, setGestionarSaving] = useState(false)
   const [gestionarObservaciones, setGestionarObservaciones] = useState<Record<string, string>>({})
@@ -831,6 +1000,15 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const [gestionarSubmuestraServicio, setGestionarSubmuestraServicio] = useState<any>(null)
   const [gestionarSubmuestraActiva, setGestionarSubmuestraActiva] = useState<any>(null)
   const [gestionarSubmuestraFormData, setGestionarSubmuestraFormData] = useState<Record<string, any>>({})
+  const [gestionarAsignacionSubmuestraOpen, setGestionarAsignacionSubmuestraOpen] = useState(false)
+  const [gestionarAsignacionSubmuestraActiva, setGestionarAsignacionSubmuestraActiva] = useState<any>(null)
+  const [gestionarAsignacionSubmuestraInicial, setGestionarAsignacionSubmuestraInicial] = useState<Record<string, string>>({})
+  const [gestionarEstadoMenuAnchor, setGestionarEstadoMenuAnchor] = useState<HTMLElement | null>(null)
+  const [gestionarEstadoMenuTarget, setGestionarEstadoMenuTarget] = useState<any>(null)
+  const [gestionarConfirmarEnsayoSubmuestra, setGestionarConfirmarEnsayoSubmuestra] = useState<any>(null)
+  const [gestionarConfirmacionEnsayoAceptada, setGestionarConfirmacionEnsayoAceptada] = useState(false)
+  const gestionarEstadoCodigoProducto = String(gestionarRcmData?.estadoCodigoProducto ?? '').trim().toUpperCase()
+  const bloqueoEdicionGestionar = ['ENVIADO_DIGITACION', 'DIGITADO', 'REVISADO', 'FIRMADO', 'ENVIADO', 'CERRADO_OP'].includes(gestionarEstadoCodigoProducto)
   const [resultadoOpen, setResultadoOpen] = useState(false)
   const [resultadoSku, setResultadoSku] = useState('')
   const [resultadoData, setResultadoData] = useState({ dmcs: '', drMinima: '', drMaxima: '', notas: '' })
@@ -853,13 +1031,18 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   const handleOpenGestionarEnsayos = async (row: RCM) => {
     if (!row.muestra?.id) return
     setGestionarRow(row)
+    setGestionarErrorCarga('')
     setGestionarServicios([])
     setGestionarProbetas([])
     setGestionarMuestra(null)
     setGestionarRcmData(null)
     setGestionarEnsayadorGlobal('')
+    setGestionarTipoFiltro('ENSAYO')
     setGestionarEnsayadores({})
+    setGestionarAsignacionesSubmuestra({})
+    setGestionarAsignacionesSubmuestraOriginales({})
     setGestionarFechasAsignacionEnsayador({})
+    setGestionarFechaAsignacionPendiente(null)
     setGestionarFechasInicioEnsayo({})
     setGestionarFechasFinEnsayo({})
     setGestionarFechasInicioSubmuestra({})
@@ -872,6 +1055,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setGestionarSubmuestraServicio(null)
     setGestionarSubmuestraActiva(null)
     setGestionarSubmuestraFormData({})
+    setGestionarAsignacionSubmuestraOpen(false)
+    setGestionarAsignacionSubmuestraActiva(null)
+    setGestionarEstadoMenuAnchor(null)
+    setGestionarEstadoMenuTarget(null)
+    setGestionarConfirmarEnsayoSubmuestra(null)
+    setGestionarConfirmacionEnsayoAceptada(false)
     setGestionarOpen(true)
     setGestionarLoading(true)
 
@@ -884,12 +1073,17 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         rcmId ? fetch(`/api/rcm/${rcmId}?ts=${Date.now()}`, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }) : Promise.resolve(null)
       ])
 
-      const dataServ = resServicios.ok ? await resServicios.json() : { servicios: [], muestra: {} }
+      if (!resServicios.ok) {
+        throw new Error(`No se pudieron cargar los ensayos de la muestra (HTTP ${resServicios.status}).`)
+      }
+
+      const dataServ = await resServicios.json()
       const detalleRcm = resRcm?.ok ? await resRcm.json() : null
 
       const muestraFromRcm = Array.isArray(detalleRcm?.muestras)
         ? detalleRcm.muestras.find((m: any) => Number(m?.id) === Number(muestraId))
         : null
+      const probetas = Array.isArray(muestraFromRcm?.probetas) ? muestraFromRcm.probetas : []
 
       const serviciosDetalle = Array.isArray(muestraFromRcm?.servicios) ? muestraFromRcm.servicios : []
 
@@ -955,31 +1149,38 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         }
       }
 
-      const packageServices = combined.filter((svc: any) => svc.esPaquete && Array.isArray(svc.productosEnPaquete) && svc.productosEnPaquete.length > 0)
-
-      const packageHistoryRows = await Promise.all(
-        packageServices.map(async (svc: any) => {
+      const serviceHistoryResults = await Promise.all(
+        combined.map(async (svc: any) => {
           try {
             const response = await fetch(`/api/servicioMuestra/${svc.id}/history?ts=${Date.now()}`, {
               cache: 'no-store',
               headers: { 'Cache-Control': 'no-cache' }
             })
 
-            const rows = response.ok ? await response.json() : []
+            if (!response.ok) {
+              console.error(`No se pudo cargar el historial del SKU ${svc.codigo ?? svc.id}: HTTP ${response.status}`)
 
-            return [svc.id, Array.isArray(rows) ? rows : []] as const
-          } catch {
-            return [svc.id, []] as const
+              return { row: [Number(svc.id), []] as const, failed: true }
+            }
+
+            const rows = await response.json()
+
+            return { row: [Number(svc.id), Array.isArray(rows) ? rows : []] as const, failed: false }
+          } catch (error) {
+            console.error(`Error cargando el historial del SKU ${svc.codigo ?? svc.id}:`, error)
+
+            return { row: [Number(svc.id), []] as const, failed: true }
           }
         })
       )
 
-      const packageHistoryMap = new Map<number, any[]>(packageHistoryRows)
+      const serviceHistoryRows = serviceHistoryResults.map(result => result.row)
+      const serviceHistoryMap = new Map<number, any[]>(serviceHistoryRows)
 
       const hydratedExpandedCombined = expandedCombined.map((item: any) => {
         if (!item._isPaqueteSubItem) return item
 
-        const historyRows = packageHistoryMap.get(item._paqueteParentId) ?? []
+        const historyRows = serviceHistoryMap.get(Number(item._paqueteParentId)) ?? []
         const historyMatch = historyRows.find((historyRow: any) => normalizeText(historyRow?.ensayoServicio) === normalizeText(item.nombre))
 
         if (!historyMatch) return item
@@ -998,15 +1199,44 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       const servicioSubmuestras = combined.find((service: any) => serviceUsesSubmuestras(service) && service.id)
       const fechasInicioSubmuestraInit: Record<string, string> = {}
       const fechasFinSubmuestraInit: Record<string, string> = {}
+      const asignacionesSubmuestraInit: Record<string, Record<string, string>> = {}
+
+      probetas.forEach((probeta: any) => {
+        const probetaKey = String(probeta?.id ?? probeta?.numero ?? '')
+
+        asignacionesSubmuestraInit[probetaKey] = {}
+        hydratedExpandedCombined
+          .filter((entry: any) => getSkuTypeLabel(entry?.tipo ?? entry?.producto?.tipo) === 'Ensayo')
+          .forEach((entry: any) => {
+            const sku = String(entry?.codigo ?? entry?.sku ?? '').trim()
+
+            if (sku && entry?.ensayador) asignacionesSubmuestraInit[probetaKey][sku] = String(entry.ensayador)
+          })
+      })
+
+      const asignacionesSubmuestraProcesadas = new Set<string>()
+
+      serviceHistoryMap.forEach(historyRows => {
+        historyRows.forEach((historyRow: any) => {
+          const match = String(historyRow?.ensayoServicio ?? '').match(/Submuestra\s+\d+\s+\(ID\s+(\d+)\)\s+·\s+SKU\s+(.+)$/i)
+
+          if (!match) return
+
+          const [, probetaId, sku] = match
+          const probetaKey = String(probetaId)
+          const assignmentKey = `${probetaKey}:${sku}`
+
+          asignacionesSubmuestraInit[probetaKey] ??= {}
+
+          if (!asignacionesSubmuestraProcesadas.has(assignmentKey)) {
+            asignacionesSubmuestraInit[probetaKey][sku] = String(historyRow?.aplicadoA ?? '').trim()
+            asignacionesSubmuestraProcesadas.add(assignmentKey)
+          }
+        })
+      })
 
       if (servicioSubmuestras) {
-        try {
-          const response = await fetch(`/api/servicioMuestra/${servicioSubmuestras.id}/history?ts=${Date.now()}`, {
-            cache: 'no-store',
-            headers: { 'Cache-Control': 'no-cache' }
-          })
-
-          const historyRows = response.ok ? await response.json() : []
+          const historyRows = serviceHistoryMap.get(Number(servicioSubmuestras.id)) ?? []
 
           if (Array.isArray(historyRows)) {
             historyRows.forEach((historyRow: any) => {
@@ -1017,27 +1247,27 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               const subKey = match[1]
 
               if (historyRow?.fechaInicioEnsayo) fechasInicioSubmuestraInit[subKey] = toDateTimeInputValue(historyRow.fechaInicioEnsayo)
-              if (historyRow?.fechaFinEnsayo) fechasFinSubmuestraInit[subKey] = toDateTimeInputValue(historyRow.fechaFinEnsayo)
+              if (historyRow?.fechaFinEnsayo) fechasFinSubmuestraInit[subKey] = toDateInputValue(historyRow.fechaFinEnsayo)
             })
           }
-        } catch {
-          // La ausencia de historial no impide abrir el modal.
-        }
       }
-
-      const probetas = Array.isArray(muestraFromRcm?.probetas) ? muestraFromRcm.probetas : []
 
       probetas.forEach((probeta: any) => {
         const subKey = String(probeta?.id ?? probeta?.numero ?? '')
 
         if (probeta?.fechaInicioEnsayo) fechasInicioSubmuestraInit[subKey] = toDateTimeInputValue(probeta.fechaInicioEnsayo)
-        if (probeta?.fechaFinEnsayo) fechasFinSubmuestraInit[subKey] = toDateTimeInputValue(probeta.fechaFinEnsayo)
+        if (probeta?.fechaFinEnsayo) fechasFinSubmuestraInit[subKey] = toDateInputValue(probeta.fechaFinEnsayo)
       })
 
       setGestionarServicios(hydratedExpandedCombined)
+      setGestionarErrorCarga(serviceHistoryResults.some(result => result.failed)
+        ? 'Se cargaron los SKU, pero no se pudo consultar el historial de algunas actividades. Revisa la conexión antes de guardar cambios de responsables.'
+        : '')
       setGestionarProbetas(probetas)
       setGestionarMuestra({ ...(dataServ.muestra ?? {}), probetas })
       setGestionarRcmData(detalleRcm)
+      setGestionarAsignacionesSubmuestra(asignacionesSubmuestraInit)
+      setGestionarAsignacionesSubmuestraOriginales(JSON.parse(JSON.stringify(asignacionesSubmuestraInit)))
 
       // inicializar estado y ensayador local con los valores actuales de cada servicio
       const estadosInit: Record<string, string> = {}
@@ -1054,7 +1284,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         if (s.ensayador) ensayadoresInit[key] = s.ensayador
         if (s.fechaAsignacionEnsayador) fechasAsignacionInit[key] = toDateInputValue(s.fechaAsignacionEnsayador)
         if (s.fechaInicioEnsayo) fechasInicioEnsayoInit[key] = toDateTimeInputValue(s.fechaInicioEnsayo)
-        if (s.fechaFinEnsayo) fechasFinEnsayoInit[key] = toDateTimeInputValue(s.fechaFinEnsayo)
+        if (s.fechaFinEnsayo) fechasFinEnsayoInit[key] = toDateInputValue(s.fechaFinEnsayo)
 
         if (typeof s.observacion === 'string' && s.observacion.trim()) {
           observacionesInit[key] = s.observacion
@@ -1070,6 +1300,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       setGestionarObservaciones(observacionesInit)
     } catch (e) {
       console.error('Error loading gestionar ensayos:', e)
+      setGestionarServicios([])
+      setGestionarErrorCarga(e instanceof Error ? e.message : 'No se pudieron cargar los ensayos de este RCM.')
     } finally {
       setGestionarLoading(false)
     }
@@ -1077,9 +1309,34 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
   const handleGuardarGestionar = async () => {
     if (!gestionarRow) return
+    if (bloqueoEdicionGestionar) {
+      alert(`No se puede guardar: el CP está en estado ${getOperationalLabel(gestionarEstadoCodigoProducto)} o posterior.`)
+
+      return
+    }
+
     setGestionarSaving(true)
 
     try {
+      const rcmIdValidacion = gestionarRow.rcmOriginalId ?? gestionarRow.id
+      const estadoCpResponse = await fetch(`/api/rcm/${rcmIdValidacion}`, { cache: 'no-store' })
+
+      if (!estadoCpResponse.ok) {
+        throw new Error('No se pudo validar el estado actual del CP antes de guardar.')
+      }
+
+      const detalleCpActualizado = await estadoCpResponse.json()
+      const estadoCpActual = String(detalleCpActualizado?.estadoCodigoProducto ?? '').trim().toUpperCase()
+      const cpBloqueaEdicion = ['ENVIADO_DIGITACION', 'DIGITADO', 'REVISADO', 'FIRMADO', 'ENVIADO', 'CERRADO_OP'].includes(estadoCpActual)
+
+      setGestionarRcmData((prev: any) => ({ ...prev, estadoCodigoProducto: estadoCpActual }))
+
+      if (cpBloqueaEdicion) {
+        alert(`No se puede guardar: el CP está en estado ${getOperationalLabel(estadoCpActual)} o posterior.`)
+
+        return
+      }
+
       const user = getCurrentUserName() ?? 'Usuario'
       const probetasOriginales = Array.isArray(gestionarMuestra?.probetas) ? gestionarMuestra.probetas : []
 
@@ -1090,6 +1347,12 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
           return gestionarServicios.some((sub: any) => Number(sub?._paqueteParentId) === Number(service.id) && normalizeText(sub?.nombre).includes('compresion'))
         })
+      const primeraEntradaEnsayo = consolidateSkuServices(gestionarServicios)
+        .find((group: any) => group.tipo === 'Ensayo')
+        ?.entries?.[0]
+      const servicioHistorialSubmuestraId = Number(primeraEntradaEnsayo?._isPaqueteSubItem
+        ? primeraEntradaEnsayo?._paqueteParentId
+        : primeraEntradaEnsayo?.id)
 
       const submuestrasEnsayadas = gestionarProbetas.length > 0 && gestionarProbetas.every((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO') === 'ENSAYADO')
       let fechaInicioPadreSubmuestras = ''
@@ -1105,8 +1368,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         const fechasFin = gestionarProbetas
           .map((probeta: any) => gestionarFechasFinSubmuestra[String(probeta?.id ?? probeta?.numero ?? '')])
           .filter(Boolean)
-          .map((fecha: string) => new Date(fecha))
-          .filter((fecha: Date) => !Number.isNaN(fecha.getTime()))
+          .map((fecha: string) => toDateOnly(fecha))
+          .filter((fecha: Date | null): fecha is Date => Boolean(fecha))
 
         if (fechasInicio.length > 0) {
           const inicioPadre = new Date(Math.min(...fechasInicio.map(fecha => fecha.getTime())))
@@ -1119,7 +1382,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         if (fechasFin.length > 0) {
           const finPadre = new Date(Math.max(...fechasFin.map(fecha => fecha.getTime())))
 
-          fechaFinPadreSubmuestras = toDateTimeInputValue(finPadre)
+          fechaFinPadreSubmuestras = toDateInputValue(finPadre)
 
           setGestionarFechasFinEnsayo(prev => ({ ...prev, [String(servicioSubmuestras.id)]: fechaFinPadreSubmuestras }))
         }
@@ -1130,9 +1393,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
         if (subItems.length === 0) return gestionarEstados[String(parentId)] ?? 'CODIFICADO'
 
-        const paqueteUsaSubmuestras = subItems.some((sub: any) => normalizeText(sub?.nombre).includes('compresion'))
+        const paqueteTieneEnsayo = subItems.some((sub: any) => getSkuTypeLabel(sub?.tipo ?? sub?.producto?.tipo) === 'Ensayo')
 
-        if (paqueteUsaSubmuestras && gestionarProbetas.length > 0) {
+        if (paqueteTieneEnsayo && gestionarProbetas.length > 0) {
           const estadosProbetas = gestionarProbetas.map((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO'))
 
           if (estadosProbetas.every((estado: string) => estado === 'ENSAYADO')) return 'ENSAYADO'
@@ -1153,9 +1416,49 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       const subItemsParaGuardar = gestionarServicios.filter((s: any) => s._isPaqueteSubItem)
       const serviciosParaGuardar = gestionarServicios.filter((s: any) => !s._isPaqueteSubItem)
+      const gruposEnsayoParaAsignar = consolidateSkuServices(gestionarServicios)
+        .filter((group: any) => group.tipo === 'Ensayo')
+      const asignacionesSubmuestraParaGuardar = gestionarProbetas.flatMap((probeta: any) => {
+        const probetaKey = getProbetaKey(probeta)
+        const estadoSubmuestra = normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO')
 
+        return gruposEnsayoParaAsignar.flatMap((group: any) => {
+          const sku = String(group.sku)
+          const ensayadorNuevo = getEnsayadorSubmuestra(probeta, sku)
+          const ensayadorPrevio = String(gestionarAsignacionesSubmuestraOriginales[probetaKey]?.[sku] ?? '').trim()
+
+          if (ensayadorNuevo === ensayadorPrevio) return []
+
+          const serviceIds = Array.from(new Set(group.entries
+            .map((entry: any) => Number(entry._isPaqueteSubItem ? entry._paqueteParentId : entry.id))
+            .filter((id: number) => Number.isFinite(id) && id > 0)))
+
+          return serviceIds.map(async (serviceId: number) => {
+            const response = await fetch(`/api/servicioMuestra/${serviceId}/history`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tipo: 'Ens',
+                estAnterior: estadoSubmuestra,
+                estNuevo: estadoSubmuestra,
+                funcionario: user,
+                aplicadoA: ensayadorNuevo || null,
+                ensayoServicio: `${group.nombre} · Submuestra ${probeta.numero ?? probetaKey} (ID ${probeta.id}) · SKU ${sku}`,
+                fechaAccion: getTodayDateInputValue(),
+                fechaFinEnsayo: gestionarFechasFinSubmuestra[probetaKey] ?? probeta?.fechaFinEnsayo ?? null,
+                skipServicioEstadoUpdate: true
+              })
+            })
+
+            if (!response.ok) {
+              throw new Error(`No se pudo guardar el ensayador del SKU ${sku} en la submuestra ${probeta.numero ?? probetaKey}`)
+            }
+          })
+        })
+      })
       await Promise.all(
         [
+          ...asignacionesSubmuestraParaGuardar,
           ...(servicioSubmuestras
             ? gestionarProbetas.map(async (probeta: any) => {
               const subKey = String(probeta?.id ?? probeta?.numero ?? '')
@@ -1193,7 +1496,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             const fechaInicioNueva = String(gestionarFechasInicioSubmuestra[subKey] ?? '').trim()
             const fechaFinNueva = String(gestionarFechasFinSubmuestra[subKey] ?? '').trim()
             const fechaInicioPrev = toDateTimeInputValue(original?.fechaInicioEnsayo)
-            const fechaFinPrev = toDateTimeInputValue(original?.fechaFinEnsayo)
+            const fechaFinPrev = toDateInputValue(original?.fechaFinEnsayo)
 
             if (!probetaId || (estadoNuevo === estadoPrev && fechaInicioNueva === fechaInicioPrev && fechaFinNueva === fechaFinPrev)) return
 
@@ -1209,6 +1512,32 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
             if (!response.ok) {
               throw new Error(`No se pudo guardar la submuestra ${subKey}`)
+            }
+
+            if (normalizeEnsayoState(estadoPrev) !== normalizeEnsayoState(estadoNuevo)) {
+              if (!Number.isFinite(servicioHistorialSubmuestraId) || servicioHistorialSubmuestraId <= 0) {
+                throw new Error(`No se encontró un SKU Ensayo para registrar el cambio de estado de la submuestra ${subKey}`)
+              }
+
+              const historyResponse = await fetch(`/api/servicioMuestra/${servicioHistorialSubmuestraId}/history`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tipo: 'Ens',
+                  estAnterior: normalizeEnsayoState(estadoPrev),
+                  estNuevo: normalizeEnsayoState(estadoNuevo),
+                  funcionario: user,
+                  ensayoServicio: `${primeraEntradaEnsayo?.nombre ?? primeraEntradaEnsayo?.producto?.nombre ?? 'Ensayo'} · Submuestra ${probeta.numero ?? subKey} (ID ${probeta.id}) · Estado`,
+                  fechaAccion: getTodayDateInputValue(),
+                  fechaInicioEnsayo: fechaInicioNueva || null,
+                  fechaFinEnsayo: normalizeEnsayoState(estadoNuevo) === 'ENSAYADO' ? fechaFinNueva || getTodayDateInputValue() : null,
+                  skipServicioEstadoUpdate: true
+                })
+              })
+
+              if (!historyResponse.ok) {
+                throw new Error(`No se pudo registrar el cambio de estado de la submuestra ${probeta.numero ?? subKey}`)
+              }
             }
           }),
           ...subItemsParaGuardar.map(async (s: any) => {
@@ -1228,7 +1557,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             const fechaInicioEnsayoNueva = String(gestionarFechasInicioEnsayo[sKey] ?? '').trim()
             const fechaInicioEnsayoPrev = toDateTimeInputValue(s.fechaInicioEnsayo)
             const fechaFinEnsayoNueva = String(gestionarFechasFinEnsayo[sKey] ?? '').trim()
-            const fechaFinEnsayoPrev = toDateTimeInputValue(s.fechaFinEnsayo)
+            const fechaFinEnsayoPrev = toDateInputValue(s.fechaFinEnsayo)
 
             if (
               estadoNuevo === estadoPrev &&
@@ -1283,7 +1612,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               ? fechaFinPadreSubmuestras
               : String(gestionarFechasFinEnsayo[sKey] ?? '').trim()
 
-            const fechaFinEnsayoPrev = toDateTimeInputValue(s.fechaFinEnsayo)
+            const fechaFinEnsayoPrev = toDateInputValue(s.fechaFinEnsayo)
 
             // Guardar si cambió estado, ensayador u observación
             if (
@@ -1316,33 +1645,38 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       )
 
       // El estado persistido del RCM usa los mismos SKU consolidados que muestra el modal.
-      const ensayosAplicables = consolidateSkuServices(gestionarServicios)
+      const gruposEnsayosAplicables = consolidateSkuServices(gestionarServicios)
         .filter((group: any) => group.tipo === 'Ensayo')
-        .map((group: any) => {
-          const usaSubmuestras = group.entries.some((entry: any) => serviceUsesSubmuestras(entry))
+      const ensayosAplicables = gruposEnsayosAplicables.map((group: any) => {
+        const usaSubmuestras = gestionarProbetas.length > 0
 
-          if (usaSubmuestras) {
-            const estadosProbetas = gestionarProbetas.map((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO'))
+        if (usaSubmuestras) {
+          const estadosProbetas = gestionarProbetas.map((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO'))
 
-            return estadosProbetas.length > 0 && estadosProbetas.every((estado: string) => estado === 'ENSAYADO')
-              ? 'ENSAYADO'
-              : estadosProbetas.some((estado: string) => estado !== 'CODIFICADO')
-                ? 'EN_PROCESO'
-                : 'CODIFICADO'
-          }
-
-          const estadosEntradas = group.entries.map((entry: any) => {
-            const key = String(entry._syntheticKey ?? entry.id)
-
-            return normalizeEnsayoState(gestionarEstados[key] ?? entry.estado ?? 'CODIFICADO')
-          })
-
-          return estadosEntradas.length > 0 && estadosEntradas.every((estado: string) => estado === 'ENSAYADO')
+          return estadosProbetas.length > 0 && estadosProbetas.every((estado: string) => estado === 'ENSAYADO')
             ? 'ENSAYADO'
-            : estadosEntradas.some((estado: string) => estado !== 'CODIFICADO')
+            : estadosProbetas.some((estado: string) => estado !== 'CODIFICADO')
               ? 'EN_PROCESO'
               : 'CODIFICADO'
+        }
+
+        const estadosEntradas = group.entries.map((entry: any) => {
+          const key = String(entry._syntheticKey ?? entry.id)
+
+          return normalizeEnsayoState(gestionarEstados[key] ?? entry.estado ?? 'CODIFICADO')
         })
+
+        return estadosEntradas.length > 0 && estadosEntradas.every((estado: string) => estado === 'ENSAYADO')
+          ? 'ENSAYADO'
+          : estadosEntradas.some((estado: string) => estado !== 'CODIFICADO')
+            ? 'EN_PROCESO'
+            : 'CODIFICADO'
+      })
+      const ensayadosActualizados = gruposEnsayosAplicables.reduce(
+        (total: number, group: any, index: number) =>
+          total + (ensayosAplicables[index] === 'ENSAYADO' ? Number(group.cantidad ?? 0) : 0),
+        0
+      )
 
       const estadoFinal = ensayosAplicables.length > 0 && ensayosAplicables.every((estado: string) => estado === 'ENSAYADO')
         ? 'ENSAYADO'
@@ -1378,22 +1712,39 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           .map((s: any) => gestionarEnsayadores[String(s._syntheticKey ?? s.id)] ?? s.ensayador ?? '')
           .find((e: string) => Boolean(e.trim())) ?? (gestionarRow?.ensayador ?? '')
 
-      setData(prev => prev.map(row => {
-        if (row.id === gestionarRow?.id) {
-          return { ...row, estadoMuestra: estadoFinal, estadoOperativo: estadoFinal, ensayador: ensayadorFinal || row.ensayador }
+      const actualizarFila = (row: RCM) => {
+        if (row.id !== gestionarRow?.id) return row
+
+        const probetasResumen = getPendingProbetaSummary(gestionarProbetas, compareDateOnly)
+
+        const totalEnsayos = Number(row.ensayos?.total ?? gruposEnsayosAplicables.reduce(
+          (total: number, group: any) => total + Number(group.cantidad ?? 0),
+          0
+        ))
+
+        const ensayados = Math.min(totalEnsayos, ensayadosActualizados)
+
+        return {
+          ...row,
+          estadoMuestra: estadoFinal,
+          estadoOperativo: estadoFinal,
+          proximoVencimiento: probetasResumen.proximoVencimiento,
+          diasVencimiento: probetasResumen.proximoVencimiento ? diffDaysFromToday(probetasResumen.proximoVencimiento) : null,
+          cantidadProbetas: gestionarProbetas.length,
+          cantidadProbetasPendientes: probetasResumen.cantidadPendientes,
+          muestra: row.muestra ? { ...row.muestra, probetas: gestionarProbetas } : row.muestra,
+          ensayador: ensayadorFinal || row.ensayador,
+          ensayos: {
+            total: totalEnsayos,
+            ensayados,
+            pendientes: Math.max(0, totalEnsayos - ensayados)
+          }
         }
+      }
 
 
-        return row
-      }))
-
-      setFilteredData(prev => prev.map(row => {
-        if (row.id === gestionarRow?.id) {
-          return { ...row, estadoMuestra: estadoFinal, estadoOperativo: estadoFinal, ensayador: ensayadorFinal || row.ensayador }
-        }
-
-        return row
-      }))
+      setData(prev => prev.map(actualizarFila))
+      setFilteredData(prev => prev.map(actualizarFila))
 
       if (selectedInlineRowId && gestionarRow?.id === selectedInlineRowId) {
         setInlineServicios(prev => prev.map((servicio: any) => {
@@ -1418,6 +1769,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       setGestionarOpen(false)
     } catch (e) {
       console.error('Error guardando gestionar ensayos:', e)
+      alert(e instanceof Error ? e.message : 'No se pudieron guardar los cambios de ensayo.')
     } finally {
       setGestionarSaving(false)
     }
@@ -1774,6 +2126,15 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     setServiciosMuestra([])
     setMuestraDetalle(null)
     setRcmDetalleModal(null)
+
+    if (searchParams?.has('rcmId')) {
+      const params = new URLSearchParams(searchParams.toString())
+
+      params.delete('rcmId')
+      const query = params.toString()
+
+      router.replace(`${pathname}${query ? `?${query}` : ''}`, { scroll: false })
+    }
   }
 
   const resetInlineDetail = () => {
@@ -2892,11 +3253,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               (rcmTypeNorm === 'CONTROL' && rcmEstadoNorm === 'ENSAYADO') ||
               (rcmTypeNorm === 'SERVICIO' && (rcmEstadoNorm === 'EJECUTADO' || rcmEstadoNorm === 'ENSAYADO'))
 
-            const ensayados = serviciosMuestra.reduce((acc: number, servicioItem: any) => {
-              const estadoServicio = String(servicioItem?.estado ?? '').toUpperCase().trim()
-
-              return acc + ((estadoServicio === 'ENSAYADO' || estadoServicio === 'EJECUTADO') ? Number(servicioItem?.cantidad ?? 1) : 0)
-            }, 0)
+            const ensayados = countCompletedDetailedEnsayos(serviciosParaConteo, serviciosMuestra, rcmAutoCompletado)
 
             const ensayadosResueltos = rcmAutoCompletado ? totalEnsayos : ensayados
 
@@ -2915,20 +3272,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                     : (estadosServicios[0] ?? '')
 
             const probetas = Array.isArray(muestra.probetas) ? muestra.probetas : []
-
-            const nextProbeta = probetas
-              .map((probeta: any) => ({
-                ...probeta,
-                fechaVencimiento: probeta?.fechaVencimiento ?? null
-              }))
-              .filter((probeta: any) => {
-                if (!probeta.fechaVencimiento) return false
-
-                const estado = String(probeta?.estado ?? 'CODIFICADO').toUpperCase().trim()
-
-                return estado === 'CODIFICADO'
-              })
-              .sort((left: any, right: any) => compareDateOnly(left.fechaVencimiento, right.fechaVencimiento))[0] ?? null
+            const probetasResumen = getPendingProbetaSummary(probetas, compareDateOnly)
 
             const tipoServicio =
               tipoServicioMuestra ??
@@ -2989,6 +3333,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               numeroRcm: r.numeroRcm,
               rcmType: (r as any)?.rcmType ?? null,
               sede: r.sede ?? null,
+              tomaMuestra: r.tomaMuestra ?? null,
 
               // Ô£à Agregar numeroTarjeta al objeto retornado
               numeroTarjeta: muestra.numeroTarjeta ??
@@ -3016,9 +3361,10 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
               estadoAdministrativo: r.estadoAdministrativo ?? r.estado_administrativo ?? '',
               tipoServicio,
               ensayoServicioNombres,
-              proximoVencimiento: nextProbeta?.fechaVencimiento ?? null,
-              diasVencimiento: nextProbeta?.fechaVencimiento ? diffDaysFromToday(nextProbeta.fechaVencimiento) : null,
+              proximoVencimiento: probetasResumen.proximoVencimiento,
+              diasVencimiento: probetasResumen.proximoVencimiento ? diffDaysFromToday(probetasResumen.proximoVencimiento) : null,
               cantidadProbetas: probetas.length,
+              cantidadProbetasPendientes: probetasResumen.cantidadPendientes,
               ensayador,
               ensayos: {
                 total: totalEnsayos,
@@ -3048,6 +3394,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 cantidad: muestra.cantidad ?? muestra.cantidadMuestras ?? 1,
                 estado: muestra.estado,
                 numeroTarjeta: muestra.numeroTarjeta ?? muestra.numero_tarjeta ?? null,
+                probetas,
                 servicioRCM: servicioRCM ? {
                   id: servicioRCM.id,
                   estado: servicioRCM.estado,
@@ -3313,6 +3660,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     }
   }
 
+
   const normalizeEnsayoState = (raw?: string | null) => {
     const state = String(raw ?? 'CODIFICADO').toUpperCase()
 
@@ -3322,12 +3670,24 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     return 'CODIFICADO'
   }
 
+  const getSubmuestraVencimientoLabel = (estado?: string | null, fechaVencimiento?: string | null) => {
+    if (normalizeEnsayoState(estado) === 'ENSAYADO') return 'Completado'
+
+    const days = diffDaysFromToday(fechaVencimiento)
+
+    if (days === null) return '-'
+    if (days < 0) return `Atrasado ${Math.abs(days)} días`
+    if (days === 0) return 'Programado hoy'
+
+    return `En ${days} días`
+  }
+
   const canTransitionEnsayoState = (fromRaw: string | null | undefined, toRaw: string) => {
     const from = normalizeEnsayoState(fromRaw)
     const to = normalizeEnsayoState(toRaw)
 
-    if (from === 'ENSAYADO') return to === 'ENSAYADO'
-    if (from === 'EN_PROCESO') return to === 'EN_PROCESO' || to === 'ENSAYADO'
+    if (from === 'ENSAYADO') return to === 'ENSAYADO' || to === 'EN_PROCESO'
+    if (from === 'EN_PROCESO') return to === 'CODIFICADO' || to === 'EN_PROCESO' || to === 'ENSAYADO'
 
     // CODIFICADO
     return to === 'CODIFICADO' || to === 'EN_PROCESO'
@@ -3386,6 +3746,28 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
       return next
     })
+
+    if (targetState === 'ENSAYADO') {
+      const today = getTodayDateInputValue()
+      const ensayosAplicables = consolidateSkuServices(gestionarServicios)
+        .filter((group: any) => group.tipo === 'Ensayo')
+        .flatMap((group: any) => group.entries)
+
+      setGestionarFechasFinEnsayo(prev => {
+        const next = { ...prev }
+
+        ensayosAplicables.forEach((entry: any) => {
+          const key = String(entry._syntheticKey ?? entry.id)
+          const state = getEstadoServicioConProbetas(entry, gestionarEstados[key] ?? entry.estado ?? 'CODIFICADO')
+
+          if (canTransitionEnsayoState(state, targetState) && !next[key] && !entry.fechaFinEnsayo) {
+            next[key] = today
+          }
+        })
+
+        return next
+      })
+    }
   }
 
   const canMarkProbetaAsReady = (probeta?: any) => {
@@ -3402,6 +3784,27 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       .sort((left: any, right: any) => compareDateOnly(left?.fechaVencimiento, right?.fechaVencimiento))
 
     return pending.length === 0 || Number(pending[0]?.id) === Number(probeta?.id)
+  }
+
+  const getProbetaKey = (probeta?: any) => String(probeta?.id ?? probeta?.numero ?? '')
+
+  const getEnsayadorSubmuestra = (probeta: any, sku: string) => {
+    return String(gestionarAsignacionesSubmuestra[getProbetaKey(probeta)]?.[sku] ?? '').trim()
+  }
+
+  const setEnsayadorSubmuestra = (probeta: any, sku: string, value: string) => {
+    const probetaKey = getProbetaKey(probeta)
+
+    setGestionarAsignacionesSubmuestra(prev => ({
+      ...prev,
+      [probetaKey]: { ...(prev[probetaKey] ?? {}), [sku]: value }
+    }))
+  }
+
+  const hasAllAssigneesForProbeta = (probeta: any) => {
+    const assaySkus = consolidateSkuServices(gestionarServicios).filter((group: any) => group.tipo === 'Ensayo')
+
+    return assaySkus.length > 0 && assaySkus.every((group: any) => Boolean(getEnsayadorSubmuestra(probeta, String(group.sku))))
   }
 
   const createEmptySubmuestraFicha = () => ({
@@ -3428,21 +3831,22 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
   }
 
   const getSubmuestrasForService = (service?: any) => {
-    if (!serviceUsesSubmuestras(service)) return []
+    if (!service || getSkuTypeLabel(service?.tipo ?? service?.producto?.tipo) !== 'Ensayo') return []
 
     return gestionarProbetas.slice().sort((a: any, b: any) => Number(a.numero ?? 0) - Number(b.numero ?? 0))
   }
 
   const getEstadoServicioConProbetas = (service?: any, fallback?: string | null) => {
-    if (!serviceUsesSubmuestras(service)) return fallback ?? service?.estado ?? 'CODIFICADO'
+    if (gestionarProbetas.length === 0 || getSkuTypeLabel(service?.tipo ?? service?.producto?.tipo) !== 'Ensayo') {
+      return fallback ?? service?.estado ?? 'CODIFICADO'
+    }
 
-    const probetasServicio = getSubmuestrasForService(service)
-    const estados = probetasServicio.map((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO'))
+    const estados = gestionarProbetas.map((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO'))
 
     if (estados.length > 0 && estados.every((estado: string) => estado === 'ENSAYADO')) return 'ENSAYADO'
     if (estados.some((estado: string) => estado !== 'CODIFICADO')) return 'EN_PROCESO'
 
-    return fallback ?? service?.estado ?? 'CODIFICADO'
+    return 'CODIFICADO'
   }
 
   const getSubmuestraFichaKey = (service?: any, probeta?: any) => `${String(service?._syntheticKey ?? service?.id ?? 'svc')}_${String(probeta?.id ?? probeta?.numero ?? 'prob')}`
@@ -3523,12 +3927,13 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         return next
       })
       const now = getNowDateTimeInputValue()
+      const today = getTodayDateInputValue()
 
       gestionarServicios.filter((service: any) => String(service.codigo ?? '') === resultadoSku).forEach((service: any) => {
         const key = String(service._syntheticKey ?? service.id)
 
         setGestionarFechasInicioEnsayo(prev => ({ ...prev, [key]: prev[key] || now }))
-        setGestionarFechasFinEnsayo(prev => ({ ...prev, [key]: now }))
+        setGestionarFechasFinEnsayo(prev => ({ ...prev, [key]: today }))
       })
       setResultadoOpen(false)
     } catch {
@@ -3543,19 +3948,29 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     if (!canProcessProbetaInOrder(gestionarSubmuestraActiva)) return
 
     const serviceKey = String(gestionarSubmuestraServicio._syntheticKey ?? gestionarSubmuestraServicio.id)
+    const subKey = String(gestionarSubmuestraActiva.id ?? gestionarSubmuestraActiva.numero ?? '')
+    const today = getTodayDateInputValue()
 
     setGestionarProbetas(prev => prev.map((probeta: any) => Number(probeta?.id) === Number(gestionarSubmuestraActiva?.id)
       ? { ...probeta, estado: 'ENSAYADO' }
       : probeta))
     setGestionarEstados(prev => ({ ...prev, [serviceKey]: 'ENSAYADO' }))
+    setGestionarFechasFinSubmuestra(prev => ({ ...prev, [subKey]: prev[subKey] || today }))
     handleCloseGestionarSubmuestra()
   }
 
-  const updateSubmuestraState = (probeta: any, targetState: 'EN_PROCESO' | 'ENSAYADO') => {
-    if (!canProcessProbetaInOrder(probeta)) return
+  const updateSubmuestraState = (probeta: any, targetState: 'CODIFICADO' | 'EN_PROCESO' | 'ENSAYADO') => {
+    const currentState = normalizeEnsayoState(probeta?.estado)
+
+    const requiresProcessingWindow =
+      (currentState === 'CODIFICADO' && targetState === 'EN_PROCESO') ||
+      (currentState === 'EN_PROCESO' && targetState === 'ENSAYADO')
+
+    if (requiresProcessingWindow && !canProcessProbetaInOrder(probeta)) return
 
     const subKey = String(probeta?.id ?? probeta?.numero ?? '')
     const now = getNowDateTimeInputValue()
+    const today = getTodayDateInputValue()
 
     setGestionarProbetas(prev => prev.map((item: any) => Number(item?.id) === Number(probeta?.id)
       ? { ...item, estado: targetState }
@@ -3563,9 +3978,82 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
     if (targetState === 'EN_PROCESO') {
       setGestionarFechasInicioSubmuestra(prev => ({ ...prev, [subKey]: prev[subKey] || now }))
-    } else {
-      setGestionarFechasFinSubmuestra(prev => ({ ...prev, [subKey]: prev[subKey] || now }))
+    } else if (targetState === 'ENSAYADO') {
+      setGestionarFechasFinSubmuestra(prev => ({ ...prev, [subKey]: prev[subKey] || today }))
     }
+  }
+
+  const closeGestionarEstadoMenu = () => {
+    setGestionarEstadoMenuAnchor(null)
+    setGestionarEstadoMenuTarget(null)
+  }
+
+  const applyGestionarEstadoMenu = (targetState: 'CODIFICADO' | 'EN_PROCESO' | 'ENSAYADO') => {
+    const target = gestionarEstadoMenuTarget
+
+    if (!target || target.bloqueado) return
+
+    if (target.kind === 'probeta') {
+      if (!canTransitionEnsayoState(target.probeta?.estado, targetState)) return
+
+      const currentState = normalizeEnsayoState(target.probeta?.estado)
+
+      const requiresProcessingWindow =
+        (currentState === 'CODIFICADO' && targetState === 'EN_PROCESO') ||
+        (currentState === 'EN_PROCESO' && targetState === 'ENSAYADO')
+
+      if (requiresProcessingWindow && !target.puedeProcesar) return
+
+      if (targetState === 'ENSAYADO') {
+        setGestionarConfirmarEnsayoSubmuestra(target.probeta)
+        setGestionarConfirmacionEnsayoAceptada(false)
+        closeGestionarEstadoMenu()
+
+        return
+      }
+
+      updateSubmuestraState(target.probeta, targetState)
+      closeGestionarEstadoMenu()
+
+      return
+    }
+
+    const entries = target.entries ?? []
+
+    if (!canTransitionEnsayoState(target.estado, targetState)) return
+
+    if (targetState === 'EN_PROCESO' && normalizeEnsayoState(target.estado) === 'CODIFICADO' && !puedeIniciarEnsayos) return
+    if (targetState === 'EN_PROCESO' && normalizeEnsayoState(target.estado) === 'CODIFICADO' && !hasAssignedEnsayador(target.service, target.ensayador)) return
+
+    const keys = entries.map((entry: any) => String(entry._syntheticKey ?? entry.id))
+    const today = getTodayDateInputValue()
+
+    setGestionarEstados(prev => ({
+      ...prev,
+      ...Object.fromEntries(keys.map((key: string) => [key, targetState]))
+    }))
+
+    if (targetState === 'EN_PROCESO') {
+      const now = getNowDateTimeInputValue()
+
+      setGestionarFechasInicioEnsayo(prev => {
+        const next = { ...prev }
+
+        keys.forEach((key: string) => { if (!next[key]) next[key] = now })
+
+        return next
+      })
+    } else if (targetState === 'ENSAYADO') {
+      setGestionarFechasFinEnsayo(prev => {
+        const next = { ...prev }
+
+        keys.forEach((key: string) => { if (!next[key]) next[key] = today })
+
+        return next
+      })
+    }
+
+    closeGestionarEstadoMenu()
   }
 
   const proximaProbetaPendiente = useMemo(() => {
@@ -3590,7 +4078,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     ? `Disponible desde ${formatDateDDMMYYYYDateOnlyDash(proximaProbetaPendiente.fechaVencimiento)}`
     : null
 
-  const getVencimientoMeta = (raw?: string | null, cantidadProbetas = 0) => {
+  const getVencimientoMeta = (raw?: string | null, cantidadProbetas = 0, cantidadProbetasPendientes = cantidadProbetas) => {
     const formatted = formatDateLikeDDMMYYYYDash(raw)
     const days = diffDaysFromToday(raw)
     const unit = cantidadProbetas === 1 ? 'submuestra' : 'submuestras'
@@ -3602,25 +4090,30 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
       backgroundColor: 'rgba(255, 196, 84, 0.14)'
     }
 
-    if (days !== null) {
+    if (cantidadProbetas > 0 && cantidadProbetasPendientes === 0) {
+      status = 'Sin pendientes'
+      colors = {
+        color: '#08794c',
+        borderColor: 'rgba(16, 185, 129, 0.55)',
+        backgroundColor: 'rgba(16, 185, 129, 0.12)'
+      }
+    } else if (days !== null) {
       if (days < 0) {
-        status = `Vencido ${Math.abs(days)}d`
+        status = `Atrasado ${Math.abs(days)} días`
         colors = {
           color: '#d84f2a',
           borderColor: 'rgba(255, 112, 67, 0.7)',
           backgroundColor: 'rgba(255, 138, 101, 0.12)'
         }
       } else if (days === 0) {
-        status = 'Hoy'
+        status = 'Programado hoy'
         colors = {
           color: '#d84f2a',
           borderColor: 'rgba(255, 112, 67, 0.7)',
           backgroundColor: 'rgba(255, 138, 101, 0.12)'
         }
-      } else if (days === 1) {
-        status = 'Mañana'
       } else {
-        status = `En ${days}d`
+        status = `En ${days} días`
       }
     }
 
@@ -4126,7 +4619,11 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         header: 'Próx. Venc.',
         accessorKey: 'proximoVencimiento',
         cell: ({ row }) => {
-          const meta = getVencimientoMeta(row.original.proximoVencimiento, row.original.cantidadProbetas ?? 0)
+          const meta = getVencimientoMeta(
+            row.original.proximoVencimiento,
+            row.original.cantidadProbetas ?? 0,
+            row.original.cantidadProbetasPendientes ?? row.original.cantidadProbetas ?? 0
+          )
 
           if (!row.original.proximoVencimiento) {
             return (
@@ -4134,6 +4631,21 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 <Typography variant='body2' color='text.disabled' sx={{ fontWeight: 500 }}>
                   -
                 </Typography>
+                {meta.status ? (
+                  <Chip
+                    size='small'
+                    label={meta.status}
+                    variant='outlined'
+                    sx={{
+                      height: 22,
+                      fontWeight: 800,
+                      color: meta.colors.color,
+                      borderColor: meta.colors.borderColor,
+                      bgcolor: meta.colors.backgroundColor,
+                      '& .MuiChip-label': { px: 0.8 }
+                    }}
+                  />
+                ) : null}
                 {meta.helper !== '-' ? (
                   <Typography variant='caption' color='text.secondary' sx={{ textAlign: 'center' }}>
                     {meta.helper}
@@ -4312,18 +4824,46 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
     },
     state: {
       sorting,
-      globalFilter
+      globalFilter,
+      pagination
     },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
+    onSortingChange: updater => {
+      const next = functionalUpdate(updater, sorting)
+
+      setSorting(next)
+      persistTableQuery({ sorting: next })
+    },
+    onGlobalFilterChange: updater => updateGlobalFilter(String(functionalUpdate(updater, globalFilter))),
+    onPaginationChange: updater => {
+      const next = functionalUpdate(updater, pagination)
+
+      setPagination(next)
+      persistTableQuery({ pagination: next })
+    },
     globalFilterFn: fuzzyFilter,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    autoResetPageIndex: false,
     filterFromLeafRows: true, // ÔåÉ AGREGAR esto
     maxLeafRowFilterDepth: 0 // ÔåÉ AGREGAR esto
   })
+
+  const filteredRowCount = table.getFilteredRowModel().rows.length
+
+  useEffect(() => {
+    if (loading) return
+
+    const lastPageIndex = Math.max(0, Math.ceil(filteredRowCount / pagination.pageSize) - 1)
+
+    if (pagination.pageIndex <= lastPageIndex) return
+
+    const nextPagination = { ...pagination, pageIndex: lastPageIndex }
+
+    setPagination(nextPagination)
+    persistTableQuery({ pagination: nextPagination })
+  }, [filteredRowCount, loading, pagination, persistTableQuery])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -4620,7 +5160,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
           <DebouncedInput
             value={globalFilter ?? ''}
-            onChange={value => setGlobalFilter(String(value))}
+            onChange={value => updateGlobalFilter(String(value))}
             placeholder='Buscar RCM, OT, obra, material...'
             sx={{ width: 320 }}
           />
@@ -4792,8 +5332,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
         const estadoActual = row?.estadoMuestra ?? row?.estadoOperativo ?? 'CODIFICADO'
         const area = rcmData?.area?.nombre ?? row?.area ?? '-'
         const tarjeta = muestra?.numeroTarjeta || row?.numeroTarjeta || rcmData?.numeroTarjeta || '-'
-        const numeroMuestra = muestra?.numeroMuestra || '-'
+        const numeroMuestra = String(rcmData?.tomaMuestra ?? row?.tomaMuestra ?? '').trim() || '-'
         const ensayosCount = countDetailedEnsayos(inlineServicios)
+        const inlineDisplayServices = consolidateSkuServices(inlineServicios)
 
         const cp = (() => {
           const candidates = [
@@ -4947,7 +5488,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                       <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>MATERIAL</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{material}</Typography></Box>
                       <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>ÍTEM</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{item}</Typography></Box>
                       <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>N° TARJETA</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{String(tarjeta).startsWith('T-') ? tarjeta : `T-${tarjeta}`}</Typography></Box>
-                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>N° MUESTRA</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{String(numeroMuestra).startsWith('#') ? numeroMuestra : `#${numeroMuestra}`}</Typography></Box>
+                      <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>N° MUESTRA</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{numeroMuestra}</Typography></Box>
                       <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>CANTIDAD</Typography><Typography sx={{ fontSize: '0.9rem', color: '#111827' }}>{cantidad}</Typography></Box>
                       <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>VENCIMIENTO</Typography><Typography sx={{ fontSize: '0.9rem', color: vencimiento ? '#047857' : '#9ca3af', fontWeight: 700 }}>{vencimiento ? '✓ Sí' : 'No'}</Typography></Box>
                       <Box><Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: '#8b95a7' }}>INF. ENSAYO</Typography><Typography sx={{ fontSize: '0.9rem', color: informeEnsayo ? '#047857' : '#9ca3af', fontWeight: 700 }}>{informeEnsayo ? '✓ Sí' : 'No'}</Typography></Box>
@@ -4996,18 +5537,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                             .sort((a: any, b: any) => Number(a?.numero ?? 0) - Number(b?.numero ?? 0))
                             .map((p: any, i: number) => {
                               const daysToDue = diffDaysFromToday(p?.fechaVencimiento)
-                              const safeDays = daysToDue ?? 0
-                              const isToday = safeDays === 0
-                              const isTomorrow = safeDays === 1
                               const estadoSubmuestra = p?.estado ?? 'CODIFICADO'
-
-                              const restantesLabel = isToday
-                                ? 'en 0d'
-                                : isTomorrow
-                                  ? 'en 1d'
-                                  : safeDays < 0
-                                    ? `vencido ${Math.abs(safeDays)}d`
-                                    : `en ${safeDays}d`
+                              const restantesLabel = getSubmuestraVencimientoLabel(estadoSubmuestra, p?.fechaVencimiento)
 
                               return (
                                 <Box key={p?.id ?? i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.8, py: 0.45, borderRadius: 1, border: '1px solid #d0d7e2', bgcolor: '#fff' }}>
@@ -5016,7 +5547,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                   <Typography sx={{ fontSize: '0.75rem', color: '#8b95a7' }}>{formatDateDDMMYYYYDateOnlyDash(p?.fechaVencimiento)}</Typography>
                                   <Typography sx={{ fontSize: '0.75rem', color: '#374151' }}>{`cant. ${p?.cantidad ?? '-'}`}</Typography>
                                   <Chip label={getOperationalLabel(estadoSubmuestra)} size='small' variant='outlined' sx={{ height: 20, fontWeight: 700, fontSize: '0.7rem', ...inlineEstadoPillSx(String(estadoSubmuestra)) }} />
-                                  <Typography sx={{ fontSize: '0.75rem', color: '#374151', fontWeight: 700 }}>{restantesLabel}</Typography>
+                                  <Typography sx={{ fontSize: '0.75rem', color: normalizeEnsayoState(estadoSubmuestra) === 'ENSAYADO' ? '#08794c' : (daysToDue ?? 0) < 0 ? '#dc2626' : '#374151', fontWeight: 700 }}>{restantesLabel}</Typography>
                                 </Box>
                               )
                             })}
@@ -5038,32 +5569,41 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {inlineServicios.length === 0 ? (
+                        {inlineDisplayServices.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={6} align='center' sx={{ py: 3 }}>
                               <Typography sx={{ color: '#9ca3af' }}>No hay ensayos cargados</Typography>
                             </TableCell>
                           </TableRow>
                         ) : (
-                          inlineServicios.map((servicio: any, idx: number) => {
-                            const servicioId = servicio.id ?? servicio.servicioMuestraId ?? servicio.servicioId ?? servicio._id ?? idx
+                          inlineDisplayServices.map((servicio: any) => {
 
                             const estadoRaw = resolveServiceStateFromRcm(
-                              servicio.estado ?? servicio.estadoServicio ?? 'CODIFICADO',
+                              servicio.estado ?? 'CODIFICADO',
                               rcmData?.rcmType,
                               row?.estadoOperativo ?? rcmData?.estadoOperativo
                             )
 
+                            const mostrarAvanceSubmuestras = servicio.tipo === 'Ensayo' && probetas.length > 0
+
+                            const totalSubmuestrasSku = mostrarAvanceSubmuestras
+                              ? probetas.reduce((total: number, probeta: any) => total + getSkuQuantity(probeta), 0)
+                              : 0
+
+                            const completadasSubmuestrasSku = mostrarAvanceSubmuestras
+                              ? probetas.reduce((total: number, probeta: any) => total + (normalizeEnsayoState(probeta?.estado) === 'ENSAYADO' ? getSkuQuantity(probeta) : 0), 0)
+                              : 0
+
                             return (
-                              <TableRow key={servicioId}>
+                              <TableRow key={servicio.key}>
                                 <TableCell>
                                   <Typography sx={{ display: 'inline-flex', px: 0.9, py: 0.18, borderRadius: 0.8, bgcolor: '#f1f5f9', border: '1px solid #d0d7e2', fontSize: '0.76rem', fontWeight: 700, color: '#374151' }}>
-                                    {servicio.codigo ?? '-'}
+                                    {servicio.sku ?? '-'}
                                   </Typography>
                                 </TableCell>
                                 <TableCell>
                                   <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#111827', lineHeight: 1.2 }}>
-                                    {servicio.nombre ?? servicio.servicio?.nombre ?? '-'}
+                                    {servicio.nombre ?? '-'}
                                   </Typography>
                                   <Typography sx={{ fontSize: '0.75rem', color: '#8b95a7' }}>
                                     {servicio.norma ?? '-'}
@@ -5071,19 +5611,26 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                 </TableCell>
                                 <TableCell align='center'>
                                   <Typography sx={{ fontSize: '0.84rem', color: '#374151' }}>
-                                    {servicio.cantidad ?? 1}
+                                    {servicio.cantidad}
                                   </Typography>
                                 </TableCell>
                                 <TableCell>
                                   <Typography sx={{ fontSize: '0.84rem', color: '#374151' }}>
-                                    {servicio.ensayador ?? '-'}
+                                    {servicio.ensayadores?.join(' / ') || servicio.ensayador || '-'}
                                   </Typography>
                                 </TableCell>
                                 <TableCell align='center'>
-                                  <Chip label={getOperationalLabel(estadoRaw)} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.72rem', ...inlineEstadoPillSx(String(estadoRaw)) }} />
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+                                    <Chip label={getOperationalLabel(estadoRaw)} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.72rem', ...inlineEstadoPillSx(String(estadoRaw)) }} />
+                                    {mostrarAvanceSubmuestras && (
+                                      <Typography variant='caption' color='text.secondary'>
+                                        {`${completadasSubmuestrasSku}/${totalSubmuestrasSku}`}
+                                      </Typography>
+                                    )}
+                                  </Box>
                                 </TableCell>
                                 <TableCell>
-                                  <Typography sx={{ fontSize: '0.82rem', color: '#9ca3af' }}>{servicio.observacion ?? '—'}</Typography>
+                                  <Typography sx={{ fontSize: '0.82rem', color: '#9ca3af' }}>{servicio.entries.map((entry: any) => entry.observacion).filter(Boolean).join(' · ') || '—'}</Typography>
                                 </TableCell>
                               </TableRow>
                             )
@@ -5264,7 +5811,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const tipoMaterial = muestra?.tipoMaterial || rcmData?.tipoMaterial || row?.tipoMaterial || '-'
           const item = muestra?.item || rcmData?.item || '-'
           const tarjeta = muestra?.numeroTarjeta || row?.numeroTarjeta || rcmData?.numeroTarjeta || '-'
-          const numeroMuestra = muestra?.numeroMuestra || '-'
+          const numeroMuestra = String(rcmData?.tomaMuestra ?? row?.tomaMuestra ?? '').trim() || '-'
           const procedencia = muestra?.procedencia || rcmData?.procedencia || '-'
           const ubicacionSector = muestra?.ubicacionSector || rcmData?.ubicacionSector || '-'
           const cantidad = muestra?.cantidadMuestras ?? rcmData?.cantidadMuestras ?? '-'
@@ -5298,8 +5845,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const ensayosCount = displayServices.length
           const ensayosPendientes = displayServices.some((service: any) => service.tipo === 'Ensayo' && service.completedQuantity < service.cantidad)
 
+          const ensayosIniciados = displayServices.some(
+            (service: any) => service.tipo === 'Ensayo' && normalizeEnsayoState(service.estado) !== 'CODIFICADO'
+          )
+
           if (displayServices.some((service: any) => service.tipo === 'Ensayo')) {
-            estadoActual = ensayosPendientes ? 'EN_PROCESO' : 'ENSAYADO'
+            estadoActual = !ensayosPendientes
+              ? 'ENSAYADO'
+              : ensayosIniciados
+                ? 'EN_PROCESO'
+                : 'CODIFICADO'
           }
 
           const submuestrasCount = probetas.length
@@ -5426,7 +5981,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                   <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>TIPO DE MATERIAL</Typography><Typography sx={{ color: '#374151', fontWeight: 600 }}>{tipoMaterial}</Typography></Box>
                   <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>ITEM</Typography><Typography sx={{ color: '#374151', fontWeight: 600 }}>{item}</Typography></Box>
                   <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>N° TARJETA</Typography><Typography sx={{ color: '#1d4ed8', fontWeight: 800 }}>{String(tarjeta).startsWith('T-') ? tarjeta : `T-${tarjeta}`}</Typography></Box>
-                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>N° DE MUESTRA</Typography><Typography sx={{ color: '#374151', fontWeight: 600 }}>{String(numeroMuestra).startsWith('#') ? numeroMuestra : `#${numeroMuestra}`}</Typography></Box>
+                  <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>N° DE MUESTRA</Typography><Typography sx={{ color: '#374151', fontWeight: 600 }}>{numeroMuestra}</Typography></Box>
                   <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>PROCEDENCIA</Typography><Typography sx={{ color: '#374151', fontWeight: 600 }}>{procedencia}</Typography></Box>
                   <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>UBICACION / SECTOR</Typography><Typography sx={{ color: '#374151', fontWeight: 600 }}>{ubicacionSector}</Typography></Box>
                   <Box><Typography sx={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b95a7' }}>CANTIDAD</Typography><Typography sx={{ color: '#374151', fontWeight: 600 }}>{cantidad}</Typography></Box>
@@ -5510,6 +6065,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                               row?.estadoOperativo ?? rcmData?.estadoOperativo
                             )
 
+                            const mostrarAvanceSubmuestras = servicio.tipo === 'Ensayo' && probetas.length > 0
+
+                            const totalSubmuestrasSku = mostrarAvanceSubmuestras
+                              ? probetas.reduce((total: number, probeta: any) => total + getSkuQuantity(probeta), 0)
+                              : 0
+
+                            const completadasSubmuestrasSku = mostrarAvanceSubmuestras
+                              ? probetas.reduce((total: number, probeta: any) => total + (normalizeEnsayoState(probeta?.estado) === 'ENSAYADO' ? getSkuQuantity(probeta) : 0), 0)
+                              : 0
+
                             const esPaquete = servicio.esPaquete === true
 
                             const subProductos: any[] = esPaquete
@@ -5550,8 +6115,8 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                   <TableCell align='center'>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.35 }}>
                                       <Chip label={getOperationalLabel(servicio.estado ?? estadoRaw)} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.74rem', ...estadoPillSx(String(servicio.estado ?? estadoRaw)) }} />
-                                      {servicio.completedQuantity < servicio.cantidad ? (
-                                        <Typography variant='caption' color='text.secondary'>{`${servicio.completedQuantity}/${servicio.cantidad} completados`}</Typography>
+                                      {mostrarAvanceSubmuestras ? (
+                                        <Typography variant='caption' color='text.secondary'>{`${completadasSubmuestrasSku}/${totalSubmuestrasSku}`}</Typography>
                                       ) : null}
                                     </Box>
                                   </TableCell>
@@ -5727,6 +6292,22 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           }
 
           const areaLabel = toLabel((rcmData as any)?.area) ?? toLabel(row?.area) ?? '-'
+          const areaNorm = normalizeText(areaLabel)
+          const esHormigon = areaNorm === 'hormigon'
+          const esElementosComponentes = areaNorm === 'elementos y componentes'
+          const esAsfalto = areaNorm === 'asfalto'
+          const esSuelo = areaNorm === 'suelo'
+          const esOtros = areaNorm === 'otros'
+          const mostrarFechaConfeccion = esHormigon || esElementosComponentes || esAsfalto || esOtros
+          const mostrarElementoYGrado = esHormigon || esElementosComponentes
+          const mostrarCotas = esSuelo
+          const fechaConfeccion = gestionarMuestra?.fechaConfeccion ?? rcmData?.fechaConfeccion
+          const elemento = gestionarMuestra?.elemento ?? rcmData?.elemento
+          const grado = gestionarMuestra?.grado ?? rcmData?.grado
+          const cotas = typeof gestionarMuestra?.cotas === 'string' ? gestionarMuestra.cotas : ''
+          const cota1 = rcmData?.cota1 ?? cotas.split('-')[0]?.trim()
+          const cota2 = rcmData?.cota2 ?? cotas.split('-')[1]?.trim()
+          const mostrarCamposDinamicos = mostrarFechaConfeccion || mostrarElementoYGrado || mostrarCotas
 
           const tipoServicioLabel =
             toLabel(row?.familia) ??
@@ -5742,6 +6323,14 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           const tarjetaLabel = gestionarMuestra?.numeroTarjeta || row?.numeroTarjeta || '-'
           const otLabel = rcmData?.ordenTrabajo?.correlativo ?? rcmData?.ordenTrabajo?.correlativ ?? row?.otDisplay ?? '-'
 
+          const terrenoResponsable = resolveDisplayPersonName(
+            rcmData?.ordenTrabajo?.user?.name,
+            rcmData?.ordenTrabajo?.user?.email,
+            (row as any)?.muestreadoPor
+          )
+          const estadoCodigoProducto = String(rcmData?.estadoCodigoProducto ?? '').trim().toUpperCase()
+          const bloqueoEdicionCodigoProducto = bloqueoEdicionGestionar
+
           const estadoPillSx = (raw?: string) => {
             const k = String(raw ?? '').toUpperCase()
 
@@ -5754,13 +6343,20 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 
           const displayServices = consolidateSkuServices(gestionarServicios).map((group: any) => {
             const entries = group.entries
-            const entriesConSubmuestras = entries.filter((entry: any) => serviceUsesSubmuestras(entry))
+            const usaSubmuestrasDelRcm = group.tipo === 'Ensayo' && gestionarProbetas.length > 0
+            const entriesConSubmuestras = usaSubmuestrasDelRcm
+              ? entries
+              : entries.filter((entry: any) => serviceUsesSubmuestras(entry))
 
-            const entriesRegulares = entriesConSubmuestras.length > 0
+            const entriesRegulares = usaSubmuestrasDelRcm || entriesConSubmuestras.length > 0
               ? []
               : entries
 
-            const submuestras = entriesConSubmuestras.length > 0 ? getSubmuestrasForService(entriesConSubmuestras[0]) : []
+            const submuestras = usaSubmuestrasDelRcm
+              ? gestionarProbetas
+              : entriesConSubmuestras.length > 0
+                ? getSubmuestrasForService(entriesConSubmuestras[0])
+                : []
             const cantidadSubmuestras = submuestras.reduce((total: number, probeta: any) => total + getSkuQuantity(probeta), 0)
 
             const completadasSubmuestras = submuestras.reduce((total: number, probeta: any) => {
@@ -5774,15 +6370,24 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             const completadasRegulares = entriesRegulares.reduce((total: number, entry: any) => {
               const key = String(entry._syntheticKey ?? entry.id)
               const state = getEstadoServicioConProbetas(entry, gestionarEstados[key] ?? entry.estado ?? 'CODIFICADO')
+              const normalizedState = String(state).toUpperCase()
 
-              return total + (String(state).toUpperCase().includes('ENSAYADO') ? getSkuQuantity(entry) : 0)
+              return total + (normalizedState.includes('ENSAYADO') || normalizedState.includes('EJECUTADO') ? getSkuQuantity(entry) : 0)
             }, 0)
 
             const cantidad = cantidadRegular + cantidadSubmuestras
             const completedQuantity = completadasRegulares + completadasSubmuestras
 
+            const estadosRegulares = entriesRegulares.map((entry: any) => {
+              const key = String(entry._syntheticKey ?? entry.id)
+
+              return String(getEstadoServicioConProbetas(entry, gestionarEstados[key] ?? entry.estado ?? 'CODIFICADO')).toUpperCase()
+            })
+
             const liveState = cantidad > 0 && completedQuantity >= cantidad
-              ? 'ENSAYADO'
+              ? estadosRegulares.length > 0 && estadosRegulares.every((state: string) => state.includes('EJECUTADO'))
+                ? 'EJECUTADO'
+                : 'ENSAYADO'
               : submuestras.some((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO') !== 'CODIFICADO') || entriesRegulares.some((entry: any) => {
                 const key = String(entry._syntheticKey ?? entry.id)
 
@@ -5801,16 +6406,25 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
           })
 
           const countableServices = displayServices.filter((service: any) => service.tipo === 'Ensayo')
-          const totalServicios = displayServices.reduce((total: number, service: any) => total + service.cantidad, 0)
-          const completados = displayServices.reduce((total: number, service: any) => total + service.completedQuantity, 0)
+
+          const visibleServices = gestionarTipoFiltro === 'TODAS'
+            ? displayServices
+            : countableServices
+
+          const totalServicios = visibleServices.reduce((total: number, service: any) => total + service.cantidad, 0)
+          const completados = visibleServices.reduce((total: number, service: any) => total + service.completedQuantity, 0)
 
           if (countableServices.length > 0) {
-            estadoActual = completados < totalServicios ? 'EN_PROCESO' : 'ENSAYADO'
-          }
+            const totalEnsayos = countableServices.reduce((total: number, service: any) => total + service.cantidad, 0)
+            const ensayosCompletados = countableServices.reduce((total: number, service: any) => total + service.completedQuantity, 0)
+            const ensayosIniciados = countableServices.some((service: any) => normalizeEnsayoState(service.estado) !== 'CODIFICADO')
 
-          const submuestraEnsayador = displayServices
-            .flatMap((service: any) => service.ensayadores ?? [])
-            .find((name: string) => Boolean(name)) ?? ''
+            estadoActual = totalEnsayos > 0 && ensayosCompletados >= totalEnsayos
+              ? 'ENSAYADO'
+              : ensayosIniciados
+                ? 'EN_PROCESO'
+                : 'CODIFICADO'
+          }
 
           const submuestraPermiteResultados = displayServices.some((service: any) => ['1005', '1006'].includes(String(service.sku)))
           const submuestraService = gestionarServicios.find((service: any) => serviceUsesSubmuestras(service) && service.id) ?? null
@@ -5839,8 +6453,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                   </Box>
                 </Box>
                 <Box>
+                  <Typography sx={{ fontSize: '0.64rem', fontWeight: 800, color: '#9ca3af', letterSpacing: 0.6, mb: 0.5 }}>FECHA DE INGRESO</Typography>
+                  <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: '#111827' }}>{formatDateDDMMYYYYDateOnlyDash(rcmData?.fechaIngreso ?? row?.fechaIngreso)}</Typography>
+                </Box>
+                <Box>
                   <Typography sx={{ fontSize: '0.64rem', fontWeight: 800, color: '#9ca3af', letterSpacing: 0.6, mb: 0.5 }}>N° TARJETA</Typography>
                   <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#1d4ed8' }}>{tarjetaLabel}</Typography>
+                </Box>
+                <Box>
+                  <Typography sx={{ fontSize: '0.64rem', fontWeight: 800, color: '#9ca3af', letterSpacing: 0.6, mb: 0.5 }}>N° MUESTRA</Typography>
+                  <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: '#111827' }}>{String(rcmData?.tomaMuestra ?? row?.tomaMuestra ?? '').trim() || '—'}</Typography>
                 </Box>
                 <Box>
                   <Typography sx={{ fontSize: '0.64rem', fontWeight: 800, color: '#9ca3af', letterSpacing: 0.6, mb: 0.5 }}>OT</Typography>
@@ -5852,6 +6474,42 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 </Box>
               </Box>
 
+              {mostrarCamposDinamicos && (
+                <Box sx={{ px: 3, py: 1.1, bgcolor: '#fdf8e8', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: 2.5, flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
+                  <Typography sx={{ fontSize: '0.72rem', fontWeight: 800, color: '#8a5a00' }}>{areaLabel.toUpperCase()}</Typography>
+                  {mostrarFechaConfeccion && (
+                    <Box>
+                      <Typography sx={{ fontSize: '0.64rem', fontWeight: 800, color: '#b7791f' }}>FECHA CONFECCIÓN</Typography>
+                      <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#374151' }}>{formatDateDDMMYYYYDateOnlyDash(fechaConfeccion)}</Typography>
+                    </Box>
+                  )}
+                  {mostrarElementoYGrado && (
+                    <Box>
+                      <Typography sx={{ fontSize: '0.64rem', fontWeight: 800, color: '#b7791f' }}>ELEMENTO</Typography>
+                      <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#374151' }}>{String(elemento ?? '').trim() || '—'}</Typography>
+                    </Box>
+                  )}
+                  {mostrarElementoYGrado && (
+                    <Box>
+                      <Typography sx={{ fontSize: '0.64rem', fontWeight: 800, color: '#b7791f' }}>GRADO</Typography>
+                      <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#374151' }}>{String(grado ?? '').trim() || '—'}</Typography>
+                    </Box>
+                  )}
+                  {mostrarCotas && (
+                    <Box>
+                      <Typography sx={{ fontSize: '0.64rem', fontWeight: 800, color: '#b7791f' }}>COTA 1</Typography>
+                      <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#374151' }}>{String(cota1 ?? '').trim() || '—'}</Typography>
+                    </Box>
+                  )}
+                  {mostrarCotas && (
+                    <Box>
+                      <Typography sx={{ fontSize: '0.64rem', fontWeight: 800, color: '#b7791f' }}>COTA 2</Typography>
+                      <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#374151' }}>{String(cota2 ?? '').trim() || '—'}</Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+
               <DialogContent sx={{ p: 2.5, bgcolor: '#fff', overflowY: 'auto', flex: 1 }}>
                 {gestionarLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
@@ -5859,6 +6517,21 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                   </Box>
                 ) : (
                   <>
+                    {gestionarErrorCarga && (
+                      <Box role='alert' sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, p: 1.25, mb: 2, border: '1px solid #fca5a5', borderRadius: 1, bgcolor: '#fef2f2' }}>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#991b1b', fontWeight: 600 }}>
+                          {gestionarErrorCarga}
+                        </Typography>
+                        <Button
+                          size='small'
+                          variant='outlined'
+                          onClick={() => gestionarRow && handleOpenGestionarEnsayos(gestionarRow)}
+                          sx={{ flexShrink: 0, textTransform: 'none' }}
+                        >
+                          Reintentar
+                        </Button>
+                      </Box>
+                    )}
                     {/* COORDINADOR DE SALA */}
                     <Box sx={{ border: '1.5px solid #bfdbfe', borderRadius: 1.5, p: 2, mb: 2.5, bgcolor: '#f0f7ff' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mb: 1.6 }}>
@@ -5866,14 +6539,15 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                         <Typography sx={{ fontSize: '0.78rem', fontWeight: 800, color: '#1d4ed8', letterSpacing: 0.4 }}>COORDINADOR DE SALA</Typography>
                       </Box>
 
-                      {/* Fila única: Ensayador global + Aplicar + Estado masivo */}
+                      {/* Fila única: ensayador global + aplicar + estado masivo */}
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'nowrap' }}>
                         <Box sx={{ flex: '1 1 0', minWidth: 0 }}>
-                          <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, color: '#6b7280', letterSpacing: 0.3, mb: 0.4 }}>ASIGNAR ENSAYADOR A TODOS</Typography>
+                          <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, color: '#6b7280', letterSpacing: 0.3, mb: 0.4 }}>ASIGNAR ENSAYADOR A TODOS LOS ENSAYOS</Typography>
                           <Select
                             size='small'
                             displayEmpty
                             value={gestionarEnsayadorGlobal}
+                            disabled={bloqueoEdicionCodigoProducto}
                             onChange={e => setGestionarEnsayadorGlobal(String(e.target.value))}
                             sx={{ width: '100%', fontSize: '0.82rem', bgcolor: '#fff' }}
                           >
@@ -5886,52 +6560,75 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                         <Button
                           variant='contained'
                           size='small'
-                          disabled={!gestionarEnsayadorGlobal}
+                          disabled={bloqueoEdicionCodigoProducto || !gestionarEnsayadorGlobal || countableServices.length === 0}
                           onClick={() => {
-                            setGestionarEnsayadores(prev => {
-                              const next = { ...prev }
+                            const serviciosPendientes = countableServices.filter((service: any) => service.completedQuantity < service.cantidad)
 
-                              gestionarServicios
-                                .filter((s: any) => !s._isPaqueteHeader)
-                                .forEach((s: any) => {
-                                  const key = String(s._syntheticKey ?? s.id)
-                                  const actual = String(next[key] ?? s.ensayador ?? '').trim()
+                            if (gestionarProbetas.length > 0) {
+                              setGestionarAsignacionesSubmuestra(prev => {
+                                const next = { ...prev }
 
-                                  // Solo completar cuando no hay ensayador asignado previamente.
-                                  if (!actual) next[key] = gestionarEnsayadorGlobal
+                                const pendingProbetas = gestionarProbetas.filter((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO') !== 'ENSAYADO')
+
+                                pendingProbetas.forEach((probeta: any) => {
+                                  const probetaKey = getProbetaKey(probeta)
+
+                                  next[probetaKey] = { ...(next[probetaKey] ?? {}) }
+
+                                  countableServices.forEach((service: any) => {
+                                    if (String(next[probetaKey][String(service.sku)] ?? '').trim()) return
+
+                                    next[probetaKey][String(service.sku)] = gestionarEnsayadorGlobal
+                                  })
                                 })
 
-                              return next
-                            })
+                                return next
+                              })
+                            } else {
+                              setGestionarEnsayadores(prev => {
+                                const next = { ...prev }
 
-                            const todayInput = getTodayDateInputValue()
+                                serviciosPendientes
+                                  .flatMap((service: any) => service.entries)
+                                  .forEach((entry: any) => {
+                                    const key = String(entry._syntheticKey ?? entry.id)
+                                    const actual = String(next[key] ?? entry.ensayador ?? '').trim()
 
-                            setGestionarFechasAsignacionEnsayador(prev => {
-                              const next = { ...prev }
+                                    if (!actual) next[key] = gestionarEnsayadorGlobal
+                                  })
 
-                              gestionarServicios
-                                .filter((s: any) => !s._isPaqueteHeader)
-                                .forEach((s: any) => {
-                                  const key = String(s._syntheticKey ?? s.id)
-                                  const actual = String((gestionarEnsayadores[key] ?? s.ensayador ?? '')).trim()
+                                return next
+                              })
 
-                                  if (!actual) next[key] = todayInput
-                                })
+                              const todayInput = getTodayDateInputValue()
 
-                              return next
-                            })
+                              setGestionarFechasAsignacionEnsayador(prev => {
+                                const next = { ...prev }
+
+                                serviciosPendientes
+                                  .flatMap((service: any) => service.entries)
+                                  .forEach((entry: any) => {
+                                    const key = String(entry._syntheticKey ?? entry.id)
+                                    const actual = String((gestionarEnsayadores[key] ?? entry.ensayador ?? '')).trim()
+
+                                    if (!actual) next[key] = todayInput
+                                  })
+
+                                return next
+                              })
+                            }
                           }}
                           sx={{ whiteSpace: 'nowrap', fontWeight: 700, textTransform: 'none', bgcolor: '#1e40af', '&:hover': { bgcolor: '#1d3a9b' }, height: 36, mt: '20px', flexShrink: 0 }}
                         >
                           Aplicar a todos
                         </Button>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.4, flexShrink: 0, mt: '2px' }}>
+                        {gestionarProbetas.length === 0 && <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.4, flexShrink: 0, mt: '2px' }}>
                           <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, color: '#6b7280', letterSpacing: 0.3 }}>ESTADO MASIVO</Typography>
                           <Box sx={{ display: 'flex', gap: 0.6 }}>
                             <Button
                               size='small'
                               variant='outlined'
-                              disabled={!puedeIniciarEnsayos}
+                              disabled={!puedeIniciarEnsayos || bloqueoEdicionCodigoProducto}
                               startIcon={<i className='ri-play-fill' style={{ fontSize: 11 }} />}
                               onClick={() => applyEstadoMasivo('EN_PROCESO')}
                               sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.75rem', borderColor: '#93c5fd', color: '#1d4ed8', bgcolor: '#eff6ff', '&:hover': { bgcolor: '#dbeafe' }, px: 1 }}
@@ -5941,7 +6638,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                             <Button
                               size='small'
                               variant='outlined'
-                              disabled={!puedeIniciarEnsayos}
+                              disabled={!puedeIniciarEnsayos || bloqueoEdicionCodigoProducto}
                               startIcon={<i className='ri-check-line' style={{ fontSize: 11 }} />}
                               onClick={() => applyEstadoMasivo('ENSAYADO')}
                               sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.75rem', borderColor: '#6ee7b7', color: '#065f46', bgcolor: '#ecfdf5', '&:hover': { bgcolor: '#d1fae5' }, px: 1 }}
@@ -5959,14 +6656,31 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                               {mensajeBloqueoEnsayo}
                             </Typography>
                           )}
-                        </Box>
+                        </Box>}
                       </Box>
+                      {bloqueoEdicionCodigoProducto && (
+                        <Typography sx={{ mt: 1, fontSize: '0.75rem', fontWeight: 700, color: '#b45309' }}>
+                          Edición bloqueada: el CP está en estado {getOperationalLabel(estadoCodigoProducto)} o posterior.
+                        </Typography>
+                      )}
                     </Box>
 
                     {/* Tabla ensayos */}
-                    <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: '#374151', mb: 1, letterSpacing: 0.3 }}>
-                      {`ENSAYOS / SERVICIOS — ${completados}/${totalServicios} COMPLETADOS`}
-                    </Typography>
+                    <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
+                      <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: '#374151', letterSpacing: 0.3 }}>
+                        {`${gestionarTipoFiltro === 'ENSAYO' ? 'ENSAYOS' : 'TODAS LAS ACTIVIDADES'} — ${completados}/${totalServicios}`}
+                      </Typography>
+                      <Select
+                        size='small'
+                        value={gestionarTipoFiltro}
+                        onChange={event => setGestionarTipoFiltro(event.target.value === 'TODAS' ? 'TODAS' : 'ENSAYO')}
+                        sx={{ minWidth: 190, fontSize: '0.8rem', bgcolor: '#fff' }}
+                        aria-label='Filtrar actividades por tipo'
+                      >
+                        <MenuItem value='ENSAYO'>Solo ensayos</MenuItem>
+                        <MenuItem value='TODAS'>Todas las actividades</MenuItem>
+                      </Select>
+                    </Box>
                     <TableContainer component={Paper} variant='outlined' sx={{ borderColor: '#e5e7eb', borderRadius: 1.5, mb: 2.5 }}>
                       <Table size='small'>
                         <colgroup>
@@ -5978,9 +6692,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                           <col style={{ width: 122 }} />
                           <col style={{ width: 108 }} />
                           <col style={{ width: 128 }} />
-                          <col style={{ width: 112 }} />
+                          <col style={{ width: 170 }} />
                           <col style={{ width: 72 }} />
-                          <col style={{ width: 120 }} />
+
                         </colgroup>
                         <TableHead>
                           <TableRow sx={{ bgcolor: '#f9fafb' }}>
@@ -5988,22 +6702,23 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                             <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 86 }}>TIPO</TableCell>
                             <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>ENSAYO / SERVICIO</TableCell>
                             <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 74 }}>CANT</TableCell>
-                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 230 }}>ENSAYADOR</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 230 }}>RESPONSABLE</TableCell>
                             <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 122 }}>F. ASIGN.</TableCell>
                             <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 108 }}>ESTADO</TableCell>
-                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 120 }}>ACCIÓN</TableCell>
-                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 220 }}>FECHA ENSAYO</TableCell>
+                            <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 170 }}>FECHA ENSAYO</TableCell>
                             <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 72 }}>RES.</TableCell>
                             <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 120 }}>OBS.</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {displayServices.length === 0 ? (
+                          {visibleServices.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={11} align='center' sx={{ py: 3, color: '#9ca3af' }}>Sin ensayos registrados</TableCell>
+                              <TableCell colSpan={10} align='center' sx={{ py: 3, color: '#9ca3af' }}>
+                                {gestionarTipoFiltro === 'ENSAYO' ? 'Sin ensayos registrados' : 'Sin actividades registradas'}
+                              </TableCell>
                             </TableRow>
                           ) : (
-                            displayServices.map((group: any) => {
+                            visibleServices.map((group: any) => {
                               const sourceEntries = group.entries
                               const s = { ...sourceEntries[0], ...group, _isPaqueteHeader: false, _isPaqueteSubItem: false }
                               const sKey = group.key
@@ -6032,7 +6747,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                         {s.cantidad ?? 1}
                                       </Typography>
                                     </TableCell>
-                                    <TableCell colSpan={7} />
+                                    <TableCell colSpan={6} />
                                   </TableRow>
                                 )
                               }
@@ -6040,46 +6755,60 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                               const estadoActualServicio = group.estado
 
                               const ensayadorActual = group.ensayadores.join(' / ') || s.ensayador || ''
+                              const esEnsayo = group.tipo === 'Ensayo'
+
+                              const esEnsayoConSubmuestras = esEnsayo && gestionarProbetas.length > 0
+
+                              const ensayadoresSubmuestras = esEnsayoConSubmuestras
+                                ? Array.from(new Set(gestionarProbetas.map((probeta: any) => getEnsayadorSubmuestra(probeta, String(group.sku))).filter(Boolean)))
+                                : []
+
+                              const responsableSubmuestras = ensayadoresSubmuestras.length > 1
+                                ? 'Varios ensayadores'
+                                : ensayadoresSubmuestras[0] ?? '—'
+
+                              const responsableActual = esEnsayo
+                                ? ensayadorActual || '—'
+                                : group.tipo === 'Terreno'
+                                  ? terrenoResponsable
+                                  : '—'
+
+                              const tipoStyles = group.tipo === 'Ensayo'
+                                ? { color: '#0000b4', bgcolor: '#e7e8ff', borderColor: '#0000b4' }
+                                : group.tipo === 'Terreno'
+                                  ? { color: '#FF0096', bgcolor: '#fff0f8', borderColor: '#FF0096' }
+                                  : { color: '#3b3b3b', bgcolor: '#f3f3f3', borderColor: '#3b3b3b' }
 
                               const fechaAsignacionActual =
                                 sourceDateKeys.map(key => gestionarFechasAsignacionEnsayador[key]).find(Boolean) ??
                                 toDateInputValue(s.fechaAsignacionEnsayador) ??
                                 ''
 
-                              const submuestrasServicio = getSubmuestrasForService(s)
-                              const submuestrasEnsayadas = submuestrasServicio.length > 0 && submuestrasServicio.every((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO') === 'ENSAYADO')
+                              const submuestrasEnsayadas = esEnsayoConSubmuestras && gestionarProbetas.every((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO') === 'ENSAYADO')
 
-                              const inicioSubmuestras = submuestrasServicio
-                                .map((probeta: any) => gestionarFechasInicioSubmuestra[String(probeta?.id ?? probeta?.numero ?? '')])
+                              const submuestrasConFechaEnsayo = esEnsayoConSubmuestras
+                                ? gestionarProbetas.filter((probeta: any) => normalizeEnsayoState(probeta?.estado ?? 'CODIFICADO') === 'ENSAYADO')
+                                : []
+
+                              const finSubmuestras = submuestrasConFechaEnsayo
+                                .map((probeta: any) => gestionarFechasFinSubmuestra[getProbetaKey(probeta)] ?? probeta?.fechaFinEnsayo)
                                 .filter(Boolean)
-                                .map((fecha: string) => new Date(fecha))
-                                .filter((fecha: Date) => !Number.isNaN(fecha.getTime()))
+                                .map((fecha: string) => toDateOnly(fecha))
+                                .filter((fecha: Date | null): fecha is Date => Boolean(fecha))
 
-                              const finSubmuestras = submuestrasServicio
-                                .map((probeta: any) => gestionarFechasFinSubmuestra[String(probeta?.id ?? probeta?.numero ?? '')])
-                                .filter(Boolean)
-                                .map((fecha: string) => new Date(fecha))
-                                .filter((fecha: Date) => !Number.isNaN(fecha.getTime()))
-
-                              const esEnsayoPadreSubmuestras = normalizeText(s.nombre).includes('compresion')
-
-                              const fechaInicioDerivada = submuestrasEnsayadas && esEnsayoPadreSubmuestras && inicioSubmuestras.length > 0
-                                ? toDateTimeInputValue(new Date(Math.min(...inicioSubmuestras.map(fecha => fecha.getTime()))))
+                              const fechaFinDerivada = finSubmuestras.length > 0
+                                ? toDateInputValue(new Date(Math.max(...finSubmuestras.map(fecha => fecha.getTime()))))
                                 : ''
 
-                              const fechaFinDerivada = submuestrasEnsayadas && esEnsayoPadreSubmuestras && finSubmuestras.length > 0
-                                ? toDateTimeInputValue(new Date(Math.max(...finSubmuestras.map(fecha => fecha.getTime()))))
-                                : ''
+                              const fechaFinEnsayoActual = esEnsayoConSubmuestras
+                                ? fechaFinDerivada
+                                : sourceDateKeys.map(key => gestionarFechasFinEnsayo[key]).find(Boolean) || toDateInputValue(s.fechaFinEnsayo)
 
-                              const fechaInicioEnsayoActual = fechaInicioDerivada || sourceDateKeys.map(key => gestionarFechasInicioEnsayo[key]).find(Boolean) || toDateTimeInputValue(s.fechaInicioEnsayo)
-                              const fechaFinEnsayoActual = fechaFinDerivada || sourceDateKeys.map(key => gestionarFechasFinEnsayo[key]).find(Boolean) || toDateTimeInputValue(s.fechaFinEnsayo)
-
-                              const tieneEnsayadorAsignado = hasAssignedEnsayador(s, ensayadorActual)
-                              const puedeIniciarServicio = puedeIniciarEnsayos && tieneEnsayadorAsignado
-                              const esEnsayado = String(estadoActualServicio).toUpperCase().includes('ENSAYADO')
-                              const esEnProceso = String(estadoActualServicio).toUpperCase().includes('PROCESO')
-                              const esCodificado = !esEnsayado && !esEnProceso
-                              const calendarioFechaHabilitado = String(ensayadorActual ?? '').trim().length > 0 && esCodificado
+                              const calendarioFechaHabilitado = esEnsayo &&
+                                !esEnsayoConSubmuestras &&
+                                !bloqueoEdicionCodigoProducto &&
+                                String(ensayadorActual ?? '').trim().length > 0 &&
+                                normalizeEnsayoState(estadoActualServicio) !== 'ENSAYADO'
 
 
                               return (
@@ -6090,7 +6819,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                     </Box>
                                   </TableCell>
                                   <TableCell align='center'>
-                                    <Chip label={group.tipo} size='small' variant='outlined' sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }} />
+                                    <Chip label={group.tipo} size='small' variant='outlined' sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, color: tipoStyles.color, bgcolor: tipoStyles.bgcolor, borderColor: tipoStyles.borderColor }} />
                                   </TableCell>
                                   <TableCell sx={{ pl: s._isPaqueteSubItem ? 3 : undefined }}>
                                     <Typography sx={{ fontSize: '0.86rem', fontWeight: 600, color: '#111827', lineHeight: 1.3 }}>{s.nombre}</Typography>
@@ -6102,51 +6831,70 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                     </Typography>
                                   </TableCell>
                                   <TableCell>
-                                    <Select
-                                      size='small'
-                                      displayEmpty
-                                      value={ensayadorActual}
-                                      onChange={e => {
-                                        const nextEnsayador = String(e.target.value)
+                                    {esEnsayo ? (
+                                      esEnsayoConSubmuestras ? (
+                                        <Typography sx={{ fontSize: '0.82rem', color: responsableSubmuestras === '—' ? '#9ca3af' : '#374151' }}>
+                                          {responsableSubmuestras}
+                                        </Typography>
+                                      ) : (
+                                        <Select
+                                          size='small'
+                                          displayEmpty
+                                          value={ensayadorActual}
+                                          disabled={bloqueoEdicionCodigoProducto}
+                                          onChange={e => {
+                                            const nextEnsayador = String(e.target.value)
 
-                                        setGestionarEnsayadores(prev => {
-                                          const next = { ...prev }
+                                            const previousAssignees = new Map<string, string>(
+                                              sourceEntries.map((entry: any): [string, string] => {
+                                                const key = String(entry._syntheticKey ?? entry.id)
 
-                                          sourceEntries.forEach((entry: any) => {
-                                            next[String(entry._syntheticKey ?? entry.id)] = nextEnsayador
-                                          })
+                                                return [key, String(gestionarEnsayadores[key] ?? entry.ensayador ?? '').trim()]
+                                              })
+                                            )
 
-                                          return next
-                                        })
-                                        setGestionarFechasAsignacionEnsayador(prev => {
-                                          const next = { ...prev }
+                                            setGestionarEnsayadores(prev => {
+                                              const next = { ...prev }
 
-                                          sourceEntries.forEach((entry: any) => {
-                                            const key = String(entry._syntheticKey ?? entry.id)
+                                              sourceEntries.forEach((entry: any) => {
+                                                next[String(entry._syntheticKey ?? entry.id)] = nextEnsayador
+                                              })
 
-                                            if (!nextEnsayador.trim()) delete next[key]
-                                            else next[key] = getTodayDateInputValue()
-                                          })
+                                              return next
+                                            })
+                                            setGestionarFechasAsignacionEnsayador(prev => {
+                                              const next = { ...prev }
 
-                                          return next
-                                        })
-                                      }}
-                                      sx={{
-                                        width: '100%',
-                                        minWidth: 220,
-                                        fontSize: '0.82rem',
-                                        '& .MuiSelect-select': {
-                                          whiteSpace: 'nowrap',
-                                          overflow: 'hidden',
-                                          textOverflow: 'ellipsis'
-                                        }
-                                      }}
-                                    >
-                                      <MenuItem value=''><em style={{ color: '#9ca3af' }}>—</em></MenuItem>
-                                      {ensayadorOptions.map(name => (
-                                        <MenuItem key={name} value={name}>{name}</MenuItem>
-                                      ))}
-                                    </Select>
+                                              sourceDateKeys.forEach(key => {
+                                                if (!nextEnsayador.trim()) delete next[key]
+                                                else if (!previousAssignees.get(key)) next[key] = getTodayDateInputValue()
+                                              })
+
+                                              return next
+                                            })
+                                          }}
+                                          sx={{
+                                            width: '100%',
+                                            minWidth: 220,
+                                            fontSize: '0.82rem',
+                                            '& .MuiSelect-select': {
+                                              whiteSpace: 'nowrap',
+                                              overflow: 'hidden',
+                                              textOverflow: 'ellipsis'
+                                            }
+                                          }}
+                                        >
+                                          <MenuItem value=''><em style={{ color: '#9ca3af' }}>—</em></MenuItem>
+                                          {ensayadorOptions.map(name => (
+                                            <MenuItem key={name} value={name}>{name}</MenuItem>
+                                          ))}
+                                        </Select>
+                                      )
+                                    ) : (
+                                      <Typography sx={{ fontSize: '0.82rem', color: responsableActual === '—' ? '#9ca3af' : '#374151' }}>
+                                        {responsableActual}
+                                      </Typography>
+                                    )}
                                   </TableCell>
                                   <TableCell align='center'>
                                     <Box
@@ -6189,15 +6937,19 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                         onChange={e => {
                                           const nextFecha = String(e.target.value ?? '').trim()
 
-                                          setGestionarFechasAsignacionEnsayador(prev => {
-                                            const next = { ...prev }
+                                          const otherPendingKeys = countableServices
+                                            .filter((service: any) =>
+                                              service.key !== group.key &&
+                                              service.completedQuantity < service.cantidad
+                                            )
+                                            .flatMap((service: any) =>
+                                              service.entries.map((entry: any) => String(entry._syntheticKey ?? entry.id))
+                                            )
 
-                                            sourceDateKeys.forEach(key => {
-                                              if (!nextFecha) delete next[key]
-                                              else next[key] = nextFecha
-                                            })
-
-                                            return next
+                                          setGestionarFechaAsignacionPendiente({
+                                            fecha: nextFecha,
+                                            selectedKeys: sourceDateKeys,
+                                            otherPendingKeys
                                           })
                                         }}
                                         style={{
@@ -6212,128 +6964,54 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                     </Box>
                                   </TableCell>
                                   <TableCell align='center'>
-                                    <Chip
-                                      label={getOperationalLabel(estadoActualServicio)}
-                                      size='small'
-                                      variant='outlined'
-                                      sx={{ fontWeight: 700, fontSize: '0.74rem', ...estadoPillSx(estadoActualServicio) }}
-                                    />
-                                    {group.completedQuantity < group.cantidad ? (
-                                      <Typography variant='caption' color='text.secondary'>{`${group.completedQuantity}/${group.cantidad} completados`}</Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.4 }}>
+                                      <Tooltip title={esEnsayoConSubmuestras ? 'Actualizar en submuestras' : bloqueoEdicionCodigoProducto ? 'Edición bloqueada por el estado del CP' : 'Cambiar estado'}>
+                                        <span>
+                                          <Chip
+                                            label={getOperationalLabel(estadoActualServicio)}
+                                            size='small'
+                                            variant='outlined'
+                                            disabled={esEnsayoConSubmuestras || bloqueoEdicionCodigoProducto}
+                                            onClick={event => {
+                                              setGestionarEstadoMenuAnchor(event.currentTarget)
+                                              setGestionarEstadoMenuTarget({
+                                                kind: 'sku',
+                                                entries: sourceEntries,
+                                                service: group,
+                                                ensayador: ensayadorActual,
+                                                estado: estadoActualServicio,
+                                                bloqueado: bloqueoEdicionCodigoProducto
+                                              })
+                                            }}
+                                            sx={{ fontWeight: 700, fontSize: '0.74rem', ...estadoPillSx(estadoActualServicio), cursor: esEnsayoConSubmuestras || bloqueoEdicionCodigoProducto ? 'default' : 'pointer' }}
+                                          />
+                                        </span>
+                                      </Tooltip>
+                                      {esEnsayoConSubmuestras && (
+                                        <Tooltip title='Actualizar en submuestras'>
+                                          <i className='ri-lock-line' style={{ color: '#64748b', fontSize: 14 }} />
+                                        </Tooltip>
+                                      )}
+                                    </Box>
+                                    {esEnsayoConSubmuestras ? (
+                                      <Typography variant='caption' color='text.secondary'>{`${group.completedQuantity}/${group.cantidad}`}</Typography>
                                     ) : null}
                                   </TableCell>
                                   <TableCell align='center'>
-                                    {submuestrasServicio.length > 0 ? (
-                                      <Button
-                                        size='small'
-                                        variant='text'
-                                        onClick={() => document.getElementById('gestionar-submuestras-table')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                                        sx={{ minWidth: 0, px: 0.7, py: 0.2, fontSize: '0.75rem', fontWeight: 800, textTransform: 'none', color: '#334e9b' }}
-                                      >
-                                        ↓ subs
-                                      </Button>
-                                    ) : esEnsayado ? (
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, justifyContent: 'center', color: '#16a34a', fontWeight: 700, fontSize: '0.82rem' }}>
-                                        <i className='ri-checkbox-circle-fill' style={{ fontSize: 14 }} />
-                                        Completado
-                                      </Box>
-                                    ) : esCodificado ? (
-                                      <Tooltip title={!tieneEnsayadorAsignado ? 'Asigna ensayador para iniciar' : (!puedeIniciarEnsayos ? (mensajeBloqueoEnsayo ?? '') : '')}>
-                                        <Box component='span'>
-                                          <Button
-                                            size='small'
-                                            variant='outlined'
-                                            disabled={!puedeIniciarServicio}
-                                            onClick={() => {
-                                              const today = getNowDateTimeInputValue()
-
-                                              setGestionarEstados(prev => {
-                                                const next = { ...prev }
-
-                                                sourceEntries.forEach((entry: any) => { next[String(entry._syntheticKey ?? entry.id)] = 'EN_PROCESO' })
-
-                                                return next
-                                              })
-                                              setGestionarFechasInicioEnsayo(prev => {
-                                                const next = { ...prev }
-
-                                                sourceDateKeys.forEach(key => {
-                                                  if (!next[key]) next[key] = today
-                                                })
-
-                                                return next
-                                              })
-                                            }}
-                                            sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1, textTransform: 'none', borderColor: '#bfdbfe', color: '#1d4ed8', bgcolor: '#eff6ff', minWidth: 0 }}
-                                          >
-                                            <i className='ri-play-fill' style={{ fontSize: 12, marginRight: 3 }} />Iniciar
-                                          </Button>
-                                        </Box>
-                                      </Tooltip>
-                                    ) : esEnProceso ? (
-                                      <Button
-                                        size='small'
-                                        variant='outlined'
-                                        onClick={() => {
-                                          const now = getNowDateTimeInputValue()
-
-                                          setGestionarEstados(prev => {
-                                            const next = { ...prev }
-
-                                            sourceEntries.forEach((entry: any) => { next[String(entry._syntheticKey ?? entry.id)] = 'ENSAYADO' })
-
-                                            return next
-                                          })
-                                          setGestionarFechasFinEnsayo(prev => {
-                                            const next = { ...prev }
-
-                                            sourceDateKeys.forEach(key => {
-                                              if (!next[key]) next[key] = now
-                                            })
-
-                                            return next
-                                          })
-                                        }}
-                                        sx={{ fontSize: '0.75rem', fontWeight: 700, py: 0.3, px: 1, textTransform: 'none', borderColor: '#bbf7d0', color: '#16a34a', bgcolor: '#f0fdf4', minWidth: 0 }}
-                                      >
-                                        <i className='ri-check-line' style={{ fontSize: 12, marginRight: 3 }} />Finalizar
-                                      </Button>
+                                    {esEnsayoConSubmuestras ? (
+                                      <Typography sx={{ fontSize: '0.75rem', color: fechaFinEnsayoActual ? '#374151' : '#9ca3af' }}>
+                                        {fechaFinEnsayoActual
+                                          ? `${submuestrasEnsayadas ? '' : 'Último: '}${formatDateDDMMYYYYDateOnlyDash(fechaFinEnsayoActual)}`
+                                          : '—'}
+                                      </Typography>
                                     ) : (
-                                      <Typography sx={{ fontSize: '0.82rem', color: '#9ca3af' }}>-</Typography>
-                                    )}
-                                  </TableCell>
-                                  <TableCell align='center'>
-                                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
-                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.45, minWidth: 205 }}>
-                                        <Box sx={{ display: 'grid', gridTemplateColumns: '42px 1fr', alignItems: 'center', gap: 0.5 }}>
-                                          <Typography variant='caption' sx={{ fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Inicio</Typography>
-                                          <DateTimePicker
-                                            value={fechaInicioEnsayoActual ? new Date(fechaInicioEnsayoActual) : null}
+                                      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
+                                        <Box sx={{ minWidth: 150 }}>
+                                          <DatePicker
+                                            value={fechaFinEnsayoActual ? toDateOnly(fechaFinEnsayoActual) : null}
+                                            disabled={bloqueoEdicionCodigoProducto}
                                             onChange={value => {
-                                              const nextValue = value ? toDateTimeInputValue(value) : ''
-
-                                              setGestionarFechasInicioEnsayo(prev => {
-                                                const next = { ...prev }
-
-                                                sourceDateKeys.forEach(key => {
-                                                  if (nextValue) next[key] = nextValue
-                                                  else delete next[key]
-                                                })
-
-                                                return next
-                                              })
-                                            }}
-                                            format='dd-MM-yy HH:mm'
-                                            ampm={false}
-                                            slotProps={{ textField: { size: 'small', fullWidth: true, sx: { '& .MuiInputBase-input': { py: 0.5, fontSize: '0.72rem' } } } }}
-                                          />
-                                        </Box>
-                                        <Box sx={{ display: 'grid', gridTemplateColumns: '42px 1fr', alignItems: 'center', gap: 0.5 }}>
-                                          <Typography variant='caption' sx={{ fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Fin</Typography>
-                                          <DateTimePicker
-                                            value={fechaFinEnsayoActual ? new Date(fechaFinEnsayoActual) : null}
-                                            onChange={value => {
-                                              const nextValue = value ? toDateTimeInputValue(value) : ''
+                                              const nextValue = value ? toDateInputValue(value) : ''
 
                                               setGestionarFechasFinEnsayo(prev => {
                                                 const next = { ...prev }
@@ -6346,17 +7024,16 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                                 return next
                                               })
                                             }}
-                                            format='dd-MM-yy HH:mm'
-                                            ampm={false}
+                                            format='dd-MM-yyyy'
                                             slotProps={{ textField: { size: 'small', fullWidth: true, sx: { '& .MuiInputBase-input': { py: 0.5, fontSize: '0.72rem' } } } }}
                                           />
                                         </Box>
-                                      </Box>
-                                    </LocalizationProvider>
+                                      </LocalizationProvider>
+                                    )}
                                   </TableCell>
                                   <TableCell align='center'>
                                     {['1005', '1006'].includes(String(group.sku)) ? (
-                                      <IconButton size='small' color='primary' aria-label={`Ingresar resultados para SKU ${group.sku}`} title='Ingresar resultados' onClick={() => openResultado(String(group.sku))}>
+                                      <IconButton size='small' color='primary' disabled={bloqueoEdicionCodigoProducto} aria-label={`Ingresar resultados para SKU ${group.sku}`} title='Ingresar resultados' onClick={() => openResultado(String(group.sku))}>
                                         <i className='ri-add-line' style={{ fontSize: 17 }} />
                                       </IconButton>
                                     ) : (
@@ -6368,6 +7045,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                       size='small'
                                       placeholder='Obs...'
                                       value={gestionarObservaciones[sKey] ?? s.observacion ?? ''}
+                                      disabled={bloqueoEdicionCodigoProducto}
                                       onChange={e => setGestionarObservaciones(prev => ({ ...prev, [sKey]: e.target.value }))}
                                       inputProps={{ maxLength: 120 }}
                                       sx={{ width: 110, '& .MuiInputBase-input': { py: 0.55, fontSize: '0.74rem' } }}
@@ -6395,19 +7073,9 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                 <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>DÍAS</TableCell>
                                 <TableCell sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>FECHA PROGRAMADA</TableCell>
                                 <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>CANT.</TableCell>
-                                <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>ENSAYADOR</TableCell>
+                                <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>RESPONSABLES</TableCell>
                                 <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 108 }}>ESTADO</TableCell>
-                                <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem', width: 110 }}>ACCIÓN</TableCell>
-                                <TableCell align='center' sx={{ width: 250, py: 0.85 }}>
-                                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.2 }}>
-                                    <Typography sx={{ fontWeight: 800, color: '#64748b', fontSize: '0.72rem', lineHeight: 1.1 }}>
-                                      FECHA ENSAYO
-                                    </Typography>
-                                    <Typography sx={{ color: '#94a3b8', fontSize: '0.62rem', fontWeight: 600, lineHeight: 1.1 }}>
-                                      INICIO · FIN
-                                    </Typography>
-                                  </Box>
-                                </TableCell>
+                                <TableCell align='center' sx={{ width: 180, py: 0.85, fontWeight: 800, color: '#64748b', fontSize: '0.72rem' }}>FECHA ENSAYO</TableCell>
                                 <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>RES.</TableCell>
                                 <TableCell align='center' sx={{ fontWeight: 700, color: '#8a94a6', fontSize: '0.72rem' }}>DÍAS RESTANTES</TableCell>
                               </TableRow>
@@ -6415,10 +7083,23 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                             <TableBody>
                               {gestionarProbetas.slice().sort((a: any, b: any) => Number(a.numero ?? 0) - Number(b.numero ?? 0)).map((p: any, i: number) => {
                                 const daysToDue = diffDaysFromToday(p?.fechaVencimiento)
-                                const isToday = daysToDue === 0
-                                const isTomorrow = daysToDue === 1
-                                const isUrgent = isToday || isTomorrow || daysToDue < 0
-                                const restantesLabel = isToday ? 'Hoy' : isTomorrow ? 'Mañana' : daysToDue < 0 ? `Vencido ${Math.abs(daysToDue)}d` : `En ${daysToDue} días`
+                                const isCompleted = normalizeEnsayoState(p?.estado) === 'ENSAYADO'
+                                const isUrgent = !isCompleted && (daysToDue === 0 || daysToDue === 1 || (daysToDue !== null && daysToDue < 0))
+                                const restantesLabel = getSubmuestraVencimientoLabel(p?.estado, p?.fechaVencimiento)
+
+                                const gruposEnsayoSubmuestra = displayServices.filter((service: any) => service.tipo === 'Ensayo')
+                                const asignacionesSubmuestra = gruposEnsayoSubmuestra.map((service: any) => getEnsayadorSubmuestra(p, String(service.sku)))
+                                const ensayadoresSubmuestra = Array.from(new Set(asignacionesSubmuestra.filter(Boolean)))
+
+                                const responsableSubmuestra = ensayadoresSubmuestra.length > 1
+                                  ? 'Varios ensayadores'
+                                  : ensayadoresSubmuestra.length === 1 && asignacionesSubmuestra.some(value => !value)
+                                    ? 'Asignación parcial'
+                                    : ensayadoresSubmuestra[0] ?? '—'
+
+                                const estadoSubmuestra = normalizeEnsayoState(p.estado ?? 'CODIFICADO')
+
+                                const puedeIniciarSubmuestra = hasAllAssigneesForProbeta(p)
 
 
                                 return (
@@ -6438,76 +7119,60 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                       <Typography sx={{ fontSize: '0.88rem', color: '#374151' }}>{p.cantidad ?? '-'}</Typography>
                                     </TableCell>
                                     <TableCell align='center'>
-                                      <Typography sx={{ fontSize: '0.78rem', color: submuestraEnsayador ? '#374151' : '#9ca3af' }}>
-                                        {submuestraEnsayador || '-'}
-                                      </Typography>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.7 }}>
+                                        <Typography sx={{ fontSize: '0.78rem', color: responsableSubmuestra === '—' ? '#9ca3af' : '#374151' }}>
+                                          {responsableSubmuestra}
+                                        </Typography>
+                                        <Button
+                                          size='small'
+                                          disabled={bloqueoEdicionCodigoProducto || estadoSubmuestra === 'ENSAYADO'}
+                                          onClick={() => {
+                                            setGestionarAsignacionSubmuestraActiva(p)
+                                            setGestionarAsignacionSubmuestraInicial({ ...(gestionarAsignacionesSubmuestra[getProbetaKey(p)] ?? {}) })
+                                            setGestionarAsignacionSubmuestraOpen(true)
+                                          }}
+                                          sx={{ minWidth: 0, px: 0.5, py: 0.1, textTransform: 'none', fontSize: '0.68rem' }}
+                                        >
+                                          Editar
+                                        </Button>
+                                      </Box>
                                     </TableCell>
                                     <TableCell align='center'>
-                                      <Chip label={getOperationalLabel(p.estado ?? 'CODIFICADO')} size='small' variant='outlined' sx={{ fontWeight: 700, fontSize: '0.73rem', ...estadoPillSx(p.estado ?? 'CODIFICADO') }} />
-                                    </TableCell>
-                                    <TableCell align='center'>
-                                      {String(p.estado ?? 'CODIFICADO').toUpperCase().includes('ENSAYADO') ? (
-                                        <Typography sx={{ color: '#16a34a', fontSize: '0.76rem', fontWeight: 700 }}>Completado</Typography>
-                                      ) : String(p.estado ?? 'CODIFICADO').toUpperCase().includes('PROCESO') ? (
-                                        <Tooltip title={!canProcessProbetaInOrder(p) ? `Disponible desde ${formatDateDDMMYYYYDateOnlyDash(p.fechaVencimiento)}` : ''}>
-                                          <Box component='span'>
-                                            <Button
-                                              size='small'
-                                              variant='outlined'
-                                              disabled={!canProcessProbetaInOrder(p)}
-                                              onClick={() => updateSubmuestraState(p, 'ENSAYADO')}
-                                              sx={{ minWidth: 0, px: 0.8, py: 0.25, fontSize: '0.72rem', textTransform: 'none', borderColor: '#bbf7d0', color: '#15803d', bgcolor: '#f0fdf4' }}
-                                            >
-                                              <i className='ri-check-line' style={{ fontSize: 11, marginRight: 3 }} />Finalizar
-                                            </Button>
-                                          </Box>
-                                        </Tooltip>
-                                      ) : (
-                                        <Tooltip title={!submuestraEnsayador ? 'Asigna ensayador para iniciar' : !canProcessProbetaInOrder(p) ? `Disponible desde ${formatDateDDMMYYYYDateOnlyDash(p.fechaVencimiento)}` : ''}>
-                                          <Box component='span'>
-                                            <Button
-                                              size='small'
-                                              variant='outlined'
-                                              disabled={!submuestraEnsayador || !canProcessProbetaInOrder(p)}
-                                              onClick={() => updateSubmuestraState(p, 'EN_PROCESO')}
-                                              sx={{ minWidth: 0, px: 0.8, py: 0.25, fontSize: '0.72rem', textTransform: 'none' }}
-                                            >
-                                              <i className='ri-play-fill' style={{ fontSize: 11, marginRight: 3 }} />Iniciar
-                                            </Button>
-                                          </Box>
-                                        </Tooltip>
-                                      )}
+                                      <Tooltip title={bloqueoEdicionCodigoProducto ? 'Edición bloqueada por el estado del CP' : estadoSubmuestra === 'CODIFICADO' && !canProcessProbetaInOrder(p) ? `Disponible desde ${formatDateDDMMYYYYDateOnlyDash(p.fechaVencimiento)}` : estadoSubmuestra === 'CODIFICADO' && !puedeIniciarSubmuestra ? 'Asigna responsables a todos los SKU antes de iniciar' : 'Cambiar estado'}>
+                                        <span>
+                                          <Chip
+                                            label={getOperationalLabel(p.estado ?? 'CODIFICADO')}
+                                            size='small'
+                                            variant='outlined'
+                                            disabled={bloqueoEdicionCodigoProducto || (estadoSubmuestra === 'CODIFICADO' && (!canProcessProbetaInOrder(p) || !puedeIniciarSubmuestra))}
+                                            onClick={event => {
+                                              setGestionarEstadoMenuAnchor(event.currentTarget)
+                                              setGestionarEstadoMenuTarget({
+                                                kind: 'probeta',
+                                                probeta: p,
+                                                bloqueado: bloqueoEdicionCodigoProducto,
+                                                puedeProcesar: canProcessProbetaInOrder(p),
+                                                tieneResponsables: puedeIniciarSubmuestra
+                                              })
+                                            }}
+                                            sx={{ fontWeight: 700, fontSize: '0.73rem', cursor: 'pointer', ...estadoPillSx(p.estado ?? 'CODIFICADO') }}
+                                          />
+                                        </span>
+                                      </Tooltip>
                                     </TableCell>
                                     <TableCell align='center'>
                                       {(() => {
                                         const subKey = String(p.id ?? p.numero ?? i)
-                                        const fechaInicio = gestionarFechasInicioSubmuestra[subKey] ?? ''
                                         const fechaFin = gestionarFechasFinSubmuestra[subKey] ?? ''
 
                                         return (
                                           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
-                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.35, minWidth: 220 }}>
-                                              <Box sx={{ display: 'grid', gridTemplateColumns: '42px 1fr', alignItems: 'center', gap: 0.5 }}>
-                                                <Typography variant='caption' sx={{ fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Inicio</Typography>
-                                                <DateTimePicker
-                                                  value={fechaInicio ? new Date(fechaInicio) : null}
-                                                  onChange={value => setGestionarFechasInicioSubmuestra(prev => ({ ...prev, [subKey]: value ? toDateTimeInputValue(value) : '' }))}
-                                                  format='dd-MM-yy HH:mm'
-                                                  ampm={false}
-                                                  slotProps={{ textField: { size: 'small', sx: { '& .MuiInputBase-input': { py: 0.35, fontSize: '0.68rem' } } } }}
-                                                />
-                                              </Box>
-                                              <Box sx={{ display: 'grid', gridTemplateColumns: '42px 1fr', alignItems: 'center', gap: 0.5 }}>
-                                                <Typography variant='caption' sx={{ fontWeight: 700, color: '#64748b', textAlign: 'left' }}>Fin</Typography>
-                                                <DateTimePicker
-                                                  value={fechaFin ? new Date(fechaFin) : null}
-                                                  onChange={value => setGestionarFechasFinSubmuestra(prev => ({ ...prev, [subKey]: value ? toDateTimeInputValue(value) : '' }))}
-                                                  format='dd-MM-yy HH:mm'
-                                                  ampm={false}
-                                                  slotProps={{ textField: { size: 'small', sx: { '& .MuiInputBase-input': { py: 0.35, fontSize: '0.68rem' } } } }}
-                                                />
-                                              </Box>
-                                            </Box>
+                                            <DatePicker
+                                              value={fechaFin ? toDateOnly(fechaFin) : null}
+                                              onChange={value => setGestionarFechasFinSubmuestra(prev => ({ ...prev, [subKey]: value ? toDateInputValue(value) : '' }))}
+                                              format='dd-MM-yyyy'
+                                              slotProps={{ textField: { size: 'small', sx: { '& .MuiInputBase-input': { py: 0.35, fontSize: '0.68rem' } } } }}
+                                            />
                                           </LocalizationProvider>
                                         )
                                       })()}
@@ -6517,6 +7182,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                         <IconButton
                                           size='small'
                                           color='primary'
+                                          disabled={bloqueoEdicionCodigoProducto}
                                           aria-label={`Ingresar resultados de submuestra ${p.numero ?? i + 1}`}
                                           title='Ingresar resultados'
                                           onClick={() => submuestraService && handleOpenGestionarSubmuestra(submuestraService, p)}
@@ -6528,7 +7194,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                                       )}
                                     </TableCell>
                                     <TableCell align='center'>
-                                      <Typography sx={{ fontSize: '0.86rem', fontWeight: 700, color: isUrgent ? '#dc2626' : '#4b5563' }}>
+                                      <Typography sx={{ fontSize: '0.86rem', fontWeight: 700, color: isCompleted ? '#08794c' : isUrgent ? '#dc2626' : '#4b5563' }}>
                                         {restantesLabel}{isUrgent && ' ⚠'}
                                       </Typography>
                                     </TableCell>
@@ -6551,7 +7217,7 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
                 </Button>
                 <Button
                   variant='contained'
-                  disabled={gestionarSaving}
+                  disabled={gestionarSaving || Boolean(gestionarErrorCarga)}
                   onClick={handleGuardarGestionar}
                   startIcon={gestionarSaving ? <CircularProgress size={14} color='inherit' /> : <i className='ri-save-3-line' />}
                   sx={{ textTransform: 'none', fontWeight: 700, bgcolor: '#1e40af', '&:hover': { bgcolor: '#1d3a9b' } }}
@@ -6562,6 +7228,235 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
             </>
           )
         })()}
+      </Dialog>
+
+      <Menu
+        anchorEl={gestionarEstadoMenuAnchor}
+        open={Boolean(gestionarEstadoMenuAnchor)}
+        onClose={closeGestionarEstadoMenu}
+      >
+        {(() => {
+          const target = gestionarEstadoMenuTarget
+
+          const estadoActual = target?.kind === 'probeta'
+            ? normalizeEnsayoState(target.probeta?.estado)
+            : normalizeEnsayoState(target?.estado ?? target?.entries?.[0]?.estado ?? 'CODIFICADO')
+
+          if (!target) return null
+
+          const puedeIniciar = target.kind === 'probeta'
+            ? target.puedeProcesar && target.tieneResponsables
+            : target.puedeProcesar !== false && hasAssignedEnsayador(target.service, target.ensayador)
+
+          const puedeFinalizar = target.kind === 'probeta'
+            ? target.puedeProcesar
+            : target.puedeProcesar !== false
+
+          return [
+            estadoActual === 'CODIFICADO' ? (
+              <MenuItem key='iniciar' disabled={!puedeIniciar || target.bloqueado} onClick={() => applyGestionarEstadoMenu('EN_PROCESO')}>
+                Pasar a En Proceso
+              </MenuItem>
+            ) : null,
+            estadoActual === 'EN_PROCESO' ? (
+              <MenuItem key='revertir-codificado' disabled={target.bloqueado} onClick={() => applyGestionarEstadoMenu('CODIFICADO')}>
+                Revertir a Codificado
+              </MenuItem>
+            ) : null,
+            estadoActual === 'EN_PROCESO' ? (
+              <MenuItem key='finalizar' disabled={!puedeFinalizar || target.bloqueado} onClick={() => applyGestionarEstadoMenu('ENSAYADO')}>
+                Pasar a Ensayado
+              </MenuItem>
+            ) : null,
+            estadoActual === 'ENSAYADO' ? (
+              <MenuItem key='revertir-proceso' disabled={target.bloqueado} onClick={() => applyGestionarEstadoMenu('EN_PROCESO')}>
+                Revertir a En Proceso
+              </MenuItem>
+            ) : null
+          ]
+        })()}
+      </Menu>
+
+      <Dialog
+        open={Boolean(gestionarConfirmarEnsayoSubmuestra)}
+        onClose={() => {
+          setGestionarConfirmarEnsayoSubmuestra(null)
+          setGestionarConfirmacionEnsayoAceptada(false)
+        }}
+        maxWidth='sm'
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 800 }}>Confirmar ensayo de submuestra</DialogTitle>
+        <DialogContent dividers>
+          <Typography sx={{ mb: 1.5 }}>
+            Confirma que todos los ensayos requeridos para la submuestra {gestionarConfirmarEnsayoSubmuestra?.numero ?? ''} fueron realizados y cumplen las validaciones y revisiones aplicables.
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Checkbox
+              checked={gestionarConfirmacionEnsayoAceptada}
+              onChange={event => setGestionarConfirmacionEnsayoAceptada(event.target.checked)}
+            />
+            <Typography>Confirmo que los ensayos y revisiones están completos.</Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setGestionarConfirmarEnsayoSubmuestra(null)
+              setGestionarConfirmacionEnsayoAceptada(false)
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant='contained'
+            disabled={!gestionarConfirmacionEnsayoAceptada || bloqueoEdicionGestionar}
+            onClick={() => {
+              if (gestionarConfirmarEnsayoSubmuestra) updateSubmuestraState(gestionarConfirmarEnsayoSubmuestra, 'ENSAYADO')
+              setGestionarConfirmarEnsayoSubmuestra(null)
+              setGestionarConfirmacionEnsayoAceptada(false)
+            }}
+          >
+            Confirmar y finalizar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={gestionarAsignacionSubmuestraOpen}
+        onClose={() => {
+          if (gestionarAsignacionSubmuestraActiva) {
+            const key = getProbetaKey(gestionarAsignacionSubmuestraActiva)
+
+            setGestionarAsignacionesSubmuestra(prev => ({ ...prev, [key]: gestionarAsignacionSubmuestraInicial }))
+          }
+
+          setGestionarAsignacionSubmuestraOpen(false)
+          setGestionarAsignacionSubmuestraActiva(null)
+        }}
+        maxWidth='sm'
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 800 }}>
+          Responsables de submuestra {gestionarAsignacionSubmuestraActiva?.numero ?? ''}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: 'grid', gap: 1.5 }}>
+            {consolidateSkuServices(gestionarServicios)
+              .filter((service: any) => service.tipo === 'Ensayo')
+              .map((service: any) => {
+                const sku = String(service.sku)
+                const probeta = gestionarAsignacionSubmuestraActiva
+
+                return (
+                  <Box key={sku} sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(200px, 1fr)', alignItems: 'center', gap: 1.5 }}>
+                    <Typography sx={{ fontWeight: 700, color: '#374151' }}>{sku} · {service.nombre}</Typography>
+                    <Select
+                      size='small'
+                      displayEmpty
+                      value={probeta ? getEnsayadorSubmuestra(probeta, sku) : ''}
+                      disabled={bloqueoEdicionGestionar || !probeta || normalizeEnsayoState(probeta.estado) === 'ENSAYADO'}
+                      onChange={event => probeta && setEnsayadorSubmuestra(probeta, sku, String(event.target.value))}
+                    >
+                      <MenuItem value=''><em>Sin asignar</em></MenuItem>
+                      {ensayadorOptions.map(name => <MenuItem key={name} value={name}>{name}</MenuItem>)}
+                    </Select>
+                  </Box>
+                )
+              })}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              if (gestionarAsignacionSubmuestraActiva) {
+                const key = getProbetaKey(gestionarAsignacionSubmuestraActiva)
+
+                setGestionarAsignacionesSubmuestra(prev => ({ ...prev, [key]: gestionarAsignacionSubmuestraInicial }))
+              }
+
+              setGestionarAsignacionSubmuestraOpen(false)
+              setGestionarAsignacionSubmuestraActiva(null)
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant='contained'
+            disabled={bloqueoEdicionGestionar || normalizeEnsayoState(gestionarAsignacionSubmuestraActiva?.estado) === 'ENSAYADO'}
+            onClick={() => {
+              setGestionarAsignacionSubmuestraOpen(false)
+              setGestionarAsignacionSubmuestraActiva(null)
+            }}
+          >
+            Aplicar cambios
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(gestionarFechaAsignacionPendiente)}
+        onClose={() => setGestionarFechaAsignacionPendiente(null)}
+        maxWidth='sm'
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 800 }}>Aplicar fecha de asignación</DialogTitle>
+        <DialogContent dividers>
+          <Typography>
+            ¿Quieres aplicar esta fecha solo al ensayo seleccionado o también a los demás SKU tipo Ensayo pendientes de este RCM, sin importar quién sea el responsable?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ flexWrap: 'wrap' }}>
+          <Button onClick={() => setGestionarFechaAsignacionPendiente(null)}>
+            Cancelar
+          </Button>
+          <Button
+            variant='contained'
+            autoFocus
+            onClick={() => {
+              if (!gestionarFechaAsignacionPendiente) return
+
+              const { fecha, selectedKeys } = gestionarFechaAsignacionPendiente
+
+              setGestionarFechasAsignacionEnsayador(prev => {
+                const next = { ...prev }
+
+                selectedKeys.forEach(key => {
+                  if (fecha) next[key] = fecha
+                  else delete next[key]
+                })
+
+                return next
+              })
+              setGestionarFechaAsignacionPendiente(null)
+            }}
+          >
+            Solo este ensayo
+          </Button>
+          <Button
+            variant='outlined'
+            disabled={!gestionarFechaAsignacionPendiente?.otherPendingKeys.length}
+            onClick={() => {
+              if (!gestionarFechaAsignacionPendiente) return
+
+              const { fecha, selectedKeys, otherPendingKeys } = gestionarFechaAsignacionPendiente
+
+              setGestionarFechasAsignacionEnsayador(prev => {
+                const next = { ...prev }
+
+                Array.from(new Set([...selectedKeys, ...otherPendingKeys])).forEach(key => {
+                  if (fecha) next[key] = fecha
+                  else delete next[key]
+                })
+
+                return next
+              })
+              setGestionarFechaAsignacionPendiente(null)
+            }}
+          >
+            Aplicar a todos los pendientes
+          </Button>
+        </DialogActions>
       </Dialog>
 
       <Dialog open={resultadoOpen} onClose={() => !resultadoSaving && setResultadoOpen(false)} maxWidth='sm' fullWidth>
@@ -7373,5 +8268,3 @@ const UserListTable2 = ({ filters }: { filters?: Filters }) => {
 }
 
 export default UserListTable2
-
-

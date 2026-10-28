@@ -110,6 +110,19 @@ export async function GET(
     }
 }
 
+const parseDate = (raw: unknown): Date | null => {
+    if (!raw) return null
+
+    const value = String(raw).trim()
+    const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+
+    const date = dateOnly
+        ? new Date(Date.UTC(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]), 12))
+        : new Date(value)
+
+    return Number.isNaN(date.getTime()) ? null : date
+}
+
 export async function POST(
     request: NextRequest,
     { params }: { params: { id: string } }
@@ -157,7 +170,7 @@ export async function POST(
 
         const fechaFinEnsayo =
             body?.fechaFinEnsayo
-                ? new Date(String(body.fechaFinEnsayo))
+                ? parseDate(body.fechaFinEnsayo)
                 : estadoNuevoUpper === 'ENSAYADO'
                     ? new Date()
                     : null
@@ -171,7 +184,7 @@ export async function POST(
                 })
                 : null
             const fechaInicioEnsayo = body?.fechaInicioEnsayo
-                ? new Date(String(body.fechaInicioEnsayo))
+                ? parseDate(body.fechaInicioEnsayo)
                 : historialInicioPrevio?.fechaInicioEnsayo ?? (estadoNuevoUpper === 'EN_PROCESO' ? new Date() : null)
 
             // ✅ Crear registro de historial - servicioMuestraId viene del param, NO del body
@@ -186,8 +199,8 @@ export async function POST(
                     estAnterior: body.estAnterior ?? body.estPrev ?? null,
                     estNuevo: estadoNuevo,
                     fechaAccion,
-                    fechaInicioEnsayo: fechaInicioEnsayo && !isNaN(fechaInicioEnsayo.getTime()) ? fechaInicioEnsayo : null,
-                    fechaFinEnsayo: fechaFinEnsayo && !isNaN(fechaFinEnsayo.getTime()) ? fechaFinEnsayo : null,
+                    fechaInicioEnsayo,
+                    fechaFinEnsayo,
                     observacion: body.observacion ?? null,
                     motivo: body.motivo ?? null,
                     informe: body.informe ?? null

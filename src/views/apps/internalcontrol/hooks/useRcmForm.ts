@@ -32,6 +32,13 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         return `${year}-${month}-${day}`
     }
 
+    const getDateForInput = (dateString?: string) => {
+
+        const dateMatch = dateString?.match(/^(\d{4}-\d{2}-\d{2})/)
+
+        return dateMatch?.[1] || getTodayDateForInput()
+    }
+
     const getFechaServicioForInput = () => {
         // El usuario requiere que se muestre la fecha de la OT (createdAt en otData)
         const dateStr = otData?.createdAt || otData?.fechaServicio
@@ -48,7 +55,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
     }
 
     // Fechas
-    const [fechaCodificacion] = useState(getTodayDateForInput())
+    const [fechaCodificacion, setFechaCodificacion] = useState(getTodayDateForInput())
     const [fechaServicio, setFechaServicio] = useState(getFechaServicioForInput())
     const [fechaIngreso, setFechaIngreso] = useState(getTodayDateForInput())
     const [fechaEntrega, setFechaEntrega] = useState('')
@@ -167,6 +174,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         setObservacionItem('')
         setObservaciones('')
         setCantidadMuestras('1')
+        setFechaCodificacion(getTodayDateForInput())
         setFechaServicio(getFechaServicioForInput())
         setFechaIngreso(getTodayDateForInput())
         setFechaEntrega('')
@@ -186,6 +194,7 @@ export function useRcmForm({ otData }: UseRcmFormParams) {
         parametrosArea: ParametroAreaType[] = []
     ) => {
         setRcmType(rcm.rcmType)
+        setFechaCodificacion(mode === 'edit' ? getDateForInput(rcm.fechaCodificacion) : getTodayDateForInput())
 
         // Cargar sede
         if (rcm.sede && !STANDARD_SEDES.includes(rcm.sede)) {

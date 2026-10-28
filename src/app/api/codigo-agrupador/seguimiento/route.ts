@@ -184,6 +184,11 @@ export async function GET(request: Request) {
                 id: true,
                 comuna: true,
                 region: true,
+                solicitud: {
+                  select: {
+                    numeroSolicitud: true,
+                  },
+                },
                 cliente: {
                   select: {
                     clienteId: true,
@@ -457,6 +462,7 @@ export async function GET(request: Request) {
 
       // Con Evento
       const conEvento = rcmsForAg.some(r => isEventoSinResolver(r.RCMHistory))
+      const numeroSolicitud = ag.ordenTrabajo?.agenda?.solicitud?.numeroSolicitud
 
       return {
         id: ag.id,
@@ -466,7 +472,7 @@ export async function GET(request: Request) {
         representativeRcmId,
         rcmNumeros,
         sedes,
-        ss: ag.ordenTrabajo?.clave ?? null,
+        ss: numeroSolicitud != null ? String(numeroSolicitud) : null,
         otClave: ag.ordenTrabajo?.clave ?? null,
         ot: ag.ordenTrabajo?.correlativ ?? null,
         ordenTrabajoId: ag.ordenTrabajo?.id ?? ag.ordenTrabajoId ?? null,

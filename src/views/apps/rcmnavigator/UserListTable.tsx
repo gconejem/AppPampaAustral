@@ -2934,7 +2934,7 @@ const UserListTable2 = ({
             ? (r.sedes as any[]).map(v => String(v ?? '').trim()).filter(Boolean)
             : [],
           ss: r.ss ?? null,
-          otClave: r.otClave ?? r.ss ?? null,
+          otClave: r.otClave ?? null,
           ot: r.ot ?? null,
           ordenTrabajoId: (r?.ordenTrabajoId ?? null) as any,
           totalRcms: r.totalRcms ?? 0,
@@ -4889,7 +4889,7 @@ const UserListTable2 = ({
               const tipoServTxt = String(codigoDialogMeta?.familia ?? '').trim() || '-'
               const fechaCodTxt = formatDateDDMMYYYYDateOnly(codigoDialogMeta?.fechaCodificacion) || '-'
 
-              const otClaveTxt = String(codigoDialogMeta?.otClave ?? codigoDialogMeta?.ss ?? '').trim() || '-'
+              const solicitudTxt = String(codigoDialogMeta?.ss ?? '').trim() || '-'
 
               return (
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(5, minmax(0, 1fr))' }, gap: 1.25 }}>
@@ -4897,7 +4897,7 @@ const UserListTable2 = ({
                     { k: 'SEDE(S)', v: sedeTxt },
                     { k: 'ÁREA', v: areaTxt },
                     { k: 'TIPO SERVICIO', v: tipoServTxt },
-                    { k: 'CLAVE OT', v: otClaveTxt },
+                    { k: 'N° SS', v: solicitudTxt },
                     { k: 'FECHA COD.', v: fechaCodTxt }
                   ].map(item => (
                     <Box key={item.k} sx={{ minWidth: 0 }}>
