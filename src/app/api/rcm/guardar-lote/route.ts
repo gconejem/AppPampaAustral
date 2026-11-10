@@ -238,8 +238,9 @@ export async function POST(request: Request) {
                                         ? {
                                             create: (e.subProductos ?? [])
                                                 .filter(s => productosMap[s.sku] !== undefined)
-                                                .map(s => ({
+                                                .map((s, orden) => ({
                                                     sku: s.sku,
+                                                    orden,
                                                     nombre: s.nombre,
                                                     norma: s.norma ?? null,
                                                     cantidad: s.cantidad,

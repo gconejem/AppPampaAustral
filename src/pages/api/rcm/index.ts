@@ -161,8 +161,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   ? {
                     create: (e.subProductos ?? [])
                       .filter((s: SubProducto) => productosMap[s.sku] !== undefined)
-                      .map((s: SubProducto) => ({
+                      .map((s: SubProducto, orden: number) => ({
                         sku: s.sku,
+                        orden,
                         nombre: s.nombre,
                         norma: s.norma ?? null,
                         cantidad: s.cantidad,
@@ -219,7 +220,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         },
         include: {
-          servicios: { orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }], include: { subProductos: true, producto: true } },
+          servicios: { orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }], include: { subProductos: { orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }] }, producto: true } },
           muestras: { include: { servicios: { orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }] }, probetas: true } },
           area: true,
           familia: true,
@@ -313,7 +314,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
             include: {
               subProductos: {
-                orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+                orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
                 include: {
                   producto: {
                     select: {

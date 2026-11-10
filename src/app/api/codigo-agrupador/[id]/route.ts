@@ -140,7 +140,7 @@ export async function GET(request: Request, { params }: Params) {
                                     codigo: true,
                                     cantidad: true,
                                     subProductos: {
-                                        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+                                        orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
                                         select: {
                                             sku: true,
                                             nombre: true,
@@ -175,7 +175,7 @@ export async function GET(request: Request, { params }: Params) {
                                             codigo: true,
                                             cantidad: true,
                                             subProductos: {
-                                                orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+                                                orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
                                                 select: {
                                                     sku: true,
                                                     nombre: true,
@@ -289,6 +289,7 @@ export async function GET(request: Request, { params }: Params) {
                                         }
                                     },
                                     subProductos: {
+                                        orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
                                         select: {
                                             cantidad: true,
                                             sku: true,
@@ -395,6 +396,7 @@ export async function GET(request: Request, { params }: Params) {
                                                 }
                                             },
                                             subProductos: {
+                                                orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
                                                 select: {
                                                     cantidad: true,
                                                     sku: true,

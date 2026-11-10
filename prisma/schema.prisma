@@ -1038,6 +1038,7 @@ model SubProductoServicioRCM {
   nombre        String
   norma         String?
   cantidad      Int         @default(1)
+  orden         Int?
   observacion   String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
