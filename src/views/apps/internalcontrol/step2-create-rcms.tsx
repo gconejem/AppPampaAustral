@@ -37,7 +37,7 @@ const Step2CreateRcms = ({
     ensayosAsociados, setEnsayosAsociados,
     savedRcms, setSavedRcms,
     otData, initialRcmType, onClearInitialRcmType,
-    onDraftCountChange, onAgrupadosCountChange,
+    onDraftCountChange, onAgrupadosIdsChange,
     onRegisterFinalizar, onIsSavingChange,
 }: Step2CreateRcmsProps) => {
 
@@ -177,7 +177,7 @@ const Step2CreateRcms = ({
     }, [form.showRcmCard])
 
     useEffect(() => {
-        onAgrupadosCountChange?.(rcmIdsAgrupados.size)
+        onAgrupadosIdsChange?.(rcmIdsAgrupados)
     }, [codigoReal.codigosAgrupadores])
 
     useEffect(() => {

@@ -43,6 +43,7 @@ interface RCMData {
   tomaMuestra?: string
   cantidadMuestras: string
   numeroRcm?: string
+  dbId?: number
   estado: string
   tieneVencimiento?: boolean
   submuestrasVencimiento?: Array<{
@@ -68,7 +69,7 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
 
   // Estados para contadores en tiempo real
   const [openDraftCount, setOpenDraftCount] = useState(0) // Borradores (formularios abiertos sin guardar)
-  const [agrupadosCount, setAgrupadosCount] = useState(0) // RCMs con Código Producto asignado
+  const [agrupadosIds, setAgrupadosIds] = useState<Set<number>>(new Set()) // IDs de RCMs con Código Producto asignado
   const [isSaving, setIsSaving] = useState(false)
   const finalizarRef = useRef<(() => void) | null>(null)
 
@@ -78,10 +79,11 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
 
   // Cálculo de contadores
   const borradores = openDraftCount
-  const agrupados = agrupadosCount
+  const agrupados = agrupadosIds.size
   const pendientes = savedRcms.length - agrupados // Guardados sin agrupar
   const totalRcms = borradores + savedRcms.length
-  const unsavedCount = savedRcms.filter(rcm => !rcm.dbId).length
+  // Sin guardar y sin agrupar (los agrupados se persisten al finalizar la codificación)
+  const unsavedCount = savedRcms.filter(rcm => !rcm.dbId && !agrupadosIds.has(rcm.id)).length
 
   useEffect(() => {
     if (!searchParams) return
@@ -164,7 +166,7 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
           initialRcmType={initialRcmType}
           onClearInitialRcmType={() => setInitialRcmType('')}
           onDraftCountChange={setOpenDraftCount}
-          onAgrupadosCountChange={setAgrupadosCount}
+          onAgrupadosIdsChange={setAgrupadosIds}
           onIsSavingChange={setIsSaving}
           onRegisterFinalizar={(fn: () => void) => { finalizarRef.current = fn }}
         />
