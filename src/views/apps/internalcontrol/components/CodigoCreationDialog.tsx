@@ -12,8 +12,10 @@ import {
     Divider,
     TextField,
     InputAdornment,
+    Collapse,
 } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CloseIcon from '@mui/icons-material/Close'
 import InventoryIcon from '@mui/icons-material/Inventory'
@@ -107,6 +109,31 @@ const getSelectedRcmSummary = (rcm?: RCMData) => {
     ].filter(Boolean)
 }
 
+const getActividadesEfectivas = (rcm: RCMData) => {
+    const actividades: Array<{ sku: string; nombre: string; cantidad: number }> = []
+    const agregar = (sku: string, nombre: string, cantidad: number) => {
+        const existente = actividades.find(a => a.sku === sku)
+        if (existente) existente.cantidad += cantidad
+        else actividades.push({ sku, nombre, cantidad })
+    }
+    rcm.ensayos.forEach(ensayo => {
+        if (ensayo.esPaquete && ensayo.subProductos?.length) ensayo.subProductos.forEach(sp => agregar(sp.sku, sp.nombre, sp.cantidad || 0))
+        else agregar(ensayo.sku, ensayo.nombre, ensayo.cantidad || 0)
+    })
+    return actividades
+}
+
+const getSubmuestrasResumen = (rcm: RCMData) => {
+    const submuestras = rcm.submuestrasVencimiento
+    if (!rcm.tieneVencimiento || !submuestras?.length) return ''
+    const totalEjemplares = submuestras.reduce((sum, sub) => sum + (sub.cantidad || 0), 0)
+    return [
+        `${submuestras.length} grupo${submuestras.length !== 1 ? 's' : ''}`,
+        `${totalEjemplares} ejemplar${totalEjemplares !== 1 ? 'es' : ''}`,
+        ...submuestras.map(sub => `${sub.dias}d ×${sub.cantidad}${sub.fechaVencimiento ? ` (${formatDateOnly(sub.fechaVencimiento)})` : ''}`)
+    ].join(' · ')
+}
+
 const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
     open, onClose,
     selectedRcmIds, savedRcms,
@@ -123,6 +150,14 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
     isSpecialSkuGrouping,
 }) => {
     const isEditMode = dialogMode === 'editar'
+    const [expandedRcmIds, setExpandedRcmIds] = React.useState<Set<number>>(new Set())
+    React.useEffect(() => { if (open) setExpandedRcmIds(new Set()) }, [open])
+    const toggleRcmExpanded = (rcmId: number) => setExpandedRcmIds(prev => {
+        const next = new Set(prev)
+        if (next.has(rcmId)) next.delete(rcmId)
+        else next.add(rcmId)
+        return next
+    })
 
     return (
         <Dialog
@@ -157,10 +192,15 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                     const rcm = savedRcms.find(r => r.id === id)
                                     const rcmNum = rcm?.numeroRcm ? `RCM-${String(rcm.numeroRcm).padStart(3, '0')}` : `RCM-${String(idx + 1).padStart(3, '0')}`
                                     const summaryParts = getSelectedRcmSummary(rcm)
+                                    const esMuestra = rcm?.rcmType === 'Muestra'
+                                    const isExpanded = esMuestra && expandedRcmIds.has(id)
+                                    const actividades = esMuestra && rcm ? getActividadesEfectivas(rcm) : []
+                                    const submuestrasResumen = esMuestra && rcm ? getSubmuestrasResumen(rcm) : ''
                                     return (
+                                        <Box key={id} sx={{ bgcolor: 'white', border: '1px solid', borderColor: '#BFDBFE', borderRadius: '6px' }}>
                                         <Box
-                                            key={id}
-                                            sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'white', border: '1px solid', borderColor: '#BFDBFE', borderRadius: '6px', px: 1, py: 0.5 }}
+                                            onClick={esMuestra ? () => toggleRcmExpanded(id) : undefined}
+                                            sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, cursor: esMuestra ? 'pointer' : 'default' }}
                                         >
                                             <Chip
                                                 label={getRcmTypeShortLabel(rcm?.rcmType)}
@@ -177,16 +217,47 @@ const CodigoCreationDialog: React.FC<CodigoCreationDialogProps> = ({
                                             <Typography variant='caption' sx={{ color: 'text.secondary', fontSize: '0.78rem', minWidth: 0, flex: 1 }} noWrap>
                                                 {summaryParts.join(' | ')}
                                             </Typography>
+                                            {esMuestra && (
+                                                <ExpandMoreIcon fontSize='small' sx={{ color: 'primary.main', flexShrink: 0, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'none' }} />
+                                            )}
                                             {isEditMode && (
                                                 <IconButton
                                                     size='small'
-                                                    onClick={() => onRemoveRcmFromEditing(id)}
+                                                    onClick={(e) => { e.stopPropagation(); onRemoveRcmFromEditing(id) }}
                                                     disableRipple
-                                                    sx={{ width: 28, height: 28, ml: 'auto', color: '#EF4444', '&:hover': { bgcolor: 'transparent' } }}
+                                                    sx={{ width: 28, height: 28, ml: esMuestra ? 0 : 'auto', color: '#EF4444', '&:hover': { bgcolor: 'transparent' } }}
                                                 >
                                                     <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, lineHeight: 1, color: '#EF4444' }}>×</Typography>
                                                 </IconButton>
                                             )}
+                                        </Box>
+                                        {esMuestra && (
+                                            <Collapse in={isExpanded} unmountOnExit>
+                                                <Box sx={{ borderTop: '1px solid #DBEAFE', px: 1, py: 0.75, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                                                        <Typography variant='caption' sx={{ color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.04em' }}>
+                                                            SKU / Actividades codificadas
+                                                        </Typography>
+                                                        <Typography variant='caption' noWrap sx={{ color: 'text.secondary', fontSize: '0.75rem', flexShrink: 0 }}>
+                                                            {actividades.length} actividad{actividades.length !== 1 ? 'es' : ''}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Typography variant='caption' sx={{ color: 'text.primary', fontSize: '0.78rem', lineHeight: 1.5 }}>
+                                                        {actividades.length > 0 ? actividades.map(a => `${a.sku} ${a.nombre} ×${a.cantidad}`).join(' · ') : 'Sin actividades codificadas'}
+                                                    </Typography>
+                                                    {submuestrasResumen && (
+                                                        <>
+                                                            <Typography variant='caption' sx={{ color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.04em', mt: 0.5 }}>
+                                                                Submuestras
+                                                            </Typography>
+                                                            <Typography variant='caption' sx={{ color: 'text.primary', fontSize: '0.78rem', lineHeight: 1.5 }}>
+                                                                {submuestrasResumen}
+                                                            </Typography>
+                                                        </>
+                                                    )}
+                                                </Box>
+                                            </Collapse>
+                                        )}
                                         </Box>
                                     )
                                 })}
