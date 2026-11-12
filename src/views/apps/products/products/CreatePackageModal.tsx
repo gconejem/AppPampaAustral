@@ -43,6 +43,7 @@ interface CreatePackageModalProps {
   open: boolean
   handleClose: () => void
   soloLectura?: boolean
+  onSuccess?: () => void
 }
 
 interface Producto {
@@ -72,7 +73,7 @@ interface Familia {
   }
 }
 
-const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClose, soloLectura }) => {
+const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClose, soloLectura, onSuccess }) => {
   // Estados para el formulario
   const [nombre, setNombre] = useState('')
   const [sku, setSku] = useState('')
@@ -266,7 +267,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
 
       toast.success('Paquete creado exitosamente')
       handleCloseModal()
-      window.location.reload()
+      onSuccess?.()
     } catch (error: unknown) {
       console.error('Error:', error)
       toast.error(error instanceof Error ? error.message : 'Error desconocido')

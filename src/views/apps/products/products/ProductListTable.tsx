@@ -1020,7 +1020,7 @@ const ProductListTable = () => {
             table.setPageSize(newRowsPerPage)
           }}
         />
-        <CreatePackageModal open={openPackageModal} handleClose={handleClosePackageModal} soloLectura={soloLectura} />
+        <CreatePackageModal open={openPackageModal} handleClose={handleClosePackageModal} soloLectura={soloLectura} onSuccess={cargarProductos} />
         <PreviewProductForm
           open={previewModalOpen}
           onClose={() => setPreviewModalOpen(false)}
