@@ -81,7 +81,6 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
   const [area, setArea] = useState('')
   const [aplicaImpuesto, setAplicaImpuesto] = useState(false)
   const [familia, setFamilia] = useState('')
-  const [cantidadPaquete, setCantidadPaquete] = useState(1) // Estado para la cantidad del paquete padre
 
   // Estado para las áreas y familias
   const [areas, setAreas] = useState<Area[]>([])
@@ -121,7 +120,6 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
     setArea('')
     setAplicaImpuesto(false)
     setFamilia('')
-    setCantidadPaquete(1)
     setBuscarPaquete('')
     setBuscarProductos('')
     setProductos([])
@@ -244,10 +242,9 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
         familia: familia || '',
         norma: norma || '',
         aplicaImpuesto: aplicaImpuesto,
-        cantidad: cantidadPaquete,
         productos: productosSeleccionados.map(producto => ({
           productoId: producto.productoId,
-          cantidad: cantidadPaquete,
+          cantidad: cantidades[producto.productoId] || 1,
           descripcion: `Producto incluido en paquete ${nombre}`
         }))
       }
@@ -298,7 +295,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
 
         {/* Nueva fila para área y cantidad */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={4}>
+          <Grid item xs={6}>
             <FormControl fullWidth size='small'>
               <InputLabel>Área</InputLabel>
               <Select
@@ -323,7 +320,7 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={4}>
+          <Grid item xs={6}>
             <FormControl fullWidth size='small'>
               <InputLabel>Familia</InputLabel>
               <Select
@@ -342,22 +339,6 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-          <Grid item xs={4}>
-            <TextField
-              fullWidth
-              label='Cantidad'
-              type='number'
-              size='small'
-              value={cantidadPaquete}
-              onChange={e => {
-                const value = parseInt(e.target.value) || 1
-                setCantidadPaquete(value)
-              }}
-              InputProps={{
-                inputProps: { min: 1 }
-              }}
-            />
           </Grid>
         </Grid>
 
@@ -501,6 +482,15 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
                   }
 
                   setProductosSeleccionados(prev => [...prev, ...productsToMove])
+                  setCantidades(prev => {
+                    const next = { ...prev }
+
+                    productsToMove.forEach(p => {
+                      next[p.productoId] = 1
+                    })
+
+                    return next
+                  })
                   setSelectedProducts([])
                 }}
                 disabled={selectedProducts.length === 0}
@@ -512,6 +502,13 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
                 size='small'
                 onClick={() => {
                   setProductosSeleccionados(prev => prev.filter(p => !selectedPaquetes.includes(p.productoId)))
+                  setCantidades(prev => {
+                    const next = { ...prev }
+
+                    selectedPaquetes.forEach(id => delete next[id])
+
+                    return next
+                  })
                   setSelectedPaquetes([])
                 }}
                 disabled={selectedPaquetes.length === 0}
@@ -549,6 +546,21 @@ const CreatePackageModal: React.FC<CreatePackageModalProps> = ({ open, handleClo
                           {`${producto.area || 'Sin área'} - ${producto.nombre} - ${producto.norma || 'Sin norma'}`}
                         </Typography>
                       }
+                    />
+                    <TextField
+                      label='Cant.'
+                      type='number'
+                      size='small'
+                      value={cantidades[producto.productoId] ?? 1}
+                      onClick={e => e.stopPropagation()}
+                      onMouseDown={e => e.stopPropagation()}
+                      onChange={e => {
+                        const value = Math.max(1, parseInt(e.target.value) || 1)
+
+                        setCantidades(prev => ({ ...prev, [producto.productoId]: value }))
+                      }}
+                      inputProps={{ min: 1 }}
+                      sx={{ width: 80, mx: 1, flexShrink: 0 }}
                     />
                     <Checkbox edge='end' checked={selectedPaquetes.includes(producto.productoId)} size='small' />
                   </ListItem>

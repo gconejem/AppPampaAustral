@@ -71,7 +71,6 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
   const [descripcion, setDescripcion] = useState('')
   const [area, setArea] = useState('')
   const [familia, setFamilia] = useState('')
-  const [cantidad, setCantidad] = useState(1)
   const [precio, setPrecio] = useState<number>(0)
 
   // Eliminar precio, lista de precios y aplicar impuesto
@@ -212,7 +211,6 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
       setSku(paquete.sku)
       setNorma(paquete.norma || '')
       setDescripcion(paquete.descripcion || '')
-      setCantidad(paquete.productosEnPaquete?.length > 0 ? paquete.productosEnPaquete[0].cantidad : 1)
       setPrecio(paquete.precio || 0)
 
       // Cargar cantidades si existen
@@ -223,6 +221,8 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
           cantidadesIniciales[p.productoId] = p.cantidad || 1
         })
         setCantidades(cantidadesIniciales)
+      } else {
+        setCantidades({})
       }
 
       // Cargar áreas y familias
@@ -341,9 +341,11 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
           descripcion,
           area: areaOptions.find(opt => opt.id === area)?.nombre,
           familia: familiaOptions.find(opt => opt.id === familia)?.nombre,
-          cantidad,
           precio,
-          productosEnPaquete: productosSeleccionados.map(p => ({ productoId: p.productoId }))
+          productosEnPaquete: productosSeleccionados.map(p => ({
+            productoId: p.productoId,
+            cantidad: cantidades[p.productoId] || 1
+          }))
         })
       })
 
@@ -422,21 +424,11 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
 
         <Grid container spacing={4}>
           {/* Primera fila */}
-          <Grid item xs={4}>
+          <Grid item xs={6}>
             <TextField label='Nombre' value={nombre} onChange={e => setNombre(e.target.value)} fullWidth />
           </Grid>
-          <Grid item xs={4}>
+          <Grid item xs={6}>
             <TextField label='SKU' value={sku} onChange={e => setSku(e.target.value)} fullWidth />
-          </Grid>
-          <Grid item xs={4}>
-            <TextField
-              label='Cantidad'
-              type='number'
-              value={cantidad}
-              onChange={e => setCantidad(Math.max(1, parseInt(e.target.value) || 1))}
-              fullWidth
-              inputProps={{ min: 1 }}
-            />
           </Grid>
 
           {/* Nueva fila para descripción */}
@@ -579,9 +571,22 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
                   variant='contained'
                   size='small'
                   onClick={() => {
-                    const productsToAdd = productosPaginados.filter(p => selectedProducts.includes(p.productoId))
+                    const productsToAdd = productosPaginados.filter(
+                      p =>
+                        selectedProducts.includes(p.productoId) &&
+                        !productosSeleccionados.some(ps => ps.productoId === p.productoId)
+                    )
 
                     setProductosSeleccionados(prev => [...prev, ...productsToAdd])
+                    setCantidades(prev => {
+                      const next = { ...prev }
+
+                      productsToAdd.forEach(p => {
+                        next[p.productoId] = 1
+                      })
+
+                      return next
+                    })
                     setSelectedProducts([])
                   }}
                   disabled={selectedProducts.length === 0}
@@ -593,6 +598,13 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
                   size='small'
                   onClick={() => {
                     setProductosSeleccionados(prev => prev.filter(p => !selectedInPackage.includes(p.productoId)))
+                    setCantidades(prev => {
+                      const next = { ...prev }
+
+                      selectedInPackage.forEach(id => delete next[id])
+
+                      return next
+                    })
                     setSelectedInPackage([])
                   }}
                   disabled={selectedInPackage.length === 0}
@@ -641,6 +653,21 @@ const EditPackageModal = ({ open, onClose, paquete, onSave }: EditPackageModalPr
                       <ListItemText
                         primary={producto.sku}
                         secondary={`${producto.nombre} - ${producto.norma || 'Sin norma'} (${producto.area || 'Sin área'})`}
+                      />
+                      <TextField
+                        label='Cant.'
+                        type='number'
+                        size='small'
+                        value={cantidades[producto.productoId] ?? 1}
+                        onClick={e => e.stopPropagation()}
+                        onMouseDown={e => e.stopPropagation()}
+                        onChange={e => {
+                          const value = Math.max(1, parseInt(e.target.value) || 1)
+
+                          setCantidades(prev => ({ ...prev, [producto.productoId]: value }))
+                        }}
+                        inputProps={{ min: 1 }}
+                        sx={{ width: 80, mx: 1, flexShrink: 0 }}
                       />
                       <Checkbox edge='end' checked={selectedInPackage.includes(producto.productoId)} />
                     </ListItem>

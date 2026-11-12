@@ -84,19 +84,11 @@ const PreviewPackageForm = ({ open, onClose, paquete }: PreviewPackageFormProps)
         </Typography>
         <Divider sx={{ mb: 4 }} />
         <Grid container spacing={4}>
-          <Grid item xs={4}>
+          <Grid item xs={6}>
             <TextField label='Nombre' value={previewPaquete.nombre} fullWidth InputProps={{ readOnly: true }} />
           </Grid>
-          <Grid item xs={4}>
+          <Grid item xs={6}>
             <TextField label='SKU' value={previewPaquete.sku} fullWidth InputProps={{ readOnly: true }} />
-          </Grid>
-          <Grid item xs={4}>
-            <TextField
-              label='Cantidad'
-              value={previewPaquete.productosEnPaquete?.length > 0 ? previewPaquete.productosEnPaquete[0].cantidad : 1}
-              fullWidth
-              InputProps={{ readOnly: true }}
-            />
           </Grid>
           <Grid item xs={6}>
             <TextField
