@@ -11,3 +11,8 @@ Este archivo contiene las reglas de desarrollo del proyecto. Es el archivo **can
 - Mantener el estilo de espaciado existente del archivo: no insertar líneas vacías extra entre declaraciones, imports, propiedades de objetos, bloques `if`, etc.
 - Solo conservar líneas en blanco que ya existían originalmente o que son estrictamente necesarias por convención del lenguaje (por ejemplo, separación entre funciones de nivel superior si el archivo ya lo hacía).
 - Al hacer ediciones puntuales, respetar la densidad visual original del archivo.
+
+## 2. Pruebas
+
+### 2.1 Claude Code
+- En el caso de Claude Code, se puede usar **Playwright** para hacer pruebas de la aplicación (navegar, interactuar con la UI y verificar el comportamiento de los cambios).
