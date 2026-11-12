@@ -562,6 +562,36 @@ export function useCodigoAgrupador({
         handleCloseCodigoPopup()
     }
 
+    /** Construye un código agrupador temporal (in-memory) con un único RCM vinculado */
+    const buildAgrupadorUnoAUno = (rcm: RCMData, index: number, tempId: string): CodigoAgrupador => {
+        const temporaryCode = generateTemporaryProductCode(index)
+        return {
+            id: tempId,
+            temporaryCode: temporaryCode,
+            codigoId: temporaryCode,
+            codigoNombre: temporaryCode,
+            rcmsVinculados: [{
+                id: rcm.id,
+                numeroTarjeta: rcm.numeroTarjeta || rcm.numeroRcm || `T-${rcm.id}`,
+                rcmType: rcm.rcmType,
+                numeroRcm: rcm.numeroRcm,
+                temporaryCode: rcm.temporaryCode
+            }],
+            ensayos: aggregateEnsayos(rcm.ensayos.map(e => ({
+                productoId: e.productoId,
+                sku: e.sku,
+                nombre: e.nombre,
+                cantidad: e.cantidad
+            }))),
+            descripcionServicio: '',
+            cantidad: (rcm.rcmType === 'Control' || rcm.rcmType === 'Servicio')
+                ? (rcm.ensayos[0]?.cantidad ?? 1)
+                : 1,
+            unidad: 'unid',
+            facturacion: 'Unitario',
+        }
+    }
+
     /** Agrupar un RCM directamente en un código nuevo sin pasar por la modal (relación 1:1) */
     const handleCodigoUnoAUno = async (
         rcmOrId: RCMData | number,
@@ -572,49 +602,39 @@ export function useCodigoAgrupador({
             : rcmOrId
         if (!rcm) return
 
-        const rcmRef = {
-            id: rcm.id,
-            numeroTarjeta: rcm.numeroTarjeta || rcm.numeroRcm || `T-${rcm.id}`,
-            rcmType: rcm.rcmType,
-            numeroRcm: rcm.numeroRcm,
-            temporaryCode: rcm.temporaryCode
-        }
-
-        const allEnsayos = aggregateEnsayos(rcm.ensayos.map(e => ({
-            productoId: e.productoId,
-            sku: e.sku,
-            nombre: e.nombre,
-            cantidad: e.cantidad
-        })))
-
         setIsCreatingCodigo(true)
         try {
-            // Generate temporary product code (in-memory only, no database save)
-            const nextIndex = codigosAgrupadores.length + 1
-            const temporaryCode = generateTemporaryProductCode(nextIndex)
-            const tempId = `temp-${Date.now()}`
-
-            const newAgrupador: CodigoAgrupador = {
-                id: tempId,
-                temporaryCode: temporaryCode,
-                codigoId: temporaryCode,
-                codigoNombre: temporaryCode,
-                rcmsVinculados: [rcmRef],
-                ensayos: allEnsayos,
-                descripcionServicio: '',
-                cantidad: (rcm.rcmType === 'Control' || rcm.rcmType === 'Servicio')
-                    ? (rcm.ensayos[0]?.cantidad ?? 1)
-                    : 1,
-                unidad: 'unid',
-                facturacion: 'Unitario',
-            }
-
+            const newAgrupador = buildAgrupadorUnoAUno(rcm, codigosAgrupadores.length + 1, `temp-${Date.now()}`)
             setCodigosAgrupadores(prev => [...prev, newAgrupador])
             setSelectedRcmIds([])
             onAutoCodigoProductoCreated?.()
         } catch (err) {
             console.error('Error al crear código 1:1:', err)
             setErrorVencimiento(err instanceof Error ? err.message : 'Error al crear código de producto')
+        } finally {
+            setIsCreatingCodigo(false)
+        }
+    }
+
+    /** Crear un código nuevo por cada RCM seleccionado (relación 1:1 múltiple) */
+    const handleCodigoUnoAUnoMultiple = async (
+        rcmIds: number[],
+        setErrorVencimiento: (msg: string) => void,
+    ) => {
+        const rcms = savedRcms.filter(r => rcmIds.includes(r.id)).sort((a, b) => a.id - b.id)
+        if (rcms.length === 0) return
+
+        setIsCreatingCodigo(true)
+        try {
+            const baseIndex = codigosAgrupadores.length + 1
+            const now = Date.now()
+            const nuevos = rcms.map((rcm, i) => buildAgrupadorUnoAUno(rcm, baseIndex + i, `temp-${now}-${i}`))
+            setCodigosAgrupadores(prev => [...prev, ...nuevos])
+            setSelectedRcmIds([])
+            onAutoCodigoProductoCreated?.()
+        } catch (err) {
+            console.error('Error al crear códigos 1:1:', err)
+            setErrorVencimiento(err instanceof Error ? err.message : 'Error al crear códigos de producto')
         } finally {
             setIsCreatingCodigo(false)
         }
@@ -740,6 +760,7 @@ export function useCodigoAgrupador({
         handleSaveEditedAgrupador,
         handleCrearNuevoCodigo,
         handleCodigoUnoAUno,
+        handleCodigoUnoAUnoMultiple,
         handleUpdateAgrupadorForRcm,
         handleDismissReusableRcm,
         handleDismissAllReusableRcms,

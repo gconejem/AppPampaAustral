@@ -416,6 +416,7 @@ const Step2CreateRcms = ({
                         onSetActionBarRcmId={crud.setActionBarRcmId}
                         onSetSelectedRcmIds={codigoReal.setSelectedRcmIds}
                         onCodigoUnoAUno={(rcmId) => codigoReal.handleCodigoUnoAUno(rcmId, form.setErrorVencimiento)}
+                        onCodigoUnoAUnoMultiple={(rcmIds) => codigoReal.handleCodigoUnoAUnoMultiple(rcmIds, form.setErrorVencimiento)}
                         onDismissReusableRcm={codigoReal.handleDismissReusableRcm}
                         onDismissAllReusableRcms={codigoReal.handleDismissAllReusableRcms}
                         onUndoLastDismissedReusableRcms={codigoReal.handleUndoLastDismissedReusableRcms}

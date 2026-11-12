@@ -44,6 +44,7 @@ interface RcmSavedListProps {
     onSetActionBarRcmId: (id: number | null) => void
     onSetSelectedRcmIds: (ids: number[]) => void
     onCodigoUnoAUno: (rcmId: number) => void
+    onCodigoUnoAUnoMultiple: (rcmIds: number[]) => void
     onDismissReusableRcm: (rcmId: number) => void
     onDismissAllReusableRcms: () => void
     onUndoLastDismissedReusableRcms: () => void
@@ -57,7 +58,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
     codigosAgrupadores, canAgrupar,
     onToggleSavedRcm, onToggleRcmSelection, onOpenRcmMenu,
     onNewRcmClick, onOpenCodigoPopup, onQuickDuplicate,
-    onSetActionBarRcmId, onSetSelectedRcmIds, onCodigoUnoAUno,
+    onSetActionBarRcmId, onSetSelectedRcmIds, onCodigoUnoAUno, onCodigoUnoAUnoMultiple,
     onDismissReusableRcm, onDismissAllReusableRcms, onUndoLastDismissedReusableRcms,
     canUndoReusableDismiss, isCreatingCodigo,
 }) => {
@@ -713,6 +714,14 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                         sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 700, fontSize: '0.9rem', px: 3, py: 1, bgcolor: 'white', color: '#1976D2', boxShadow: 'none', '&:hover': { bgcolor: '#E3F2FD', boxShadow: 'none' } }}>
                         Agrupar en Código Producto
                     </Button>
+                    {selectedRcmIds.length > 1 && (
+                        <Button variant='contained' onClick={() => onCodigoUnoAUnoMultiple(selectedRcmIds)}
+                            disabled={isCreatingCodigo}
+                            startIcon={isCreatingCodigo ? <CircularProgress size={16} color='inherit' /> : undefined}
+                            sx={{ textTransform: 'none', borderRadius: '6px', fontWeight: 700, fontSize: '0.9rem', px: 3, py: 1, bgcolor: '#2E7D32', color: 'white', boxShadow: 'none', '&:hover': { bgcolor: '#1B5E20', boxShadow: 'none' }, '&:disabled': { bgcolor: '#A5D6A7', color: 'white' } }}>
+                            Código 1:1 ({selectedRcmIds.length})
+                        </Button>
+                    )}
                 </Box>
             </Box>
 
