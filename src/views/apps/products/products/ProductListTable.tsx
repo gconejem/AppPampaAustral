@@ -39,6 +39,7 @@ import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import Menu from '@mui/material/Menu'
 import Alert from '@mui/material/Alert'
+import CircularProgress from '@mui/material/CircularProgress'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -65,6 +66,7 @@ import type { ThemeColor } from '@core/types'
 
 // Component Imports
 import TableFilters from './TableFilters'
+import type { ProductFilters } from './TableFilters'
 import CustomAvatar from '@core/components/mui/Avatar'
 import OptionMenu from '@core/components/option-menu'
 import EditProductForm from '../edit/EditProductForm'
@@ -206,18 +208,14 @@ const columnHelper = createColumnHelper<Producto>()
 const ProductListTable = () => {
   // Estados para la tabla
   const [rowSelection, setRowSelection] = useState({})
-  const [productos, setProductos] = useState<Producto[]>([])
-  const [filteredProductos, setFilteredProductos] = useState<Producto[]>([])
   const [loading, setLoading] = useState(true)
   const [globalFilter, setGlobalFilter] = useState('')
+  const [filters, setFilters] = useState<ProductFilters>({ area: '', familia: '', tipo: '' })
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
-  const [totalProductos, setTotalProductos] = useState(0)
   const [areas, setAreas] = useState<string[]>([])
   const [familias, setFamilias] = useState<string[]>([])
-  const [tipos, setTipos] = useState(['Controles', 'Ensayos', 'Servicios', 'Terreno'])
-  const [listasPrecios, setListasPrecios] = useState([])
-  const [allProductos, setAllProductos] = useState<Producto[]>([]) // Nuevo estado para almacenar todos los productos
+  const [allProductos, setAllProductos] = useState<Producto[]>([]) // Única fuente de productos
 
   // Estados para el modal de paquetes
   const [open, setOpen] = useState(false)
@@ -255,64 +253,44 @@ const ProductListTable = () => {
 
   const params = useParams()
   const locale = params?.lang || 'es'
+  const { hasPermission, status: sessionStatus } = usePermissions()
+  const soloLectura =
+    hasPermission(permisos.productos.ver) &&
+    !hasPermission(permisos.productos.crear) &&
+    !hasPermission(permisos.productos.editar) &&
+    !hasPermission(permisos.productos.eliminar)
 
-  // Cargar datos iniciales
+  // Cargar áreas y familias (para los formularios de edición)
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCatalogos = async () => {
       try {
-        // Cargar productos
-        const response = await fetch('/api/debug')
-        const data = await response.json()
-
-        console.log('Datos cargados:', data)
-
-        if (data) {
-          const productos = data.productos || []
-          setProductos(productos)
-          setAllProductos(productos) // Guardar todos los productos
-          setFilteredProductos(productos) // Inicializar filteredProductos con todos los productos
-          setTotalProductos(productos.length)
-          setTipos(data.tipos || [])
-        }
-
-        // Cargar áreas
-        const areasResponse = await fetch('/api/areas')
-        const areasData = await areasResponse.json()
+        const [areasData, familiasData] = await Promise.all([
+          fetch('/api/areas').then(res => res.json()),
+          fetch('/api/familias').then(res => res.json())
+        ])
         setAreas(areasData.map((area: any) => area.nombre))
-
-        // Cargar familias
-        const familiasResponse = await fetch('/api/familias')
-        const familiasData = await familiasResponse.json()
         setFamilias(familiasData.map((familia: any) => familia.nombre))
       } catch (error) {
         console.error('Error cargando datos:', error)
         toast.error('Error al cargar los datos')
       }
     }
-
-    fetchData()
+    fetchCatalogos()
   }, [])
 
-  // Función para cargar productos (ahora solo se llama al inicio)
+  // Cargar todos los productos (activos e inactivos) desde una única fuente
   const cargarProductos = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/productos`)
+      const response = await fetch(`/api/productos?todos=true`)
       const data = await response.json()
-
-      console.log('DATOS:', data)
-
       if (data.productos) {
-        const productosFormateados = data.productos.map(p => ({
+        const productosFormateados = data.productos.map((p: any) => ({
           ...p,
           // Asegurarse de que listasPrecios sea un array
           listasPrecios: Array.isArray(p.listasPrecios) ? p.listasPrecios : []
         }))
-
-        setProductos(productosFormateados)
-        setAllProductos(productosFormateados) // Guardar todos los productos
-        // No establecer filteredProductos aquí - dejar que el useEffect maneje el filtrado
-        setTotalProductos(productosFormateados.length)
+        setAllProductos(productosFormateados)
       }
     } catch (error) {
       console.error('Error al cargar productos:', error)
@@ -322,26 +300,40 @@ const ProductListTable = () => {
     }
   }
 
-  // Función para buscar productos (ahora busca en los datos locales)
-  const buscarProducto = (query: string) => {
-    if (!query) {
-      setFilteredProductos(allProductos)
-      setPage(0) // Reiniciar la página al limpiar la búsqueda
-      return
-    }
+  // Tipos disponibles según los productos cargados
+  const tipos = useMemo(() => Array.from(new Set(allProductos.map(p => p.tipo).filter(Boolean))).sort(), [allProductos])
 
-    const lowercaseQuery = query.toLowerCase()
-    const resultados = allProductos.filter(producto =>
-      producto.nombre.toLowerCase().includes(lowercaseQuery) ||
-      producto.sku.toLowerCase().includes(lowercaseQuery) ||
-      producto.area.toLowerCase().includes(lowercaseQuery) ||
-      producto.familia.toLowerCase().includes(lowercaseQuery) ||
-      producto.tipo.toLowerCase().includes(lowercaseQuery)
-    )
+  // Normaliza texto para búsquedas sin distinguir mayúsculas ni tildes
+  const normalizar = (texto?: string) =>
+    (texto || '')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
 
-    setFilteredProductos(resultados)
-    setPage(0) // Reiniciar la página al aplicar una búsqueda
-  }
+  // Filtrado combinado: área + familia + tipo + búsqueda de texto
+  const filteredProductos = useMemo(() => {
+    const query = normalizar(globalFilter.trim())
+    return allProductos.filter(producto => {
+      if (filters.area && producto.area !== filters.area) return false
+      if (filters.familia && producto.familia !== filters.familia) return false
+      if (filters.tipo) {
+        if (filters.tipo === 'Paquete' ? !producto.esPaquete : producto.tipo !== filters.tipo) return false
+      }
+      if (!query) return true
+      return [producto.nombre, producto.sku, producto.area, producto.familia, producto.tipo, producto.norma].some(campo =>
+        normalizar(campo).includes(query)
+      )
+    })
+  }, [allProductos, filters, globalFilter])
+
+  // Si la página actual queda fuera de rango (p. ej. tras eliminar), volver a la primera
+  useEffect(() => {
+    if (page > 0 && page * rowsPerPage >= filteredProductos.length) setPage(0)
+  }, [filteredProductos.length, page, rowsPerPage])
+
+  const handleFiltersChange = useCallback((nuevosFiltros: ProductFilters) => {
+    setFilters(nuevosFiltros)
+  }, [])
 
   // Función para eliminar producto
   const eliminarProducto = async (productoId: number) => {
@@ -355,10 +347,7 @@ const ProductListTable = () => {
       }
 
       // Actualizar el estado local eliminando el producto
-      setProductos(prevProductos => prevProductos.filter(producto => producto.productoId !== productoId))
-
-      // Actualizar también los productos filtrados
-      setFilteredProductos(prevProductos => prevProductos.filter(producto => producto.productoId !== productoId))
+      setAllProductos(prevProductos => prevProductos.filter(producto => producto.productoId !== productoId))
 
       // Mostrar notificación de éxito
       toast.success('Producto eliminado correctamente')
@@ -498,25 +487,7 @@ const ProductListTable = () => {
 
   useEffect(() => {
     cargarProductos()
-  }, []) // Ahora solo se cargan los productos al inicio
-
-  // Efecto principal para manejar filtrado
-  useEffect(() => {
-    console.log('🔍 Aplicando filtros:', {
-      globalFilter,
-      allProductosLength: allProductos.length,
-      filteredProductosLength: filteredProductos.length
-    })
-
-    if (globalFilter && allProductos.length > 0) {
-      console.log('📝 Aplicando búsqueda global...')
-      buscarProducto(globalFilter)
-    } else if (!globalFilter && allProductos.length > 0) {
-      console.log('🔄 Sin filtro global, mostrando todos los productos')
-      setFilteredProductos(allProductos)
-      setPage(0)
-    }
-  }, [globalFilter, allProductos])
+  }, [])
 
   useEffect(() => {
     if (open) {
@@ -600,13 +571,6 @@ const ProductListTable = () => {
       )
     )
 
-    // También actualizar productos para compatibilidad
-    setProductos(prevProductos =>
-      prevProductos.map(producto =>
-        producto.productoId === updatedProduct.productoId ? updatedProduct : producto
-      )
-    )
-
     // Cerrar el modal
     if (editingProduct && editingProduct.esPaquete) {
       setEditPackageModalOpen(false)
@@ -614,8 +578,7 @@ const ProductListTable = () => {
       setEditModalOpen(false)
     }
 
-    // NO llamar cargarProductos() aquí para preservar el filtrado
-    // Los useEffect se encargarán de actualizar filteredProductos automáticamente
+    // NO llamar cargarProductos() aquí: filteredProductos se recalcula a partir de allProductos
     console.log('✅ Producto actualizado, filtros se mantendrán')
   }
 
@@ -653,8 +616,7 @@ const ProductListTable = () => {
       const nuevoproducto = await response.json()
 
       // Actualizar el estado local agregando el nuevo producto
-      setProductos(prevProductos => [...prevProductos, nuevoproducto])
-      setFilteredProductos(prevProductos => [...prevProductos, nuevoproducto])
+      setAllProductos(prevProductos => [...prevProductos, { ...nuevoproducto, listasPrecios: [] }])
 
       // Mostrar notificación de éxito
       toast.success('Producto duplicado correctamente')
@@ -684,20 +646,6 @@ const ProductListTable = () => {
       }
 
       const data = await response.json()
-
-      // Actualizar el estado local
-      setProductos(prevProductos =>
-        prevProductos.map(p =>
-          p.productoId === producto.productoId ? { ...p, estado: nuevoEstado } : p
-        )
-      )
-
-      // Actualizar también en la lista filtrada
-      setFilteredProductos(prevProductos =>
-        prevProductos.map(p =>
-          p.productoId === producto.productoId ? { ...p, estado: nuevoEstado } : p
-        )
-      )
 
       // Actualizar en la lista completa
       setAllProductos(prevProductos =>
@@ -838,15 +786,14 @@ const ProductListTable = () => {
         enableSorting: false
       }
     ],
-    []
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [soloLectura]
   )
 
   // Actualizar el manejo del cambio en el filtro global
   const handleGlobalFilterChange = (value: string | number) => {
     setGlobalFilter(String(value))
-    if (value === '') {
-      setPage(0) // Reiniciar la página cuando se limpia el filtro
-    }
+    setPage(0) // Reiniciar la página al cambiar la búsqueda
   }
 
   const table = useReactTable({
@@ -857,7 +804,6 @@ const ProductListTable = () => {
     },
     state: {
       rowSelection,
-      globalFilter,
       pagination: {
         pageIndex: page,
         pageSize: rowsPerPage
@@ -869,10 +815,8 @@ const ProductListTable = () => {
       }
     },
     enableRowSelection: true,
-    globalFilterFn: fuzzyFilter,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
-    onGlobalFilterChange: setGlobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -928,12 +872,14 @@ const ProductListTable = () => {
     toast.success('Archivo Excel descargado exitosamente')
   }
 
-  const { hasPermission } = usePermissions()
-  const soloLectura =
-    hasPermission(permisos.productos.ver) &&
-    !hasPermission(permisos.productos.crear) &&
-    !hasPermission(permisos.productos.editar) &&
-    !hasPermission(permisos.productos.eliminar)
+  // Mientras la sesión carga no se muestra el aviso de "sin permiso"
+  if (sessionStatus === 'loading') {
+    return (
+      <Box className='flex justify-center p-10'>
+        <CircularProgress />
+      </Box>
+    )
+  }
 
   if (!hasPermission(permisos.productos.ver)) {
     return <Alert severity="warning">No tienes permiso para ver productos.</Alert>
@@ -963,8 +909,7 @@ const ProductListTable = () => {
       <Card>
         <CardHeader title='Productos' className='pbe-4' />
         <TableFilters
-          productData={allProductos}
-          setFilteredData={setFilteredProductos}
+          onFiltersChange={handleFiltersChange}
           areas={areas}
           familias={familias}
           tipos={tipos}
@@ -1036,11 +981,11 @@ const ProductListTable = () => {
                 </tr>
               ))}
             </thead>
-            {table.getRowModel().rows.length === 0 ? (
+            {loading || table.getRowModel().rows.length === 0 ? (
               <tbody>
                 <tr>
                   <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                    No data available
+                    {loading ? <CircularProgress size={24} /> : 'No hay productos que coincidan con los filtros'}
                   </td>
                 </tr>
               </tbody>

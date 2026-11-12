@@ -135,9 +135,11 @@ export async function GET(req: Request) {
     const familia = searchParams.get('familia') || undefined
     const search = searchParams.get('search') || undefined
     const esPaquete = searchParams.get('esPaquete')
+    // todos=true: devuelve todos los productos (activos e inactivos) sin paginar
+    const todos = searchParams.get('todos') === 'true'
 
     // Construir el objeto where para filtrar
-    const where: any = { estado: 'ACTIVO' }
+    const where: any = todos ? {} : { estado: 'ACTIVO' }
 
     if (area) where.area = area
     if (tipo) where.tipo = tipo
@@ -161,8 +163,9 @@ export async function GET(req: Request) {
     // Productos paginados con filtros
     const productos = await prisma.producto.findMany({
       where,
-      skip,
-      take: limit,
+      skip: todos ? undefined : skip,
+      take: todos ? undefined : limit,
+      orderBy: todos ? { productoId: 'asc' } : undefined,
       include: {
         productosEnPaquete: {
           include: { producto: true }
