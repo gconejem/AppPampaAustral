@@ -15,6 +15,7 @@ import type { CodificacionExistenteData, CodigoProductoExistente, RcmResumenExis
 interface CodificacionExistenteBarProps {
     data: CodificacionExistenteData
     onReagrupar?: () => void
+    reagrupando?: boolean
 }
 
 const SEP = ' · '
@@ -130,7 +131,7 @@ const CodigoRow = ({ cp, expanded, onToggle, onVer }: { cp: CodigoProductoExiste
     </Box>
 )
 
-const CodificacionExistenteBar = ({ data, onReagrupar }: CodificacionExistenteBarProps) => {
+const CodificacionExistenteBar = ({ data, onReagrupar, reagrupando = false }: CodificacionExistenteBarProps) => {
     const params = useParams()
     const lang = params?.lang || 'es'
     const [showDetalle, setShowDetalle] = useState(false)
@@ -173,10 +174,10 @@ const CodificacionExistenteBar = ({ data, onReagrupar }: CodificacionExistenteBa
                         startIcon={showDetalle ? <VisibilityOffOutlinedIcon /> : <VisibilityOutlinedIcon />}>
                         {showDetalle ? 'Ocultar detalle' : 'Ver detalle'}
                     </Button>
-                    <Tooltip title={onReagrupar ? '' : 'Disponible próximamente'}>
+                    <Tooltip title={!onReagrupar ? 'Disponible próximamente' : reagrupando ? 'La codificación existente ya está cargada en el workbench' : 'Cargar los CP y RCM confirmados para reagruparlos'}>
                         <span>
-                            <Button size='small' variant='outlined' onClick={onReagrupar} disabled={!onReagrupar} sx={buttonSx} startIcon={<AccountTreeOutlinedIcon />}>
-                                Reagrupar
+                            <Button size='small' variant='outlined' onClick={onReagrupar} disabled={!onReagrupar || reagrupando} sx={buttonSx} startIcon={<AccountTreeOutlinedIcon />}>
+                                {reagrupando ? 'Reagrupando…' : 'Reagrupar'}
                             </Button>
                         </span>
                     </Tooltip>

@@ -449,7 +449,7 @@ export function useRcmCrud({
         }
     }
 
-    const handleGuardarTodo = async (codigosAgrupadores: any[]) => {
+    const handleGuardarTodo = async (codigosAgrupadores: any[], codigosEliminados: number[] = []) => {
         if (savedRcms.length === 0) return
         setIsSaving(true)
         try {
@@ -508,6 +508,7 @@ export function useRcmCrud({
                 })),
                 codigosAgrupadores: codigosAgrupadores.map(ag => ({
                     id: ag.id,
+                    dbId: ag.dbId ?? undefined,
                     codigoId: ag.codigoId,
                     codigoNombre: ag.codigoNombre,
                     descripcionServicio: ag.descripcionServicio,
@@ -517,6 +518,7 @@ export function useRcmCrud({
                     ensayos: ag.ensayos.map((e: any) => ({ sku: e.sku, nombre: e.nombre, cantidad: e.cantidad })),
                     rcmsVinculados: ag.rcmsVinculados.map((r: any) => ({ id: r.id })),
                 })),
+                codigosEliminados,
                 ordenTrabajoId: otData?.id ?? null,
                 clienteId: otData?.clienteId ?? otData?.cliente?.id ?? null,
                 obraId: otData?.obraId ?? otData?.obra?.id ?? null,
@@ -544,7 +546,7 @@ export function useRcmCrud({
                     return {
                         ...rcm,
                         dbId: dbRcm.id,
-                        numeroRcm: dbRcm.numeroRcm,
+                        numeroRcm: dbRcm.numeroRcm ?? rcm.numeroRcm,
                         // Remove temporary code after finalization
                         temporaryCode: undefined,
                     }

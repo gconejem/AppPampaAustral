@@ -6,12 +6,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 import Grid from '@mui/material/Grid'
+import Alert from '@mui/material/Alert'
 
 // Component Imports
 import Header from './header'
 import Step2CreateRcms from './step2-create-rcms'
 import CodificacionExistenteBar from './components/CodificacionExistenteBar'
 import { useCodificacionExistente } from './hooks/useCodificacionExistente'
+import type { ReagruparData } from './types/rcm-types'
 
 // Definición de tipos básicos para evitar errores
 interface UsersType {
@@ -78,6 +80,28 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
   const [codificacionRefreshKey, setCodificacionRefreshKey] = useState(0)
   const esOtCodificada = otData?.estado === 'CODIFICADA'
   const { data: codificacionExistente } = useCodificacionExistente(otId, esOtCodificada, codificacionRefreshKey)
+  // Reagrupar: carga los CP y RCM confirmados en el workbench
+  const reagruparRef = useRef<((data: ReagruparData) => void) | null>(null)
+  const [modoReagrupar, setModoReagrupar] = useState(false)
+  const [cargandoReagrupar, setCargandoReagrupar] = useState(false)
+  const [reagruparError, setReagruparError] = useState('')
+  const handleReagrupar = async () => {
+    if (!otId || modoReagrupar || cargandoReagrupar) return
+    try {
+      setCargandoReagrupar(true)
+      setReagruparError('')
+      const response = await fetch(`/api/ot/${otId}/reagrupar`, { cache: 'no-store' })
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !data) throw new Error(data?.error || 'No se pudo cargar la codificación para reagrupar')
+      reagruparRef.current?.(data)
+      setModoReagrupar(true)
+      setTimeout(() => document.getElementById('rcms-creados')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+    } catch (error) {
+      setReagruparError(error instanceof Error ? error.message : 'No se pudo cargar la codificación para reagrupar')
+    } finally {
+      setCargandoReagrupar(false)
+    }
+  }
 
   const handleFinalizarCodificacion = () => {
     finalizarRef.current?.()
@@ -164,11 +188,12 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
       {/* Codificación existente (CP y RCM confirmados) */}
       {esOtCodificada && (codificacionExistente?.codigos.length ?? 0) > 0 && (
         <Grid item xs={12}>
-          <CodificacionExistenteBar data={codificacionExistente!} />
+          <CodificacionExistenteBar data={codificacionExistente!} onReagrupar={handleReagrupar} reagrupando={modoReagrupar || cargandoReagrupar} />
+          {reagruparError && <Alert severity='error' onClose={() => setReagruparError('')} sx={{ mt: 2 }}>{reagruparError}</Alert>}
         </Grid>
       )}
       {/* Formulario y Listado de RCMs */}
-      <Grid item xs={12}>
+      <Grid item xs={12} id='rcms-creados'>
         <Step2CreateRcms
           ensayosAsociados={ensayosAsociados}
           setEnsayosAsociados={setEnsayosAsociados}
@@ -181,7 +206,9 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
           onAgrupadosIdsChange={setAgrupadosIds}
           onIsSavingChange={setIsSaving}
           onRegisterFinalizar={(fn: () => void) => { finalizarRef.current = fn }}
+          onRegisterReagrupar={(fn: (data: ReagruparData) => void) => { reagruparRef.current = fn }}
           onCodificacionGuardada={() => {
+            setModoReagrupar(false)
             setOtData((prev: any) => (prev ? { ...prev, estado: 'CODIFICADA' } : prev))
             setCodificacionRefreshKey(k => k + 1)
           }}

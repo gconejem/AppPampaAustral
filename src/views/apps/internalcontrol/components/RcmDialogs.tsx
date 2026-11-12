@@ -75,6 +75,8 @@ interface RcmDialogsProps {
     codigosAgrupadores: CodigoAgrupador[]
     savedRcms: RCMData[]
     cardRect?: { left: number; width: number }
+    // Reagrupar: RCM confirmados con avance operativo que cambiaron de agrupación
+    rcmsConAvanceModificados?: RCMData[]
 }
 
 const RcmDialogs: React.FC<RcmDialogsProps> = ({
@@ -87,7 +89,7 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
     showDeleteConfirm, handleConfirmDelete, handleDismissDeleteConfirm,
     showPreFinalizacion, setShowPreFinalizacion,
     computeValidaciones, handleGuardarTodo, isSaving,
-    codigosAgrupadores, savedRcms, cardRect,
+    codigosAgrupadores, savedRcms, cardRect, rcmsConAvanceModificados = [],
 }) => {
     const router = useRouter()
     const params = useParams()
@@ -396,7 +398,7 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                         })
                                         const skuItems = ag.ensayos || []
                                         const descripcion = ag.descripcionServicio || '—'
-                                        const codigoDisplay = ag.temporaryCode || ag.id
+                                        const codigoDisplay = ag.temporaryCode || ag.codigoNombre || ag.id
                                         return (
                                             <Box
                                                 key={ag.id}
@@ -412,7 +414,7 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                                         {codigoDisplay}
                                                     </Typography>
                                                     <Typography variant='caption' sx={{ color: '#9CA3AF', fontSize: '0.68rem' }}>
-                                                        ~ temporal
+                                                        {ag.dbId ? 'existente' : '~ temporal'}
                                                     </Typography>
                                                 </Box>
                                                 {/* Área · Tipo */}
@@ -502,6 +504,14 @@ const RcmDialogs: React.FC<RcmDialogsProps> = ({
                                     })}
                                 </Box>
                             </Box>
+                            {rcmsConAvanceModificados.length > 0 && (
+                                <Alert severity='warning' sx={{ mt: 2, borderRadius: '8px' }}>
+                                    Los siguientes RCM ya tienen avance operativo y cambiaron de agrupación:{' '}
+                                    <strong>
+                                        {rcmsConAvanceModificados.map(rcm => `RCM-${String(rcm.numeroRcm ?? rcm.id).padStart(3, '0')} (${rcm.estadoOperativo})`).join(', ')}
+                                    </strong>
+                                </Alert>
+                            )}
                         </DialogContent>
                         <Divider />
                         <DialogActions sx={{ px: 3, py: 2, justifyContent: 'space-between' }}>

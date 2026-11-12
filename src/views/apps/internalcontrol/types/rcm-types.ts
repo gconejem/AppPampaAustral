@@ -80,6 +80,7 @@ export interface RCMData {
     cantidadMuestras: string
     numeroRcm?: string
     estado: string
+    estadoOperativo?: string // Estado operativo real (solo RCM ya confirmados, cargados al reagrupar)
     tieneVencimiento?: boolean
     submuestrasVencimiento?: SubmuestraVencimiento[]
     codigoProducto?: string
@@ -130,6 +131,13 @@ export interface Step2CreateRcmsProps {
     onRegisterFinalizar?: (fn: () => void) => void
     onIsSavingChange?: (isSaving: boolean) => void
     onCodificacionGuardada?: () => void
+    onRegisterReagrupar?: (fn: (data: ReagruparData) => void) => void
+}
+
+// Datos para reagrupar: CP y RCM confirmados en formato del workbench
+export interface ReagruparData {
+    rcms: RCMData[]
+    codigos: CodigoAgrupador[]
 }
 
 // Codificación existente (CP y RCM ya confirmados de una OT codificada)

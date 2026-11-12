@@ -38,7 +38,7 @@ const Step2CreateRcms = ({
     savedRcms, setSavedRcms,
     otData, initialRcmType, onClearInitialRcmType,
     onDraftCountChange, onAgrupadosIdsChange,
-    onRegisterFinalizar, onIsSavingChange, onCodificacionGuardada,
+    onRegisterFinalizar, onIsSavingChange, onCodificacionGuardada, onRegisterReagrupar,
 }: Step2CreateRcmsProps) => {
 
     // ═══════════════════════════════════════
@@ -130,6 +130,10 @@ const Step2CreateRcms = ({
     const selectedRcmLinkedToCodigoProducto = crud.selectedRcmId !== null
         ? isRcmLinkedToCodigoProducto(crud.selectedRcmId)
         : false
+    // RCM ya confirmado (cargado al reagrupar): no se edita ni elimina desde el workbench
+    const selectedRcmConfirmado = crud.selectedRcmId !== null
+        ? Boolean(savedRcms.find(r => r.id === crud.selectedRcmId)?.dbId)
+        : false
 
     // ═══════════════════════════════════════
     // CARD REF (for bottom panel positioning)
@@ -193,6 +197,17 @@ const Step2CreateRcms = ({
 
         return () => window.clearTimeout(timeoutId)
     }, [showAutoCodigoProductoMessage])
+
+    // Registrar la carga de la codificación existente (Reagrupar)
+    useEffect(() => {
+        onRegisterReagrupar?.((data) => {
+            setSavedRcms(prev => {
+                const dbIdsActuales = new Set(prev.map(r => r.dbId).filter(Boolean))
+                return [...data.rcms.filter(r => !dbIdsActuales.has(r.dbId)), ...prev]
+            })
+            codigoReal.cargarCodigosExistentes(data.codigos, data.rcms)
+        })
+    })
 
     // Registrar la función de finalizar en el padre al montar
     useEffect(() => {
@@ -449,18 +464,18 @@ const Step2CreateRcms = ({
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
-                <MenuItem onClick={crud.handleEditRcm}>
-                    <EditIcon fontSize='small' sx={{ mr: 1 }} /> Editar
+                <MenuItem onClick={crud.handleEditRcm} disabled={selectedRcmConfirmado}>
+                    <EditIcon fontSize='small' sx={{ mr: 1 }} /> Editar{selectedRcmConfirmado ? ' (RCM ya confirmado)' : ''}
                 </MenuItem>
                 <MenuItem onClick={crud.handleDuplicateRcm}>
                     <ContentCopyIcon fontSize='small' sx={{ mr: 1 }} /> Duplicar
                 </MenuItem>
                 <MenuItem
                     onClick={crud.handleDeleteRcm}
-                    disabled={selectedRcmLinkedToCodigoProducto}
-                    sx={{ color: selectedRcmLinkedToCodigoProducto ? 'text.disabled' : 'error.main' }}
+                    disabled={selectedRcmLinkedToCodigoProducto || selectedRcmConfirmado}
+                    sx={{ color: selectedRcmLinkedToCodigoProducto || selectedRcmConfirmado ? 'text.disabled' : 'error.main' }}
                 >
-                    <DeleteIcon fontSize='small' sx={{ mr: 1 }} /> Eliminar
+                    <DeleteIcon fontSize='small' sx={{ mr: 1 }} /> Eliminar{selectedRcmConfirmado ? ' (RCM ya confirmado)' : ''}
                 </MenuItem>
             </Menu>
 
@@ -525,10 +540,17 @@ const Step2CreateRcms = ({
                 setShowPreFinalizacion={codigoReal.setShowPreFinalizacion}
                 computeValidaciones={codigoReal.computeValidaciones}
                 handleGuardarTodo={async () => {
-                    const result = await crud.handleGuardarTodo(codigoReal.codigosAgrupadores)
-                    if (result) onCodificacionGuardada?.()
+                    const result = await crud.handleGuardarTodo(codigoReal.codigosAgrupadores, codigoReal.codigosEliminados)
+                    if (result) {
+                        // Sesión guardada: limpiar el workbench (evita duplicar CP en un segundo «Finalizar»)
+                        codigoReal.resetSesion()
+                        setSavedRcms([])
+                        setEnsayosAsociados([])
+                        onCodificacionGuardada?.()
+                    }
                     return result
                 }}
+                rcmsConAvanceModificados={codigoReal.rcmsConAvanceModificados}
                 isSaving={crud.isSaving}
                 codigosAgrupadores={codigoReal.codigosAgrupadores}
                 savedRcms={savedRcms}

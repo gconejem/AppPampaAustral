@@ -78,6 +78,9 @@ export function useCodigoAgrupador({
     const [showPreFinalizacion, setShowPreFinalizacion] = useState(false)
     const [dismissedReusableRcmIds, setDismissedReusableRcmIds] = useState<number[]>([])
     const [lastDismissedReusableRcmIds, setLastDismissedReusableRcmIds] = useState<number[]>([])
+    // Reagrupar: CP confirmados eliminados en la sesión y vínculos originales RCM → CP
+    const [codigosEliminados, setCodigosEliminados] = useState<number[]>([])
+    const [vinculosOriginales, setVinculosOriginales] = useState<Map<number, string>>(new Map())
 
     // Códigos existentes de la OT
     const [codigosOT, setCodigosOT] = useState<Array<{ id: string; nombre: string; tipo: string; descripcion: string }>>([
@@ -428,6 +431,7 @@ export function useCodigoAgrupador({
         }
 
         // In-memory only: no database deletion until finalization
+        if (agrupador?.dbId) setCodigosEliminados(prev => prev.includes(agrupador.dbId!) ? prev : [...prev, agrupador.dbId!])
         setCodigosAgrupadores(prev => prev.filter(a => a.id !== agrupadorId))
     }
 
@@ -675,6 +679,50 @@ export function useCodigoAgrupador({
         setNewCodigoTipo('')
     }
 
+    /** Reagrupar: carga en el workbench los CP ya confirmados de la OT */
+    const cargarCodigosExistentes = (codigos: CodigoAgrupador[], rcms: RCMData[]) => {
+        setCodigosAgrupadores(prev => {
+            const dbIdsActuales = new Set(prev.map(a => a.dbId).filter(Boolean))
+            return [...codigos.filter(c => !dbIdsActuales.has(c.dbId)), ...prev]
+        })
+        const vinculos = new Map<number, string[]>()
+        codigos.forEach(cp => cp.rcmsVinculados.forEach(rv => vinculos.set(rv.id, [...(vinculos.get(rv.id) ?? []), String(cp.dbId)])))
+        setVinculosOriginales(prev => {
+            const next = new Map(prev)
+            vinculos.forEach((cps, rcmId) => { if (!next.has(rcmId)) next.set(rcmId, [...cps].sort().join(',')) })
+            return next
+        })
+        // Los RCM de dosificación ya confirmados no se ofrecen para reutilizar (se recuperan con «Deshacer»)
+        const reutilizablesCargados = rcms.filter(isReusableHormigonAridosRcm).map(r => r.id)
+        if (reutilizablesCargados.length > 0) {
+            setDismissedReusableRcmIds(prev => [...new Set([...prev, ...reutilizablesCargados])])
+            setLastDismissedReusableRcmIds([])
+        }
+    }
+
+    /** RCM confirmados con avance operativo cuya agrupación cambió respecto a la original */
+    const rcmsConAvanceModificados = useMemo(() => {
+        if (vinculosOriginales.size === 0) return []
+        const actuales = new Map<number, string[]>()
+        codigosAgrupadores.forEach(ag => ag.rcmsVinculados.forEach(rv => actuales.set(rv.id, [...(actuales.get(rv.id) ?? []), String(ag.dbId ?? ag.id)])))
+        return savedRcms.filter(rcm => {
+            if (!rcm.dbId || !vinculosOriginales.has(rcm.id)) return false
+            const estado = String(rcm.estadoOperativo ?? '').trim().toUpperCase()
+            if (!estado || estado === 'CODIFICADO') return false
+            return [...(actuales.get(rcm.id) ?? [])].sort().join(',') !== vinculosOriginales.get(rcm.id)
+        })
+    }, [codigosAgrupadores, savedRcms, vinculosOriginales])
+
+    /** Limpia la sesión de agrupación tras finalizar la codificación */
+    const resetSesion = () => {
+        setCodigosAgrupadores([])
+        setSelectedRcmIds([])
+        setCodigosEliminados([])
+        setVinculosOriginales(new Map())
+        setDismissedReusableRcmIds([])
+        setLastDismissedReusableRcmIds([])
+    }
+
     const computeValidaciones = () => {
         const rcmIdsAgrupados = new Set<number>()
         codigosAgrupadores.forEach(ag => ag.rcmsVinculados.forEach(r => rcmIdsAgrupados.add(r.id)))
@@ -736,6 +784,10 @@ export function useCodigoAgrupador({
         lastDismissedReusableRcmIds,
         reusableRcmsDisponibles,
         codigosOT,
+        codigosEliminados,
+        rcmsConAvanceModificados,
+        cargarCodigosExistentes,
+        resetSesion,
         // Handlers
         handleToggleRcmSelection,
         handleOpenCodigoPopup,

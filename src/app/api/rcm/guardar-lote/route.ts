@@ -91,6 +91,7 @@ interface AgrupadorInput {
 interface LotePayload {
     rcms: RCMInput[]
     codigosAgrupadores: AgrupadorInput[]
+    codigosEliminados?: number[]   // dbIds de CP confirmados eliminados al reagrupar
     ordenTrabajoId?: string
     clienteId?: number
     obraId?: number
@@ -125,7 +126,7 @@ async function nextNumeroRcm(tx: typeof prisma): Promise<() => string> {
 export async function POST(request: Request) {
     try {
         const body: LotePayload = await request.json()
-        const { rcms = [], codigosAgrupadores = [], ordenTrabajoId, clienteId, obraId } = body
+        const { rcms = [], codigosAgrupadores = [], codigosEliminados = [], ordenTrabajoId, clienteId, obraId } = body
 
         // Collect all skus for a single DB round-trip
         const allSkus = new Set<string>()
@@ -296,7 +297,7 @@ export async function POST(request: Request) {
                             ],
                         },
                     },
-                    select: { id: true },
+                    select: { id: true, numeroRcm: true },
                 })
 
                 if (rcmInput.id != null) rcmIdMap[rcmInput.id] = rcmCriado.id
@@ -304,6 +305,27 @@ export async function POST(request: Request) {
             })
 
             const rcmsCriados = await Promise.all(rcmCreateTasks)
+            // RCMs cuyo vínculo legado (RCM.codigoAgrupadorId) se resincroniza al final
+            const rcmIdsAfectados = new Set<number>()
+            // 1b. Reagrupar: eliminar los CP confirmados que se borraron en la sesión (mismos pasos que DELETE /api/codigo-agrupador/[id])
+            const idsEliminar = Array.from(new Set(codigosEliminados.map(Number).filter(Number.isFinite)))
+            if (idsEliminar.length > 0) {
+                const eliminables = await tx.codigoAgrupador.findMany({
+                    where: { id: { in: idsEliminar }, ...(ordenTrabajoId ? { ordenTrabajoId } : {}) },
+                    select: { id: true, rcmLinks: { select: { rcmId: true } }, rcms: { select: { id: true } } },
+                })
+                const ids = eliminables.map(ag => ag.id)
+                eliminables.forEach(ag => {
+                    ag.rcmLinks.forEach(link => rcmIdsAfectados.add(link.rcmId))
+                    ag.rcms.forEach(rcm => rcmIdsAfectados.add(rcm.id))
+                })
+                if (ids.length > 0) {
+                    await tx.codigoAgrupadorRcm.deleteMany({ where: { codigoAgrupadorId: { in: ids } } })
+                    await tx.rCM.updateMany({ where: { codigoAgrupadorId: { in: ids } }, data: { codigoAgrupadorId: null } })
+                    await tx.codigoAgrupadorEnsayo.deleteMany({ where: { codigoAgrupadorId: { in: ids } } })
+                    await tx.codigoAgrupador.deleteMany({ where: { id: { in: ids } } })
+                }
+            }
 
             // 2. Crear/actualizar CodigoAgrupadores en paralelo y enlazar RCMs
             const agrupadorTasks = agrupadoresPreparados.map(async ({ ag, codigoNombre, codigoId }) => {
@@ -311,6 +333,7 @@ export async function POST(request: Request) {
                     .map(r => rcmIdMap[r.id])
                     .filter((id): id is number => id !== undefined)
                 const uniqueRcmIdsVinculados = Array.from(new Set(rcmIdsVinculados))
+                uniqueRcmIdsVinculados.forEach(id => rcmIdsAfectados.add(id))
 
                 if (uniqueRcmIdsVinculados.length === 0) return null
 
@@ -394,6 +417,25 @@ export async function POST(request: Request) {
             })
 
             const agrupadoresResultados = await Promise.all(agrupadorTasks)
+            // 2b. Resincronizar RCM.codigoAgrupadorId con el primer vínculo vigente (evita carreras entre tareas paralelas)
+            if (rcmIdsAfectados.size > 0) {
+                const links = await tx.codigoAgrupadorRcm.findMany({
+                    where: { rcmId: { in: Array.from(rcmIdsAfectados) } },
+                    orderBy: { id: 'asc' },
+                    select: { rcmId: true, codigoAgrupadorId: true },
+                })
+                const primerCpPorRcm = new Map<number, number>()
+                links.forEach(link => { if (!primerCpPorRcm.has(link.rcmId)) primerCpPorRcm.set(link.rcmId, link.codigoAgrupadorId) })
+                const rcmsPorCp = new Map<number, number[]>()
+                primerCpPorRcm.forEach((cpId, rcmId) => rcmsPorCp.set(cpId, [...(rcmsPorCp.get(cpId) ?? []), rcmId]))
+                for (const [cpId, ids] of rcmsPorCp) {
+                    await tx.rCM.updateMany({ where: { id: { in: ids } }, data: { codigoAgrupadorId: cpId } })
+                }
+                const sinVinculo = Array.from(rcmIdsAfectados).filter(id => !primerCpPorRcm.has(id))
+                if (sinVinculo.length > 0) {
+                    await tx.rCM.updateMany({ where: { id: { in: sinVinculo } }, data: { codigoAgrupadorId: null } })
+                }
+            }
             const agrupadores = agrupadoresResultados.filter(
                 (a): a is { id: number; codigoId: string; codigoNombre: string } => a !== null
             )
