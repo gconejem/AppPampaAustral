@@ -196,6 +196,7 @@ export default function ViewRCMPage() {
     const esAsfalto = areaName === 'asfalto'
     const esSuelo = areaName === 'suelo'
     const esServicio = rcm.rcmType === 'Servicio'
+    const esControl = rcm.rcmType === 'Control'
     const tieneCamposDinamicos = esHormigon || esElementosComponentes || esAsfalto || esSuelo
 
     return (
@@ -262,7 +263,7 @@ export default function ViewRCMPage() {
                         {/* ── FILA 1: FECHAS ─────────────────────────── */}
                         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(120px, 1fr))', gap: 2, mb: 2 }}>
                             {dateCell('Fecha Codificación', rcm.fechaCodificacion)}
-                            {dateCell('Fecha Muestreo', rcm.fechaMuestreo)}
+                            {dateCell(esControl || esServicio ? 'Fecha de Servicio' : 'Fecha Muestreo', rcm.fechaMuestreo)}
                             {dateCell('Fecha Ingreso', rcm.fechaIngreso)}
                             {dateCell('Fecha Entrega', rcm.fechaEntrega)}
                         </Box>

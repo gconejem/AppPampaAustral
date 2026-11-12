@@ -298,7 +298,7 @@ const RcmSavedList: React.FC<RcmSavedListProps> = ({
                 {/* ── FILA 1: FECHAS ─────────────────────────── */}
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(120px, 1fr))', gap: 2, mb: 2 }}>
                     {dateCell('Fecha Codificación', rcm.fechaCodificacion)}
-                    {dateCell('Fecha Muestreo', rcm.fechaMuestreo)}
+                    {dateCell(esControl || esServicio ? 'Fecha de Servicio' : 'Fecha Muestreo', rcm.fechaMuestreo)}
                     {dateCell('Fecha Ingreso', rcm.fechaIngreso)}
                     {dateCell('Fecha Entrega', rcm.fechaEntrega)}
                 </Box>
