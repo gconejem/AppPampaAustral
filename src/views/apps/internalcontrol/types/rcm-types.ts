@@ -129,4 +129,43 @@ export interface Step2CreateRcmsProps {
     onAgrupadosIdsChange?: (ids: Set<number>) => void
     onRegisterFinalizar?: (fn: () => void) => void
     onIsSavingChange?: (isSaving: boolean) => void
+    onCodificacionGuardada?: () => void
+}
+
+// Codificación existente (CP y RCM ya confirmados de una OT codificada)
+export interface RcmResumenExistente {
+    id: number
+    numeroRcm: string
+    rcmType: string
+    estadoOperativo?: string | null
+    fechaCodificacion?: string | null
+    fechaMuestreo?: string | null
+    fechaServicio?: string | null
+    fechaConfeccion?: string | null
+    numeroTarjeta?: string | null
+    tomaMuestra?: string | null
+    tipoMaterial?: string | null
+    item?: string | null
+    observacionItem?: string | null
+    cota1?: string | null
+    cota2?: string | null
+    elemento?: string | null
+    grado?: string | null
+    area?: string | null
+    tipoServicio?: string | null
+    actividades: number
+}
+
+export interface CodigoProductoExistente {
+    id: number
+    codigoNombre: string
+    descripcionServicio?: string | null
+    area?: string | null
+    rcms: RcmResumenExistente[]
+}
+
+export interface CodificacionExistenteData {
+    estadoOT?: string
+    codigos: CodigoProductoExistente[]
+    totales: { codigos: number; rcms: number; porTipo: { Muestra: number; Control: number; Servicio: number } }
 }

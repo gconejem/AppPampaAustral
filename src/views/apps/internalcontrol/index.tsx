@@ -10,6 +10,8 @@ import Grid from '@mui/material/Grid'
 // Component Imports
 import Header from './header'
 import Step2CreateRcms from './step2-create-rcms'
+import CodificacionExistenteBar from './components/CodificacionExistenteBar'
+import { useCodificacionExistente } from './hooks/useCodificacionExistente'
 
 // Definición de tipos básicos para evitar errores
 interface UsersType {
@@ -72,6 +74,10 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
   const [agrupadosIds, setAgrupadosIds] = useState<Set<number>>(new Set()) // IDs de RCMs con Código Producto asignado
   const [isSaving, setIsSaving] = useState(false)
   const finalizarRef = useRef<(() => void) | null>(null)
+  // Codificación incremental: solo cuando la OT ya está CODIFICADA
+  const [codificacionRefreshKey, setCodificacionRefreshKey] = useState(0)
+  const esOtCodificada = otData?.estado === 'CODIFICADA'
+  const { data: codificacionExistente } = useCodificacionExistente(otId, esOtCodificada, codificacionRefreshKey)
 
   const handleFinalizarCodificacion = () => {
     finalizarRef.current?.()
@@ -155,6 +161,12 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
         />
       </Grid>
 
+      {/* Codificación existente (CP y RCM confirmados) */}
+      {esOtCodificada && (codificacionExistente?.codigos.length ?? 0) > 0 && (
+        <Grid item xs={12}>
+          <CodificacionExistenteBar data={codificacionExistente!} />
+        </Grid>
+      )}
       {/* Formulario y Listado de RCMs */}
       <Grid item xs={12}>
         <Step2CreateRcms
@@ -169,6 +181,10 @@ const UserList = ({ userData }: { userData?: UsersType[] }) => {
           onAgrupadosIdsChange={setAgrupadosIds}
           onIsSavingChange={setIsSaving}
           onRegisterFinalizar={(fn: () => void) => { finalizarRef.current = fn }}
+          onCodificacionGuardada={() => {
+            setOtData((prev: any) => (prev ? { ...prev, estado: 'CODIFICADA' } : prev))
+            setCodificacionRefreshKey(k => k + 1)
+          }}
         />
       </Grid>
     </Grid>

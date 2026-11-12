@@ -38,7 +38,7 @@ const Step2CreateRcms = ({
     savedRcms, setSavedRcms,
     otData, initialRcmType, onClearInitialRcmType,
     onDraftCountChange, onAgrupadosIdsChange,
-    onRegisterFinalizar, onIsSavingChange,
+    onRegisterFinalizar, onIsSavingChange, onCodificacionGuardada,
 }: Step2CreateRcmsProps) => {
 
     // ═══════════════════════════════════════
@@ -524,7 +524,11 @@ const Step2CreateRcms = ({
                 showPreFinalizacion={codigoReal.showPreFinalizacion}
                 setShowPreFinalizacion={codigoReal.setShowPreFinalizacion}
                 computeValidaciones={codigoReal.computeValidaciones}
-                handleGuardarTodo={() => crud.handleGuardarTodo(codigoReal.codigosAgrupadores)}
+                handleGuardarTodo={async () => {
+                    const result = await crud.handleGuardarTodo(codigoReal.codigosAgrupadores)
+                    if (result) onCodificacionGuardada?.()
+                    return result
+                }}
                 isSaving={crud.isSaving}
                 codigosAgrupadores={codigoReal.codigosAgrupadores}
                 savedRcms={savedRcms}

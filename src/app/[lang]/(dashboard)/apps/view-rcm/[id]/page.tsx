@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import {
     Box,
@@ -17,6 +17,7 @@ import {
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
 import { formatDateOnly } from '@/utils/dateUtils'
+import { OPERATIONAL_STATES } from '@/constants/operationalStates'
 
 /* ── types (mirroring RCMData from internalcontrol) ─────────────────── */
 interface EnsayoView {
@@ -26,6 +27,8 @@ interface EnsayoView {
     norma?: string
     cantidad: number
     observacion: string
+    estado?: string
+    subProductos: Array<{ id: number; sku: string; nombre: string; cantidad: number }>
 }
 
 interface SubmuestraView {
@@ -75,6 +78,11 @@ interface RcmView {
 /* ── helpers ────────────────────────────────────────────────────────── */
 const fmtDate = (v?: string | null) => (v ? formatDateOnly(v) : '—')
 
+const estadoLabel = (v?: string | null) => {
+    const value = String(v ?? '').trim().toUpperCase()
+    return OPERATIONAL_STATES.find(s => s.value === value)?.label ?? (v || '—')
+}
+
 const dateCell = (label: string, value?: string | null) => (
     <Box sx={{ minWidth: 120 }}>
         <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block' }}>{label}</Typography>
@@ -98,6 +106,15 @@ function mapApiToView(data: any): RcmView {
         norma: s.producto?.norma ?? s.norma ?? '',
         cantidad: s.cantidad ?? 1,
         observacion: s.observacion ?? '',
+        estado: s.estadoOperativo ?? s.estado ?? '',
+        subProductos: s.esPaquete
+            ? (s.subProductos ?? []).map((sp: any, spIdx: number) => ({
+                id: sp.id ?? spIdx,
+                sku: sp.producto?.sku ?? sp.sku ?? '',
+                nombre: sp.producto?.nombre ?? sp.nombre ?? '',
+                cantidad: sp.cantidad ?? 1,
+            }))
+            : [],
     }))
 
     const submuestrasVencimiento: SubmuestraView[] = (data.muestras ?? []).flatMap((m: any) =>
@@ -357,12 +374,14 @@ export default function ViewRCMPage() {
                                                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>SKU</th>
                                                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Nombre</th>
                                                 <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0', width: '100px' }}>Cantidad</th>
+                                                <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Estado</th>
                                                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '14px', borderBottom: '2px solid #E0E0E0' }}>Observación</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {rcm.ensayos.map(ensayo => (
-                                                <tr key={ensayo.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
+                                                <React.Fragment key={ensayo.id}>
+                                                <tr style={{ borderBottom: '1px solid #E0E0E0' }}>
                                                     <td style={{ padding: '12px' }}>
                                                         <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>{ensayo.sku}</Typography>
                                                     </td>
@@ -376,12 +395,30 @@ export default function ViewRCMPage() {
                                                         <Typography variant='body2' sx={{ fontWeight: 600 }}>{ensayo.cantidad}</Typography>
                                                     </td>
                                                     <td style={{ padding: '12px' }}>
+                                                        <Typography variant='body2'>{estadoLabel(ensayo.estado)}</Typography>
+                                                    </td>
+                                                    <td style={{ padding: '12px' }}>
                                                         <Typography variant='body2' color='text.secondary'>{ensayo.observacion || '-'}</Typography>
                                                     </td>
                                                 </tr>
+                                                {ensayo.subProductos.map(sp => (
+                                                    <tr key={`sp-${ensayo.id}-${sp.id}`} style={{ borderBottom: '1px solid #F0F0F0', backgroundColor: '#FAFAFA' }}>
+                                                        <td style={{ padding: '8px 12px 8px 32px' }}>
+                                                            <Typography variant='body2' sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>{sp.sku}</Typography>
+                                                        </td>
+                                                        <td style={{ padding: '8px 12px' }}>
+                                                            <Typography variant='body2' color='text.secondary'>↳ {sp.nombre}</Typography>
+                                                        </td>
+                                                        <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                                                            <Typography variant='body2'>{sp.cantidad}</Typography>
+                                                        </td>
+                                                        <td colSpan={2} />
+                                                    </tr>
+                                                ))}
+                                                </React.Fragment>
                                             ))}
                                             {rcm.ensayos.length === 0 && (
-                                                <tr><td colSpan={4} style={{ padding: '12px', textAlign: 'center' }}>
+                                                <tr><td colSpan={5} style={{ padding: '12px', textAlign: 'center' }}>
                                                     <Typography variant='body2' color='text.secondary'>Sin ensayos registrados</Typography>
                                                 </td></tr>
                                             )}
