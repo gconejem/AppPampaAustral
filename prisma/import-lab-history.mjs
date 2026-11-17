@@ -198,8 +198,8 @@ async function writeOmissions(reportDirectory, name, data) {
   ].join('\r\n')
 
   await writeFile(reportPath, `\ufeff${reportRows}\r\n`, 'utf8')
-  
-return reportPath
+
+  return reportPath
 }
 
 async function createInBatches(tx, model, rows) {
@@ -245,8 +245,8 @@ async function main() {
 
   const states = lbotmae.accepted.reduce((counts, row) => {
     counts[row.estado] += 1
-    
-return counts
+
+    return counts
   }, { A: 0, F: 0 })
 
   const summary = {
@@ -260,8 +260,8 @@ return counts
 
   if (!options.apply) {
     console.log(JSON.stringify(summary))
-    
-return
+
+    return
   }
 
   const densityReport = await writeOmissions(options.reportDirectory, 'LBRESULT', density)
