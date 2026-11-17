@@ -220,6 +220,27 @@ model Obra {
   cotizaciones             Cotizacion[]
   rcms                     RCM[]
   solicitudes              Solicitud[]
+  referenciasDensidad      ReferenciaDensidad[]
+}
+
+model ReferenciaDensidad {
+  id          Int      @id @default(autoincrement())
+  obraId      Int
+  codigo      String
+  fecha       DateTime
+  item        String?
+  procedencia String?
+  ubicacion   String?
+  proctor     Float?
+  humedad     Float?
+  densidadMin Float?
+  densidadMax Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  obra        Obra     @relation(fields: [obraId], references: [obraId], onDelete: Cascade)
+
+  @@unique([obraId, codigo])
+  @@index([obraId, fecha])
 }
 
 model ContactoObra {

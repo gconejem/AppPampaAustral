@@ -12,7 +12,8 @@
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\"",
     "build:icons": "tsx src/assets/iconify-icons/bundle-icons-css.ts",
     "postinstall": "npm run build:icons",
-    "prisma:seed": "node prisma/seed.js"
+    "prisma:seed": "node prisma/seed.js",
+    "prisma:seed:density-demo": "node --import dotenv/config prisma/seed-densidad-demo.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
