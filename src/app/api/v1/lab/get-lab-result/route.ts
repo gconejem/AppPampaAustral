@@ -34,6 +34,8 @@ export async function GET(request: Request) {
     const obra = searchParams.get('obra[]')
     const sortColumn = searchParams.get('sortColumn') || 'FECHA'
     const sortDirection = searchParams.get('sortDirection') || 'DESC'
+    const requestedRows = Number(searchParams.get('rowsPerPage'))
+    const take = Number.isInteger(requestedRows) && requestedRows > 0 ? Math.min(requestedRows, 999) : 100
 
     process.stdout.write('\n====================================================\n')
     process.stdout.write('=== GET LAB RESULTS - ENDPOINT CALLED ===\n')
@@ -51,12 +53,32 @@ export async function GET(request: Request) {
     // Buscar referencias históricas de densidad asociadas directamente a la obra
     process.stdout.write(`🔍 Buscando referencias de densidad para obra: ${obra}\n`)
 
+    const obraRegistro = await prisma.obra.findFirst({
+      where: {
+        numeroObra: obra
+      },
+      select: { obraId: true }
+    })
+
+    if (!obraRegistro) {
+      return NextResponse.json({ data: [] }, { headers: corsHeaders(origin) })
+    }
+
+    const referenciasAnuladas = await prisma.referenciaLbotmae.findMany({
+      where: {
+        obraId: obraRegistro.obraId,
+        estado: 'F'
+      },
+      select: { codigo: true }
+    })
+
     const referencias = await prisma.referenciaDensidad.findMany({
       where: {
-        obra: { numeroObra: obra }
+        obraId: obraRegistro.obraId,
+        ...(referenciasAnuladas.length > 0 ? { codigo: { notIn: referenciasAnuladas.map(referencia => referencia.codigo) } } : {})
       },
       orderBy: [{ fecha: sortDirection === 'DESC' ? 'desc' : 'asc' }, { codigo: 'asc' }],
-      take: 100
+      take
     })
 
     process.stdout.write(`✅ Found ${referencias.length} referencias de densidad para obra ${obra}\n`)

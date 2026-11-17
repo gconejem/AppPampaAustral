@@ -221,6 +221,7 @@ model Obra {
   rcms                     RCM[]
   solicitudes              Solicitud[]
   referenciasDensidad      ReferenciaDensidad[]
+  referenciasLbotmae       ReferenciaLbotmae[]
 }
 
 model ReferenciaDensidad {
@@ -239,8 +240,24 @@ model ReferenciaDensidad {
   updatedAt   DateTime @updatedAt
   obra        Obra     @relation(fields: [obraId], references: [obraId], onDelete: Cascade)
 
-  @@unique([obraId, codigo])
+  @@index([obraId, codigo])
   @@index([obraId, fecha])
+}
+
+model ReferenciaLbotmae {
+  id          Int      @id @default(autoincrement())
+  obraId      Int
+  codigo      String
+  estado      String
+  item        String?
+  procedencia String?
+  ubicacion   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  obra        Obra     @relation(fields: [obraId], references: [obraId], onDelete: Cascade)
+
+  @@unique([obraId, codigo])
+  @@index([estado])
 }
 
 model ContactoObra {
