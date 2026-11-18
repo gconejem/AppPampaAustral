@@ -4,6 +4,7 @@ import { writeFile } from 'node:fs/promises'
 import { PrismaClient } from '@prisma/client'
 
 import { clean, escapeCsv, readCsv } from './csv.mjs'
+import { createObraLookup, resolveObraId } from './lab-history-obra-map.mjs'
 
 const prisma = new PrismaClient()
 const expectedDatabase = 'pampa_database_prod_20261115_1519'
@@ -32,8 +33,8 @@ async function main() {
     throw new Error(`Importación cancelada: ReferenciaLbotmae ya contiene ${existingCount} filas; no se sobrescribieron datos.`)
   }
 
-  const obras = await prisma.obra.findMany({ select: { obraId: true } })
-  const obraIds = new Set(obras.map(obra => String(obra.obraId)))
+  const obras = await prisma.obra.findMany({ select: { obraId: true, numeroObra: true } })
+  const obrasByNumero = createObraLookup(obras)
   const iterator = readCsv(inputPath)
   const header = (await iterator.next()).value
 
@@ -57,21 +58,27 @@ async function main() {
     if (values.length === 1 && values[0] === '') continue
     sourceRows += 1
     const codigo = clean(values[indexes.CODIGO])
-    const obraId = clean(values[indexes.OBRA])
+    const numeroObra = clean(values[indexes.OBRA])
     const estado = clean(values[indexes.ESTADO])
 
-    if (!codigo || !/^\d+$/.test(obraId)) throw new Error(`Fila ${sourceRows + 1}: CODIGO u OBRA no válido; se canceló antes de insertar.`)
+    if (!codigo || !/^\d+$/.test(numeroObra)) throw new Error(`Fila ${sourceRows + 1}: CODIGO u OBRA no válido; se canceló antes de insertar.`)
     if (estado !== 'A' && estado !== 'F') throw new Error(`Fila ${sourceRows + 1}: estado inesperado ${estado || '(vacío)'}; se canceló antes de insertar.`)
     if (codes.has(codigo)) throw new Error(`CODIGO duplicado en LBOTMAE: ${codigo}; se canceló antes de insertar.`)
     codes.add(codigo)
 
-    if (!obraIds.has(obraId)) {
+    const obra = resolveObraId(numeroObra, obrasByNumero)
+
+    if (obra.status === 'ambiguous') {
+      throw new Error(`Fila ${sourceRows + 1}: OBRA ${numeroObra} coincide con varias obras locales; se canceló antes de insertar.`)
+    }
+
+    if (obra.status === 'missing') {
       omitted.push(values)
       continue
     }
 
     accepted.push({
-      obraId: Number(obraId),
+      obraId: obra.obraId,
       codigo,
       estado,
       item: clean(values[indexes.ITEMM]) || null,
@@ -86,7 +93,7 @@ async function main() {
 
   const report = [
     header.concat('MOTIVO_OMISION').map(escapeCsv).join(','),
-    ...omitted.map(values => values.concat('Sin Obra.obraId local coincidente; no se reasignó a numeroObra.').map(escapeCsv).join(','))
+    ...omitted.map(values => values.concat('Sin Obra.numeroObra local coincidente.').map(escapeCsv).join(','))
   ].join('\r\n')
 
   await writeFile(reportPath, `\ufeff${report}\r\n`, 'utf8')

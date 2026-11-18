@@ -5,6 +5,7 @@ import { writeFile } from 'node:fs/promises'
 import { PrismaClient } from '@prisma/client'
 
 import { clean, escapeCsv, readCsv } from './csv.mjs'
+import { createObraLookup, resolveObraId } from './lab-history-obra-map.mjs'
 
 const prisma = new PrismaClient()
 const expectedRows = { density: 20240, lbotmae: 135664 }
@@ -15,10 +16,13 @@ function getOptions(args) {
   let expectedDatabase = null
   let reportDirectory = process.cwd()
   let apply = false
+  let replace = false
 
   for (let index = 0; index < flags.length; index += 1) {
     if (flags[index] === '--apply') {
       apply = true
+    } else if (flags[index] === '--replace') {
+      replace = true
     } else if (flags[index] === '--expected-database') {
       expectedDatabase = flags[index + 1]
       index += 1
@@ -31,14 +35,18 @@ function getOptions(args) {
   }
 
   if (!densityPath || !lbotmaePath) {
-    throw new Error('Uso: node prisma/import-lab-history.mjs <LBRESULT.csv> <LBOTMAE.csv> [--apply --expected-database <base> --report-dir <directorio>]')
+    throw new Error('Uso: node prisma/import-lab-history.mjs <LBRESULT.csv> <LBOTMAE.csv> [--apply --expected-database <base> [--replace] --report-dir <directorio>]')
   }
 
   if (apply && !expectedDatabase) {
     throw new Error('Para escribir se requiere --expected-database con el nombre exacto de la base destino.')
   }
 
-  return { densityPath, lbotmaePath, expectedDatabase, reportDirectory: resolve(reportDirectory), apply }
+  if (replace && !apply) {
+    throw new Error('Para reemplazar las tablas destino se requiere --apply y --expected-database.')
+  }
+
+  return { densityPath, lbotmaePath, expectedDatabase, reportDirectory: resolve(reportDirectory), apply, replace }
 }
 
 function getColumnIndexes(header, columns, fileName) {
@@ -88,7 +96,7 @@ function parseDate(value, rowNumber) {
   return date
 }
 
-async function loadDensity(path, obraIds) {
+async function loadDensity(path, obrasByNumero) {
   const iterator = readCsv(path)
   const header = (await iterator.next()).value
 
@@ -103,15 +111,20 @@ async function loadDensity(path, obraIds) {
     if (values.length === 1 && values[0] === '') continue
     sourceRows += 1
     const codigo = clean(values[indexes.CODIGO])
-    const obraId = clean(values[indexes.OBRA])
+    const numeroObra = clean(values[indexes.OBRA])
     const rowNumber = sourceRows + 1
 
-    if (!codigo || !/^\d+$/.test(obraId)) {
+    if (!codigo || !/^\d+$/.test(numeroObra)) {
       throw new Error(`LBRESULT, fila ${rowNumber}: CODIGO u OBRA no válido; se canceló antes de insertar.`)
     }
 
+    const obra = resolveObraId(numeroObra, obrasByNumero)
+
+    if (obra.status === 'ambiguous') {
+      throw new Error(`LBRESULT, fila ${rowNumber}: OBRA ${numeroObra} coincide con varias obras locales; se canceló antes de insertar.`)
+    }
+
     const row = {
-      obraId: Number(obraId),
       codigo,
       fecha: parseDate(values[indexes.FECHA], rowNumber),
       densidadMin: parseNumber(values[indexes.DEN_MIN], 'LBRESULT', rowNumber, 'DEN_MIN'),
@@ -120,8 +133,8 @@ async function loadDensity(path, obraIds) {
       humedad: parseNumber(values[indexes.HUMEDAD1], 'LBRESULT', rowNumber, 'HUMEDAD1')
     }
 
-    if (obraIds.has(String(row.obraId))) {
-      accepted.push(row)
+    if (obra.status === 'found') {
+      accepted.push({ obraId: obra.obraId, ...row })
     } else {
       omitted.push(values)
     }
@@ -134,7 +147,7 @@ async function loadDensity(path, obraIds) {
   return { header, indexes, accepted, omitted, sourceRows }
 }
 
-async function loadLbotmae(path, obraIds) {
+async function loadLbotmae(path, obrasByNumero) {
   const iterator = readCsv(path)
   const header = (await iterator.next()).value
 
@@ -150,12 +163,18 @@ async function loadLbotmae(path, obraIds) {
     if (values.length === 1 && values[0] === '') continue
     sourceRows += 1
     const codigo = clean(values[indexes.CODIGO])
-    const obraId = clean(values[indexes.OBRA])
+    const numeroObra = clean(values[indexes.OBRA])
     const estado = clean(values[indexes.ESTADO])
     const rowNumber = sourceRows + 1
 
-    if (!codigo || !/^\d+$/.test(obraId)) {
+    if (!codigo || !/^\d+$/.test(numeroObra)) {
       throw new Error(`LBOTMAE, fila ${rowNumber}: CODIGO u OBRA no válido; se canceló antes de insertar.`)
+    }
+
+    const obra = resolveObraId(numeroObra, obrasByNumero)
+
+    if (obra.status === 'ambiguous') {
+      throw new Error(`LBOTMAE, fila ${rowNumber}: OBRA ${numeroObra} coincide con varias obras locales; se canceló antes de insertar.`)
     }
 
     if (estado !== 'A' && estado !== 'F') {
@@ -168,9 +187,9 @@ async function loadLbotmae(path, obraIds) {
 
     codes.add(codigo)
 
-    if (obraIds.has(obraId)) {
+    if (obra.status === 'found') {
       accepted.push({
-        obraId: Number(obraId),
+        obraId: obra.obraId,
         codigo,
         estado,
         item: clean(values[indexes.ITEMM]) || null,
@@ -194,7 +213,7 @@ async function writeOmissions(reportDirectory, name, data) {
 
   const reportRows = [
     data.header.concat('MOTIVO_OMISION').map(escapeCsv).join(','),
-    ...data.omitted.map(values => values.concat('Sin Obra.obraId local coincidente; no se reasignó a numeroObra.').map(escapeCsv).join(','))
+    ...data.omitted.map(values => values.concat('Sin Obra.numeroObra local coincidente.').map(escapeCsv).join(','))
   ].join('\r\n')
 
   await writeFile(reportPath, `\ufeff${reportRows}\r\n`, 'utf8')
@@ -231,16 +250,16 @@ async function main() {
     prisma.referenciaLbotmae.count()
   ])
 
-  if (options.apply && (densityCount > 0 || lbotmaeCount > 0)) {
+  if (options.apply && (densityCount > 0 || lbotmaeCount > 0) && !options.replace) {
     throw new Error(`Importación cancelada: las tablas destino deben estar vacías (ReferenciaDensidad=${densityCount}, ReferenciaLbotmae=${lbotmaeCount}).`)
   }
 
-  const obras = await prisma.obra.findMany({ select: { obraId: true } })
-  const obraIds = new Set(obras.map(obra => String(obra.obraId)))
+  const obras = await prisma.obra.findMany({ select: { obraId: true, numeroObra: true } })
+  const obrasByNumero = createObraLookup(obras)
 
   const [density, lbotmae] = await Promise.all([
-    loadDensity(options.densityPath, obraIds),
-    loadLbotmae(options.lbotmaePath, obraIds)
+    loadDensity(options.densityPath, obrasByNumero),
+    loadLbotmae(options.lbotmaePath, obrasByNumero)
   ])
 
   const states = lbotmae.accepted.reduce((counts, row) => {
@@ -251,7 +270,7 @@ async function main() {
 
   const summary = {
     database,
-    mode: options.apply ? 'apply' : 'dry-run',
+    mode: options.apply ? (options.replace ? 'replace' : 'apply') : 'dry-run',
     existingRows: { referenciaDensidad: densityCount, referenciaLbotmae: lbotmaeCount },
     density: { sourceRows: density.sourceRows, importedRows: density.accepted.length, skippedRows: density.omitted.length },
     lbotmae: { sourceRows: lbotmae.sourceRows, importedRows: lbotmae.accepted.length, activeRows: states.A, annulledRows: states.F, skippedRows: lbotmae.omitted.length },
@@ -273,8 +292,13 @@ async function main() {
       tx.referenciaLbotmae.count()
     ])
 
-    if (existingDensityCount > 0 || existingLbotmaeCount > 0) {
+    if ((existingDensityCount > 0 || existingLbotmaeCount > 0) && !options.replace) {
       throw new Error('Importación cancelada dentro de la transacción: una tabla destino dejó de estar vacía.')
+    }
+
+    if (options.replace) {
+      await tx.referenciaDensidad.deleteMany()
+      await tx.referenciaLbotmae.deleteMany()
     }
 
     await createInBatches(tx, 'referenciaDensidad', density.accepted)
