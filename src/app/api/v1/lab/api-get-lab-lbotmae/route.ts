@@ -123,20 +123,6 @@ export async function GET(request: Request) {
       })
     }
 
-    // Si no hay datos, devolver mockup
-    if (ordenesTrabajo.length === 0) {
-      process.stdout.write('⚠️ No ordenes found, returning mockup\n')
-      const mockupData = codigos.map((cod, idx) => ({
-        CODIGO: cod,
-        NUMERO_OT: cod,
-        ESTADO: 'Pendiente',
-        TIPO: 'Laboratorio',
-        FECHA_CREACION: new Date(),
-        OBSERVACION: 'Orden de trabajo mockup'
-      }))
-      return NextResponse.json({ data: mockupData }, { headers: corsHeaders(origin) })
-    }
-
     const uniqueNonEmpty = (values: Array<string | null | undefined>) => {
       const out: string[] = []
       values.forEach(v => {

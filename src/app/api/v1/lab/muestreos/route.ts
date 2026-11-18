@@ -98,36 +98,6 @@ export async function GET(request: Request) {
       })
     }
 
-    // Si no hay datos reales, devolver mockup
-    if (muestreos.length === 0) {
-      process.stdout.write('⚠️ No muestreos found, returning mockup\n')
-      const mockupData = [
-        {
-          CODIGO: 'MH-001',
-          FECHA: new Date('2022-12-01'),
-          FECHATXT: '',
-          TIPO: 'Hormigón Fresco',
-          GRADO: 'H-30',
-          ELEMENTO: 'Losa Nivel 2',
-          UBICACION: 'Sector Norte',
-          PROBETAS: 6,
-          ASENTAMIENTO: 12
-        },
-        {
-          CODIGO: 'MT-002',
-          FECHA: new Date('2022-11-28'),
-          FECHATXT: '',
-          TIPO: 'Testigos',
-          GRADO: 'H-25',
-          ELEMENTO: 'Muro Contención',
-          UBICACION: 'Eje A-B',
-          PROBETAS: 3,
-          ASENTAMIENTO: null
-        }
-      ]
-      return NextResponse.json({ data: mockupData }, { headers: corsHeaders(origin) })
-    }
-
     // Transformar datos reales
     const resultados = muestreos.map(orden => {
       const hormigon = orden.hormigonFresco
