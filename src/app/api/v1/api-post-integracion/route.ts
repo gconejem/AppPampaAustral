@@ -316,6 +316,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'OTs procesadas', data: ok, errors }, { headers: corsHeaders(origin) })
     }
 
+    if (integracionTipo === 'UpdateLBRUTAOT') {
+      if (!Array.isArray(data) || data.length === 0) {
+        return NextResponse.json({ error: 'No hay OTs para actualizar' }, { status: 400, headers: corsHeaders(origin) })
+      }
+      const results = await Promise.allSettled(
+        data.map(async (ot: { CLAVE?: string; ESTADO?: string; RESPUESTA?: any }) => {
+          if (!ot.CLAVE) throw new Error('OT sin CLAVE')
+          const existing = await prisma.ordenTrabajo.findUnique({
+            where: { clave: ot.CLAVE },
+            select: { jsonOT: true }
+          })
+          if (!existing) throw new Error(`No existe la OT ${ot.CLAVE}`)
+          const existingJson = existing.jsonOT && typeof existing.jsonOT === 'object' ? existing.jsonOT as Record<string, any> : {}
+          const jsonOT = {
+            ...existingJson,
+            CLAVE: ot.CLAVE,
+            ...(ot.ESTADO !== undefined ? { ESTADO: ot.ESTADO } : {}),
+            ...(ot.RESPUESTA !== undefined ? { RESPUESTA: ot.RESPUESTA } : {})
+          }
+          return prisma.ordenTrabajo.update({
+            where: { clave: ot.CLAVE },
+            data: {
+              ...(ot.ESTADO !== undefined ? { estado: ot.ESTADO } : {}),
+              ...(ot.RESPUESTA?.nTarjetaArray !== undefined ? { numeroTarjeta: normalizeOrdenTrabajoTarjetas(ot.RESPUESTA.nTarjetaArray) } : {}),
+              jsonOT
+            }
+          })
+        })
+      )
+      const ok = results.filter(result => result.status === 'fulfilled').map((result: any) => result.value)
+      const errors = results.filter(result => result.status === 'rejected').map((result: any) => String(result.reason?.message || result.reason || 'Error'))
+      if (errors.length > 0) console.error('[api-post-integracion] UpdateLBRUTAOT errores:', errors.slice(0, 5))
+      return NextResponse.json({ message: 'OTs actualizadas', data: ok, errors }, { headers: corsHeaders(origin) })
+    }
+
     if (integracionTipo === 'UpdateLBRUTAS') {
       if (!Array.isArray(data) || data.length === 0) {
         return NextResponse.json({ error: 'No hay visitas para procesar' }, { status: 400, headers: corsHeaders(origin) })
