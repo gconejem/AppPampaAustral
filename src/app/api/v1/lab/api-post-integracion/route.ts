@@ -273,17 +273,29 @@ export async function POST(request: Request) {
             }
           } as const
 
+          const existing = await prisma.ordenTrabajo.findUnique({
+            where: { clave }
+          })
+          const { where, create, update } = upsertBase as any
+          if (existing) {
+            return prisma.ordenTrabajo.update({
+              where,
+              data: update
+            })
+          }
           try {
-            return await prisma.ordenTrabajo.upsert(upsertBase as any)
+            return await prisma.ordenTrabajo.create({ data: create })
           } catch (e: any) {
-            console.error('[lab/api-post-integracion] upsert OT falló, reintentando sin agenda.connect. clave:', ot.CLAVE)
-            const { create, ...rest } = upsertBase as any
+            if (e?.code === 'P2002') {
+              return prisma.ordenTrabajo.update({
+                where,
+                data: update
+              })
+            }
+            console.error('[lab/api-post-integracion] create OT falló, reintentando sin agenda.connect. clave:', ot.CLAVE)
             const createWithoutAgenda = { ...create }
             delete createWithoutAgenda.agenda
-            return await prisma.ordenTrabajo.upsert({
-              ...rest,
-              create: createWithoutAgenda
-            })
+            return prisma.ordenTrabajo.create({ data: createWithoutAgenda })
           }
         })
       )
