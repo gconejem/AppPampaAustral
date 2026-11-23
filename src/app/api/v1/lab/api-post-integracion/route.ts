@@ -283,19 +283,28 @@ export async function POST(request: Request) {
               data: update
             })
           }
+          const updateAfterConflict = () => prisma.ordenTrabajo.update({
+            where,
+            data: update
+          })
           try {
             return await prisma.ordenTrabajo.create({ data: create })
           } catch (e: any) {
             if (e?.code === 'P2002') {
-              return prisma.ordenTrabajo.update({
-                where,
-                data: update
-              })
+              return updateAfterConflict()
             }
+            if (e?.code !== 'P2025') throw e
             console.error('[lab/api-post-integracion] create OT falló, reintentando sin agenda.connect. clave:', ot.CLAVE)
             const createWithoutAgenda = { ...create }
             delete createWithoutAgenda.agenda
-            return prisma.ordenTrabajo.create({ data: createWithoutAgenda })
+            try {
+              return await prisma.ordenTrabajo.create({ data: createWithoutAgenda })
+            } catch (retryError: any) {
+              if (retryError?.code === 'P2002') {
+                return updateAfterConflict()
+              }
+              throw retryError
+            }
           }
         })
       )
