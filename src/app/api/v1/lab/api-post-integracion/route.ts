@@ -224,18 +224,24 @@ export async function POST(request: Request) {
               }
             : {}
 
+          const clave = String(ot.CLAVE ?? '')
+          const fklbrutas = String(ot.FKLBRUTAS ?? '')
+          const correlativ = String(ot.CORRELATIV ?? '001')
+          const fklbdocver = String(ot.FKLBDOCVER ?? '')
+          const fklbrutser = String(ot.FKLBRUTSER ?? '')
+          if (!clave || !fklbrutas) throw new Error('OT sin CLAVE o FKLBRUTAS válido')
           const upsertBase = {
             where: {
-              clave: ot.CLAVE
+              clave
             },
             create: {
-              clave: ot.CLAVE,
-              estado: ot.ESTADO || 'PENDIENTE',
-              origen: ot.ORIGEN || 'VISITA',
-              fklbrutas: ot.FKLBRUTAS || '',
-              correlativ: ot.CORRELATIV || '001',
-              fklbdocver: ot.FKLBDOCVER || '',
-              fklbrutser: ot.FKLBRUTSER || '',
+              clave,
+              estado: String(ot.ESTADO || 'PENDIENTE'),
+              origen: String(ot.ORIGEN || 'VISITA'),
+              fklbrutas,
+              correlativ,
+              fklbdocver,
+              fklbrutser,
               numeroTarjeta,
               jsonOT: ot,
               ...agendaConnect,
@@ -251,12 +257,12 @@ export async function POST(request: Request) {
               }
             },
             update: {
-              estado: ot.ESTADO ?? undefined,
-              origen: ot.ORIGEN ?? undefined,
-              fklbrutas: ot.FKLBRUTAS ?? undefined,
-              correlativ: ot.CORRELATIV ?? undefined,
-              fklbdocver: ot.FKLBDOCVER ?? undefined,
-              fklbrutser: ot.FKLBRUTSER ?? undefined,
+              estado: ot.ESTADO !== undefined ? String(ot.ESTADO) : undefined,
+              origen: ot.ORIGEN !== undefined ? String(ot.ORIGEN) : undefined,
+              fklbrutas,
+              correlativ,
+              fklbdocver,
+              fklbrutser,
               numeroTarjeta,
               jsonOT: ot,
               tipoOT: {
@@ -299,19 +305,60 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'No hay OTs para actualizar' }, { status: 400, headers: corsHeaders(origin) })
       }
       const results = await Promise.allSettled(
-        data.map(async (ot: { CLAVE?: string; ESTADO?: string; RESPUESTA?: any }) => {
+        data.map(async (ot: {
+          CLAVE?: string
+          ESTADO?: string
+          ORIGEN?: string
+          FKLBRUTAS?: string
+          CORRELATIV?: string
+          FKLBDOCVER?: string
+          FKLBRUTSER?: string
+          RESPUESTA?: any
+        }) => {
           if (!ot.CLAVE) throw new Error('OT sin CLAVE')
           const existing = await prisma.ordenTrabajo.findUnique({
             where: { clave: ot.CLAVE },
             select: { jsonOT: true }
           })
-          if (!existing) throw new Error(`No existe la OT ${ot.CLAVE}`)
-          const existingJson = existing.jsonOT && typeof existing.jsonOT === 'object' ? existing.jsonOT as Record<string, any> : {}
+          if (!existing && (!ot.FKLBRUTAS || !ot.FKLBDOCVER)) {
+            throw new Error(`No existe la OT ${ot.CLAVE} y faltan datos para crearla`)
+          }
+          const existingJson = existing?.jsonOT && typeof existing.jsonOT === 'object' ? existing.jsonOT as Record<string, any> : {}
           const jsonOT = {
             ...existingJson,
+            ...(ot.FKLBRUTAS !== undefined ? { FKLBRUTAS: ot.FKLBRUTAS } : {}),
+            ...(ot.CORRELATIV !== undefined ? { CORRELATIV: ot.CORRELATIV } : {}),
+            ...(ot.FKLBDOCVER !== undefined ? { FKLBDOCVER: ot.FKLBDOCVER } : {}),
+            ...(ot.FKLBRUTSER !== undefined ? { FKLBRUTSER: ot.FKLBRUTSER } : {}),
             CLAVE: ot.CLAVE,
             ...(ot.ESTADO !== undefined ? { ESTADO: ot.ESTADO } : {}),
             ...(ot.RESPUESTA !== undefined ? { RESPUESTA: ot.RESPUESTA } : {})
+          }
+          if (!existing) {
+            const tipoOTId = await getTipoOTFromDocCode(String(ot.FKLBDOCVER))
+            const agendaId = Number.parseInt(String(ot.FKLBRUTAS), 10)
+            const base = {
+              clave: String(ot.CLAVE),
+              estado: String(ot.ESTADO || 'PENDIENTE'),
+              origen: String(ot.ORIGEN || 'VISITA'),
+              fklbrutas: String(ot.FKLBRUTAS),
+              correlativ: String(ot.CORRELATIV || '001'),
+              fklbdocver: String(ot.FKLBDOCVER),
+              fklbrutser: String(ot.FKLBRUTSER || ''),
+              numeroTarjeta: normalizeOrdenTrabajoTarjetas(ot.RESPUESTA?.nTarjetaArray) ?? [],
+              jsonOT,
+              tipoOT: { connect: { id: tipoOTId } },
+              user: { connect: { id: user.id } }
+            }
+            if (Number.isFinite(agendaId) && agendaId > 0) {
+              return prisma.ordenTrabajo.create({
+                data: {
+                  ...base,
+                  agenda: { connect: { id: agendaId } }
+                }
+              }).catch(() => prisma.ordenTrabajo.create({ data: base }))
+            }
+            return prisma.ordenTrabajo.create({ data: base })
           }
           return prisma.ordenTrabajo.update({
             where: { clave: ot.CLAVE },
