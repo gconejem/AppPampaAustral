@@ -194,6 +194,52 @@ const getTipoOTFromDocCode = async (fklbdocver: string): Promise<number> => {
   return tipoOTDefault?.id || 8
 }
 
+const persistOrdenTrabajo = async (clave: string, createData: any, updateData: any) => {
+  const persist = async (withoutAgenda: boolean) => prisma.$transaction(async tx => {
+    const existing = await tx.ordenTrabajo.findUnique({
+      where: { clave },
+      select: { id: true, numeroCorrelativo: true }
+    })
+    let numeroCorrelativo = existing?.numeroCorrelativo
+    if (!numeroCorrelativo && numeroCorrelativo !== 0) {
+      await tx.oTCorrelativoCounter.upsert({
+        where: { id: 1 },
+        update: {},
+        create: { id: 1, nextValue: 0 }
+      })
+      const counter = await tx.oTCorrelativoCounter.update({
+        where: { id: 1 },
+        data: { nextValue: { increment: 1 } }
+      })
+      numeroCorrelativo = counter.nextValue - 1
+    }
+    if (existing) {
+      return tx.ordenTrabajo.update({
+        where: { id: existing.id },
+        data: {
+          ...updateData,
+          numeroCorrelativo
+        }
+      })
+    }
+    const createWithoutAgenda = { ...createData }
+    if (withoutAgenda) delete createWithoutAgenda.agenda
+    return tx.ordenTrabajo.create({
+      data: {
+        ...createWithoutAgenda,
+        numeroCorrelativo
+      }
+    })
+  })
+  try {
+    return await persist(false)
+  } catch (error: any) {
+    if (error?.code === 'P2025') return persist(true)
+    if (error?.code === 'P2002') return persist(false)
+    throw error
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const contentType = request.headers.get('content-type') || ''
@@ -288,39 +334,8 @@ export async function POST(request: Request) {
           } as const
 
           const clave = String(ot.CLAVE ?? '')
-          const existing = await prisma.ordenTrabajo.findUnique({
-            where: { clave }
-          })
-          const { where, create, update } = upsertBase as any
-          if (existing) {
-            return prisma.ordenTrabajo.update({
-              where,
-              data: update
-            })
-          }
-          const updateAfterConflict = () => prisma.ordenTrabajo.update({
-            where,
-            data: update
-          })
-          try {
-            return await prisma.ordenTrabajo.create({ data: create })
-          } catch (e: any) {
-            if (e?.code === 'P2002') {
-              return updateAfterConflict()
-            }
-            if (e?.code !== 'P2025') throw e
-            console.error('[api-post-integracion] create OT falló, reintentando sin agenda.connect. clave:', ot.CLAVE)
-            const createWithoutAgenda = { ...create }
-            delete createWithoutAgenda.agenda
-            try {
-              return await prisma.ordenTrabajo.create({ data: createWithoutAgenda })
-            } catch (retryError: any) {
-              if (retryError?.code === 'P2002') {
-                return updateAfterConflict()
-              }
-              throw retryError
-            }
-          }
+          const { create, update } = upsertBase as any
+          return persistOrdenTrabajo(clave, create, update)
         })
       )
 
@@ -354,7 +369,7 @@ export async function POST(request: Request) {
           if (!ot.CLAVE) throw new Error('OT sin CLAVE')
           const existing = await prisma.ordenTrabajo.findUnique({
             where: { clave: ot.CLAVE },
-            select: { jsonOT: true }
+            select: { jsonOT: true, numeroCorrelativo: true }
           })
           if (!existing && (!ot.FKLBRUTAS || !ot.FKLBDOCVER)) {
             throw new Error(`No existe la OT ${ot.CLAVE} y faltan datos para crearla`)
@@ -386,24 +401,17 @@ export async function POST(request: Request) {
               tipoOT: { connect: { id: tipoOTId } },
               user: { connect: { id: user.id } }
             }
-            if (Number.isFinite(agendaId) && agendaId > 0) {
-              return prisma.ordenTrabajo.create({
-                data: {
-                  ...base,
-                  agenda: { connect: { id: agendaId } }
-                }
-              }).catch(() => prisma.ordenTrabajo.create({ data: base }))
-            }
-            return prisma.ordenTrabajo.create({ data: base })
+            const createData = Number.isFinite(agendaId) && agendaId > 0
+              ? { ...base, agenda: { connect: { id: agendaId } } }
+              : base
+            return persistOrdenTrabajo(String(ot.CLAVE), createData, createData)
           }
-          return prisma.ordenTrabajo.update({
-            where: { clave: ot.CLAVE },
-            data: {
+          const updateData = {
               ...(ot.ESTADO !== undefined ? { estado: ot.ESTADO } : {}),
               ...(ot.RESPUESTA?.nTarjetaArray !== undefined ? { numeroTarjeta: normalizeOrdenTrabajoTarjetas(ot.RESPUESTA.nTarjetaArray) } : {}),
               jsonOT
-            }
-          })
+          }
+          return persistOrdenTrabajo(String(ot.CLAVE), updateData, updateData)
         })
       )
       const ok = results.filter(result => result.status === 'fulfilled').map((result: any) => result.value)
