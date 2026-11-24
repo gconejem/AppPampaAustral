@@ -287,19 +287,39 @@ export async function POST(request: Request) {
             }
           } as const
 
-          // Nota: `agenda.connect` puede fallar si el id no existe. En ese caso,
-          // no abortamos toda la sync: reintentamos sin conectar agenda.
+          const clave = String(ot.CLAVE ?? '')
+          const existing = await prisma.ordenTrabajo.findUnique({
+            where: { clave }
+          })
+          const { where, create, update } = upsertBase as any
+          if (existing) {
+            return prisma.ordenTrabajo.update({
+              where,
+              data: update
+            })
+          }
+          const updateAfterConflict = () => prisma.ordenTrabajo.update({
+            where,
+            data: update
+          })
           try {
-            return await prisma.ordenTrabajo.upsert(upsertBase as any)
+            return await prisma.ordenTrabajo.create({ data: create })
           } catch (e: any) {
-            console.error('[api-post-integracion] upsert OT falló, reintentando sin agenda.connect. clave:', ot.CLAVE)
-            const { create, ...rest } = upsertBase as any
+            if (e?.code === 'P2002') {
+              return updateAfterConflict()
+            }
+            if (e?.code !== 'P2025') throw e
+            console.error('[api-post-integracion] create OT falló, reintentando sin agenda.connect. clave:', ot.CLAVE)
             const createWithoutAgenda = { ...create }
             delete createWithoutAgenda.agenda
-            return await prisma.ordenTrabajo.upsert({
-              ...rest,
-              create: createWithoutAgenda
-            })
+            try {
+              return await prisma.ordenTrabajo.create({ data: createWithoutAgenda })
+            } catch (retryError: any) {
+              if (retryError?.code === 'P2002') {
+                return updateAfterConflict()
+              }
+              throw retryError
+            }
           }
         })
       )
@@ -314,6 +334,82 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({ message: 'OTs procesadas', data: ok, errors }, { headers: corsHeaders(origin) })
+    }
+
+    if (integracionTipo === 'UpdateLBRUTAOT') {
+      if (!Array.isArray(data) || data.length === 0) {
+        return NextResponse.json({ error: 'No hay OTs para actualizar' }, { status: 400, headers: corsHeaders(origin) })
+      }
+      const results = await Promise.allSettled(
+        data.map(async (ot: {
+          CLAVE?: string
+          ESTADO?: string
+          ORIGEN?: string
+          FKLBRUTAS?: string
+          CORRELATIV?: string
+          FKLBDOCVER?: string
+          FKLBRUTSER?: string
+          RESPUESTA?: any
+        }) => {
+          if (!ot.CLAVE) throw new Error('OT sin CLAVE')
+          const existing = await prisma.ordenTrabajo.findUnique({
+            where: { clave: ot.CLAVE },
+            select: { jsonOT: true }
+          })
+          if (!existing && (!ot.FKLBRUTAS || !ot.FKLBDOCVER)) {
+            throw new Error(`No existe la OT ${ot.CLAVE} y faltan datos para crearla`)
+          }
+          const existingJson = existing?.jsonOT && typeof existing.jsonOT === 'object' ? existing.jsonOT as Record<string, any> : {}
+          const jsonOT = {
+            ...existingJson,
+            ...(ot.FKLBRUTAS !== undefined ? { FKLBRUTAS: ot.FKLBRUTAS } : {}),
+            ...(ot.CORRELATIV !== undefined ? { CORRELATIV: ot.CORRELATIV } : {}),
+            ...(ot.FKLBDOCVER !== undefined ? { FKLBDOCVER: ot.FKLBDOCVER } : {}),
+            ...(ot.FKLBRUTSER !== undefined ? { FKLBRUTSER: ot.FKLBRUTSER } : {}),
+            CLAVE: ot.CLAVE,
+            ...(ot.ESTADO !== undefined ? { ESTADO: ot.ESTADO } : {}),
+            ...(ot.RESPUESTA !== undefined ? { RESPUESTA: ot.RESPUESTA } : {})
+          }
+          if (!existing) {
+            const tipoOTId = await getTipoOTFromDocCode(String(ot.FKLBDOCVER))
+            const agendaId = Number.parseInt(String(ot.FKLBRUTAS), 10)
+            const base = {
+              clave: String(ot.CLAVE),
+              estado: String(ot.ESTADO || 'PENDIENTE'),
+              origen: String(ot.ORIGEN || 'VISITA'),
+              fklbrutas: String(ot.FKLBRUTAS),
+              correlativ: String(ot.CORRELATIV || '001'),
+              fklbdocver: String(ot.FKLBDOCVER),
+              fklbrutser: String(ot.FKLBRUTSER || ''),
+              numeroTarjeta: normalizeOrdenTrabajoTarjetas(ot.RESPUESTA?.nTarjetaArray) ?? [],
+              jsonOT,
+              tipoOT: { connect: { id: tipoOTId } },
+              user: { connect: { id: user.id } }
+            }
+            if (Number.isFinite(agendaId) && agendaId > 0) {
+              return prisma.ordenTrabajo.create({
+                data: {
+                  ...base,
+                  agenda: { connect: { id: agendaId } }
+                }
+              }).catch(() => prisma.ordenTrabajo.create({ data: base }))
+            }
+            return prisma.ordenTrabajo.create({ data: base })
+          }
+          return prisma.ordenTrabajo.update({
+            where: { clave: ot.CLAVE },
+            data: {
+              ...(ot.ESTADO !== undefined ? { estado: ot.ESTADO } : {}),
+              ...(ot.RESPUESTA?.nTarjetaArray !== undefined ? { numeroTarjeta: normalizeOrdenTrabajoTarjetas(ot.RESPUESTA.nTarjetaArray) } : {}),
+              jsonOT
+            }
+          })
+        })
+      )
+      const ok = results.filter(result => result.status === 'fulfilled').map((result: any) => result.value)
+      const errors = results.filter(result => result.status === 'rejected').map((result: any) => String(result.reason?.message || result.reason || 'Error'))
+      if (errors.length > 0) console.error('[api-post-integracion] UpdateLBRUTAOT errores:', errors.slice(0, 5))
+      return NextResponse.json({ message: 'OTs actualizadas', data: ok, errors }, { headers: corsHeaders(origin) })
     }
 
     if (integracionTipo === 'UpdateLBRUTAS') {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
+
 import { prisma } from '@/lib/prisma'
-import { ordenTrabajoTarjetasToLegacyString } from '@/lib/orden-trabajo-tarjetas'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -14,6 +14,7 @@ const ALLOWED_ORIGINS = new Set([
 
 function corsHeaders(origin?: string | null) {
   const allowedOrigin = origin && ALLOWED_ORIGINS.has(origin) ? origin : null
+
   return {
     ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -33,6 +34,8 @@ export async function GET(request: Request) {
     const obra = searchParams.get('obra[]')
     const sortColumn = searchParams.get('sortColumn') || 'FECHA'
     const sortDirection = searchParams.get('sortDirection') || 'DESC'
+    const requestedRows = Number(searchParams.get('rowsPerPage'))
+    const take = Number.isInteger(requestedRows) && requestedRows > 0 ? Math.min(requestedRows, 999) : 100
 
     process.stdout.write('\n====================================================\n')
     process.stdout.write('=== GET LAB RESULTS - ENDPOINT CALLED ===\n')
@@ -43,146 +46,64 @@ export async function GET(request: Request) {
 
     if (!obra) {
       process.stdout.write('⚠️ No obra parameter, returning empty array\n')
+
       return NextResponse.json({ data: [] }, { headers: corsHeaders(origin) })
     }
 
-    // Buscar órdenes de trabajo de la obra con sus resultados de densidad
-    process.stdout.write(`🔍 Buscando órdenes de trabajo para obra: ${obra}\n`)
-    const ordenesConDensidad = await prisma.ordenTrabajo.findMany({
+    // Buscar referencias históricas de densidad asociadas directamente a la obra
+    process.stdout.write(`🔍 Buscando referencias de densidad para obra: ${obra}\n`)
+
+    const obraRegistro = await prisma.obra.findFirst({
       where: {
-        agenda: {
-          obra: {
-            numeroObra: obra
-          }
-        },
-        densidad: {
-          isNot: null
-        }
+        numeroObra: obra
       },
-      include: {
-        densidad: true,
-        agenda: {
-          include: {
-            obra: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: sortDirection === 'DESC' ? 'desc' : 'asc'
-      },
-      take: 100
+      select: { obraId: true }
     })
 
-    process.stdout.write(`✅ Found ${ordenesConDensidad.length} ordenes with densidad for obra ${obra}\n`)
-
-    // Si no hay órdenes con densidad, devolver datos de ejemplo (mockup)
-    if (ordenesConDensidad.length === 0) {
-      process.stdout.write('⚠️ No se encontraron órdenes de trabajo con densidad para esta obra\n')
-      process.stdout.write('📋 Returning MOCKUP data for testing\n')
-      
-      const mockupData = [
-        {
-          CODIGO: '154602',
-          FECHA: new Date('2022-12-02'),
-          FECHATXT: '',
-          ITEMM: 'Sello y Relleno',
-          PROCEDE: 'Proctor Cliente, Laboratorio Lab Vial MAL Existente',
-          UBICA: 'Tramo eje 27 y B Estrato -1.60',
-          PROCTOR: 1700,
-          HUMEDAD1: 15.7,
-          DEN_MIN: 1650,
-          DEN_MAX: 1720
-        },
-        {
-          CODIGO: '154603',
-          FECHA: new Date('2022-11-28'),
-          FECHATXT: '',
-          ITEMM: 'Base Granular',
-          PROCEDE: 'Proctor Laboratorio, Ensayo Tipo A',
-          UBICA: 'Km 12+500, Calzada Derecha',
-          PROCTOR: 2100,
-          HUMEDAD1: 6.5,
-          DEN_MIN: 2050,
-          DEN_MAX: 2130
-        },
-        {
-          CODIGO: '154601',
-          FECHA: new Date('2022-11-25'),
-          FECHATXT: '',
-          ITEMM: 'Sub-base Granular',
-          PROCEDE: 'Proctor Modificado, Laboratorio Central',
-          UBICA: 'Km 12+300, Eje Central',
-          PROCTOR: 2250,
-          HUMEDAD1: 5.2,
-          DEN_MIN: 2200,
-          DEN_MAX: 2280
-        }
-      ]
-      
-      return NextResponse.json({ data: mockupData }, { headers: corsHeaders(origin) })
+    if (!obraRegistro) {
+      return NextResponse.json({ data: [] }, { headers: corsHeaders(origin) })
     }
 
-    // Transformar a formato esperado por la app móvil
-    process.stdout.write('\n📦 DATOS DE ÓRDENES ENCONTRADAS:\n')
-    ordenesConDensidad.forEach((orden, idx) => {
-      process.stdout.write(`\n  [${idx + 1}] Orden ID: ${orden.id}\n`)
-      process.stdout.write(`      - clave: ${orden.clave}\n`)
-      process.stdout.write(`      - numeroTarjeta: ${ordenTrabajoTarjetasToLegacyString(orden.numeroTarjeta) || 'N/A'}\n`)
-      process.stdout.write(`      - densidad ID: ${orden.densidad?.id || 'N/A'}\n`)
-      process.stdout.write(`      - obra: ${orden.agenda?.obra?.numeroObra || 'N/A'}\n`)
+    const referenciasAnuladas = await prisma.referenciaLbotmae.findMany({
+      where: {
+        obraId: obraRegistro.obraId,
+        estado: 'F'
+      },
+      select: { codigo: true }
     })
 
-    const resultados = ordenesConDensidad.map(orden => {
-      const densidad = orden.densidad
-      const controles = densidad?.controles as any[] || []
-      
-      // Calcular promedios de los controles si existen
-      let proctor = 0
-      let humedad = 0
-      let denMin = 0
-      let denMax = 0
-      
-      if (controles.length > 0) {
-        const valores = controles.filter(c => c.proctor > 0)
-        if (valores.length > 0) {
-          proctor = valores.reduce((sum, c) => sum + (c.proctor || 0), 0) / valores.length
-          humedad = valores.reduce((sum, c) => sum + (c.w || 0), 0) / valores.length
-        }
-        
-        const densidades = controles.map(c => c.dcs).filter(d => d > 0)
-        if (densidades.length > 0) {
-          denMin = Math.min(...densidades)
-          denMax = Math.max(...densidades)
-        }
-      }
-
-      const numeroTarjeta = ordenTrabajoTarjetasToLegacyString(orden.numeroTarjeta)
-
-      return {
-        CODIGO: orden.clave || numeroTarjeta || `OT-${orden.id}`,
-        FECHA: orden.createdAt,
-        FECHATXT: '', // Se formatea en el frontend con moment
-        ITEMM: densidad?.item || '',
-        PROCEDE: '', // No disponible en el nuevo schema
-        UBICA: '', // No disponible en el nuevo schema
-        PROCTOR: Math.round(proctor * 10) / 10,
-        HUMEDAD1: Math.round(humedad * 10) / 10,
-        DEN_MIN: Math.round(denMin * 10) / 10,
-        DEN_MAX: Math.round(denMax * 10) / 10
-      }
+    const referencias = await prisma.referenciaDensidad.findMany({
+      where: {
+        obraId: obraRegistro.obraId,
+        ...(referenciasAnuladas.length > 0 ? { codigo: { notIn: referenciasAnuladas.map(referencia => referencia.codigo) } } : {})
+      },
+      orderBy: [{ fecha: sortDirection === 'DESC' ? 'desc' : 'asc' }, { codigo: 'asc' }],
+      take
     })
+
+    process.stdout.write(`✅ Found ${referencias.length} referencias de densidad para obra ${obra}\n`)
+
+    const resultados = referencias.map(referencia => ({
+      CODIGO: referencia.codigo,
+      FECHA: referencia.fecha,
+      FECHATXT: '', // Se formatea en el frontend con moment
+      ITEMM: referencia.item || '',
+      PROCEDE: referencia.procedencia || '',
+      UBICA: referencia.ubicacion || '',
+      PROCTOR: referencia.proctor ?? 0,
+      HUMEDAD1: referencia.humedad ?? 0,
+      DEN_MIN: referencia.densidadMin ?? 0,
+      DEN_MAX: referencia.densidadMax ?? 0
+    }))
 
     process.stdout.write(`📊 Returning ${resultados.length} results\n`)
-    if (resultados.length > 0) {
-      process.stdout.write('📄 First result sample:\n')
-      process.stdout.write(JSON.stringify(resultados[0], null, 2) + '\n')
-    }
 
     return NextResponse.json({ data: resultados }, { headers: corsHeaders(origin) })
   } catch (error) {
     process.stdout.write('❌ Error en get-lab-result:\n')
     process.stdout.write(String(error) + '\n')
     console.error('❌ Error en get-lab-result:', error)
+
     return NextResponse.json({ error: 'Error al obtener resultados' }, { status: 500, headers: corsHeaders(request.headers.get('origin')) })
   }
 }

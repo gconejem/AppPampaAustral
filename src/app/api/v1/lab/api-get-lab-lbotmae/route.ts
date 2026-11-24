@@ -30,20 +30,58 @@ export async function GET(request: Request) {
     const origin = request.headers.get('origin')
     const { searchParams } = new URL(request.url)
     const codigo = searchParams.get('codigo[]')
+    const obra = searchParams.get('obra[]')
 
     process.stdout.write('\n====================================================\n')
     process.stdout.write('=== GET LAB LBOTMAE - ENDPOINT CALLED ===\n')
     process.stdout.write(`codigo: ${codigo}\n`)
+    process.stdout.write(`obra: ${obra}\n`)
     process.stdout.write('====================================================\n')
 
     // Si no hay código o está vacío, devolver array vacío
     if (!codigo || codigo.trim() === '') {
       process.stdout.write('⚠️ No codigo parameter or empty, returning empty array\n')
+
       return NextResponse.json({ data: [] }, { headers: corsHeaders(origin) })
     }
 
-    // Buscar órdenes de trabajo por código (la App Terreno envía CODIGO de OT en esta query)
     const codigos = codigo.split(',').map(c => c.trim()).filter(c => c.length > 0)
+
+    if (obra) {
+      const referenciaObra = await prisma.obra.findFirst({
+        where: { numeroObra: obra },
+        select: { obraId: true }
+      })
+
+      if (!referenciaObra) {
+        return NextResponse.json({ data: [] }, { headers: corsHeaders(origin) })
+      }
+
+      const referencias = await prisma.referenciaLbotmae.findMany({
+        where: {
+          obraId: referenciaObra.obraId,
+          codigo: { in: codigos },
+          estado: 'A'
+        },
+        select: {
+          codigo: true,
+          item: true,
+          procedencia: true,
+          ubicacion: true
+        }
+      })
+
+      return NextResponse.json({
+        data: referencias.map(referencia => ({
+          CODIGO: referencia.codigo,
+          ITEMM: referencia.item || '',
+          PROCEDE: referencia.procedencia || '',
+          UBICA: referencia.ubicacion || ''
+        }))
+      }, { headers: corsHeaders(origin) })
+    }
+
+    // Compatibilidad con llamadas anteriores sin obra: buscar órdenes de trabajo por código
     process.stdout.write(`🔍 Buscando órdenes por códigos (clave): ${codigos.join(', ')}\n`)
     
     const ordenesTrabajo = await prisma.ordenTrabajo.findMany({
@@ -83,20 +121,6 @@ export async function GET(request: Request) {
       ordenesTrabajo.forEach((ot, idx) => {
         process.stdout.write(`  [${idx + 1}] clave: ${ot.clave}, tipo: ${ot.tipoOT?.nombre || 'N/A'}, estado: ${ot.estadoOT?.nombre || 'N/A'}\n`)
       })
-    }
-
-    // Si no hay datos, devolver mockup
-    if (ordenesTrabajo.length === 0) {
-      process.stdout.write('⚠️ No ordenes found, returning mockup\n')
-      const mockupData = codigos.map((cod, idx) => ({
-        CODIGO: cod,
-        NUMERO_OT: cod,
-        ESTADO: 'Pendiente',
-        TIPO: 'Laboratorio',
-        FECHA_CREACION: new Date(),
-        OBSERVACION: 'Orden de trabajo mockup'
-      }))
-      return NextResponse.json({ data: mockupData }, { headers: corsHeaders(origin) })
     }
 
     const uniqueNonEmpty = (values: Array<string | null | undefined>) => {
