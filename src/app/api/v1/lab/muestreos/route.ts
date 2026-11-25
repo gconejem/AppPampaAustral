@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { loadMuestreosConRetiro } from '@/lib/lab-muestreos'
+import { describeTipoProbeta, loadMuestreosConRetiro } from '@/lib/lab-muestreos'
 import { ordenTrabajoTarjetasToLegacyString } from '@/lib/orden-trabajo-tarjetas'
 
 export const dynamic = 'force-dynamic'
@@ -88,7 +88,7 @@ export async function GET(request: Request) {
         CODIGO: orden.clave || numeroTarjeta || `OT-${orden.id}`,
         OTNUMERO: orden.clave || numeroTarjeta || `OT-${orden.id}`, // Para el combobox de retiro
         num_tarjeta: numeroTarjeta, // Para el combobox de retiro
-        descrip_tipo_probeta: tipo, // Para el combobox de retiro
+        descrip_tipo_probeta: describeTipoProbeta(respuesta.tipo_probeta),
         FECHA: orden.createdAt,
         FECHATXT: '',
         TIPO: tipo,

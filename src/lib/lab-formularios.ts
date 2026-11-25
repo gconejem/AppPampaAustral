@@ -640,7 +640,26 @@ export const LAB_FORMULARIOS: LabFormulario[] = [
     APROFECHA: '19-02-2021',
     OPCIONES: JSON.stringify({
       formulario: 'Retiro Probeta',
-      opciones: []
+      codigo: 'R-12-99',
+      version: '1.0',
+      opciones: [
+        {
+          nombre: 'Condicion de transporte',
+          tipo: 'select',
+          opciones: [
+            { posicion: 1, texto: 'Cama de arena' },
+            { posicion: 2, texto: 'Caja de traslado' }
+          ]
+        },
+        {
+          nombre: 'Condicion al finalizar',
+          tipo: 'select',
+          opciones: [
+            { posicion: 1, texto: 'Sin observaciones' },
+            { posicion: 2, texto: 'Fisurada' }
+          ]
+        }
+      ]
     }),
     ESTADO: 'A',
     TIPO: 'D',

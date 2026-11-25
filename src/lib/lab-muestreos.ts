@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { LAB_FORMULARIOS } from '@/lib/lab-formularios'
 
 type LoadMuestreosOptions = {
   obra: { numeroObra: string } | { obraId: number }
@@ -7,7 +8,26 @@ type LoadMuestreosOptions = {
   take: number
 }
 
+const opcionesTipoProbeta = JSON.parse(
+  LAB_FORMULARIOS.find(formulario => formulario.CLAVE === 'R-12-39010')?.OPCIONES || '{"opciones":[]}'
+).opciones.find((opcion: { nombre: string }) => opcion.nombre === 'Tipo de Probeta')?.opciones || []
+
 const normalizeReference = (value: unknown) => String(value ?? '').trim()
+
+export const describeTipoProbeta = (value: unknown) => {
+  const codigo = normalizeReference(value)
+  if (!codigo) return ''
+  const option = opcionesTipoProbeta.find((item: { erp?: string; texto: string }) => item.erp === codigo)
+  if (option) return option.texto
+  const aliases: Record<string, string> = {
+    'CILINDRO-15': 'Cilíndricas (300x150)',
+    'PRISMA': 'Prismática (530x150)',
+    'CUBO-15': 'Cúbica (150x150)',
+    'CUBO-20': 'Cúbica (200x200)',
+    'RILEM': 'Rilem (160x40x40)'
+  }
+  return aliases[codigo.toUpperCase()] || codigo
+}
 
 const getRespuesta = (jsonOT: unknown): Record<string, any> => {
   if (!jsonOT || typeof jsonOT !== 'object') return {}
@@ -44,14 +64,7 @@ export const loadMuestreosConRetiro = async ({
     prisma.ordenTrabajo.findMany({
       where: {
         agenda,
-        OR: [
-          { fklbdocver: { startsWith: 'R-12-39' } },
-          { fklbdocver: { startsWith: 'R-12-27' } },
-          { fklbdocver: { startsWith: 'R-12-58' } },
-          { hormigonFresco: { isNot: null } },
-          { muestreoMaterial: { isNot: null } },
-          { testigos: { isNot: null } }
-        ]
+        fklbdocver: { startsWith: 'R-12-39' }
       },
       include: {
         hormigonFresco: true,

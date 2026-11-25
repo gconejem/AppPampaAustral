@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { loadMuestreosConRetiro } from '@/lib/lab-muestreos'
+import { describeTipoProbeta, loadMuestreosConRetiro } from '@/lib/lab-muestreos'
 import { ordenTrabajoTarjetasToLegacyString } from '@/lib/orden-trabajo-tarjetas'
 
 export const dynamic = 'force-dynamic'
@@ -76,7 +76,7 @@ export async function GET(request: Request) {
         OTNUMERO: orden.clave,
         FECHA: orden.createdAt,
         num_tarjeta: numeroTarjeta,
-        descrip_tipo_probeta: tipo,
+        descrip_tipo_probeta: describeTipoProbeta(respuesta.tipo_probeta),
         descripcion: descripcion,
         tipo_hormigon: hormigon?.tipoHormigon || testigo?.grado || respuesta.tipo_hormigon || '',
         cantidad_probetas: hormigon?.cantidadProbetas || respuesta.cantidad_probetas || 0,
