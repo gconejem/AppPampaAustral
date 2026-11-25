@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { loadMuestreosConRetiro } from '@/lib/lab-muestreos'
 import { ordenTrabajoTarjetasToLegacyString } from '@/lib/orden-trabajo-tarjetas'
 
 export const dynamic = 'force-dynamic'
@@ -48,43 +48,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ data: [] }, { headers: corsHeaders(origin) })
     }
 
-    // Construir condiciones de WHERE
-    const whereConditions: any = {
-      agenda: {
-        obra: {
-          numeroObra: obra
-        }
-      },
-      OR: [
-        { hormigonFresco: { isNot: null } },
-        { muestreoMaterial: { isNot: null } },
-        { testigos: { isNot: null } }
-      ]
-    }
-
-    // Si se solicita solo muestreos sin retiro
-    if (sinRetiro) {
-      whereConditions.retiroProbeta = null
-      process.stdout.write('🔍 Filtrando solo muestreos SIN retiro asociado\n')
-    }
-
     // Buscar muestreos de hormigón de la obra
     process.stdout.write(`🔍 Buscando muestreos para obra: ${obra}\n`)
-    const muestreos = await prisma.ordenTrabajo.findMany({
-      where: whereConditions,
-      include: {
-        hormigonFresco: true,
-        muestreoMaterial: true,
-        testigos: true,
-        agenda: {
-          include: {
-            obra: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: sortDirection === 'DESC' ? 'desc' : 'asc'
-      },
+    const muestreos = await loadMuestreosConRetiro({
+      obra: { numeroObra: obra },
+      sinRetiro,
+      sortDirection: sortDirection === 'DESC' ? 'desc' : 'asc',
       take: 100
     })
 
@@ -92,19 +61,28 @@ export async function GET(request: Request) {
 
     if (muestreos.length > 0) {
       process.stdout.write('\n📦 TIPOS DE MUESTREOS ENCONTRADOS:\n')
-      muestreos.forEach((m, idx) => {
-        const tipo = m.hormigonFresco ? 'Hormigón Fresco' : m.testigos ? 'Testigos' : m.muestreoMaterial ? 'Material' : 'Otro'
-        process.stdout.write(`  [${idx + 1}] ${m.clave} - ${tipo}\n`)
+      muestreos.forEach((item, idx) => {
+        const tipo = item.orden.hormigonFresco ? 'Hormigón Fresco' : item.orden.testigos ? 'Testigos' : item.orden.muestreoMaterial ? 'Material' : 'Otro'
+        process.stdout.write(`  [${idx + 1}] ${item.orden.clave} - ${tipo} - retirada: ${item.retirada}\n`)
       })
     }
 
     // Transformar datos reales
-    const resultados = muestreos.map(orden => {
+    const resultados = muestreos.map(({ orden, respuesta, retirada }) => {
       const hormigon = orden.hormigonFresco
       const testigo = orden.testigos
-      const tipo = hormigon ? 'Hormigón Fresco' : testigo ? 'Testigos' : 'Muestreo'
+      const tipo = hormigon || orden.fklbdocver.startsWith('R-12-39')
+        ? 'Hormigón Fresco'
+        : testigo
+          ? 'Testigos'
+          : 'Muestreo'
       
-      const numeroTarjeta = ordenTrabajoTarjetasToLegacyString(orden.numeroTarjeta)
+      const tarjetasRespuesta = Array.isArray(respuesta.nTarjetaArray)
+        ? respuesta.nTarjetaArray.map((tarjeta: unknown) => String(tarjeta))
+        : []
+      const numeroTarjeta = ordenTrabajoTarjetasToLegacyString(orden.numeroTarjeta) ||
+        tarjetasRespuesta.join(',') ||
+        String(respuesta.num_tarjeta || '')
 
       return {
         CODIGO: orden.clave || numeroTarjeta || `OT-${orden.id}`,
@@ -114,11 +92,13 @@ export async function GET(request: Request) {
         FECHA: orden.createdAt,
         FECHATXT: '',
         TIPO: tipo,
-        GRADO: testigo?.grado || hormigon?.tipoHormigon || '',
-        ELEMENTO: hormigon?.elementoHormigonado || '',
-        UBICACION: hormigon?.ubicacionHormigonado || '',
-        PROBETAS: hormigon?.cantidadProbetas || 0,
-        ASENTAMIENTO: hormigon?.conoAsentamiento || null
+        GRADO: testigo?.grado || hormigon?.tipoHormigon || respuesta.tipo_hormigon || '',
+        ELEMENTO: hormigon?.elementoHormigonado || respuesta.elemento_hormigonado || '',
+        UBICACION: hormigon?.ubicacionHormigonado || respuesta.ubicacion_hormigonado || '',
+        PROBETAS: hormigon?.cantidadProbetas || respuesta.cantidad_probetas || 0,
+        ASENTAMIENTO: hormigon?.conoAsentamiento || respuesta.cono_asentamiento || null,
+        retirada,
+        RETIRADA: retirada
       }
     })
 

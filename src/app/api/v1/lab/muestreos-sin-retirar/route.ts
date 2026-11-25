@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { loadMuestreosConRetiro } from '@/lib/lab-muestreos'
 import { ordenTrabajoTarjetasToLegacyString } from '@/lib/orden-trabajo-tarjetas'
 
 export const dynamic = 'force-dynamic'
@@ -36,38 +36,10 @@ export async function GET(request: Request) {
     // Buscar órdenes de trabajo con hormigón fresco o testigos que NO tengan retiro de probeta
     process.stdout.write(`🔍 Buscando muestreos sin retirar para obra: ${obraId}\n`)
     
-    const muestreosSinRetirar = await prisma.ordenTrabajo.findMany({
-      where: {
-        agenda: {
-          obraId: parseInt(obraId)
-        },
-        OR: [
-          { 
-            hormigonFresco: { 
-              isNot: null 
-            }
-          },
-          { 
-            testigos: { 
-              isNot: null 
-            }
-          }
-        ],
-        retiroProbeta: null // No tiene retiro asociado
-      },
-      include: {
-        hormigonFresco: true,
-        testigos: true,
-        tipoOT: true,
-        agenda: {
-          include: {
-            obra: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
+    const muestreosSinRetirar = await loadMuestreosConRetiro({
+      obra: { obraId: parseInt(obraId, 10) },
+      sinRetiro: true,
+      sortDirection: 'desc',
       take: 50
     })
 
@@ -75,25 +47,30 @@ export async function GET(request: Request) {
 
     if (muestreosSinRetirar.length > 0) {
       process.stdout.write('\n📦 MUESTREOS SIN RETIRAR:\n')
-      muestreosSinRetirar.forEach((m, idx) => {
-        const tipo = m.hormigonFresco ? 'Hormigón Fresco' : 'Testigos'
-        const tarjeta = ordenTrabajoTarjetasToLegacyString(m.numeroTarjeta) || 'Sin tarjeta'
-        process.stdout.write(`  [${idx + 1}] OT: ${m.clave} | Tipo: ${tipo} | Tarjeta: ${tarjeta} | Fecha: ${m.createdAt.toISOString().split('T')[0]}\n`)
+      muestreosSinRetirar.forEach((item, idx) => {
+        const tipo = item.orden.hormigonFresco ? 'Hormigón Fresco' : 'Testigos'
+        const tarjeta = ordenTrabajoTarjetasToLegacyString(item.orden.numeroTarjeta) || 'Sin tarjeta'
+        process.stdout.write(`  [${idx + 1}] OT: ${item.orden.clave} | Tipo: ${tipo} | Tarjeta: ${tarjeta} | Fecha: ${item.orden.createdAt.toISOString().split('T')[0]}\n`)
       })
     }
 
     // Transformar datos
-    const resultados = muestreosSinRetirar.map(orden => {
+    const resultados = muestreosSinRetirar.map(({ orden, respuesta, retirada }) => {
       const hormigon = orden.hormigonFresco
       const testigo = orden.testigos
-      const tipo = hormigon ? 'Hormigón Fresco' : testigo ? 'Testigos' : 'Muestreo'
+      const tipo = hormigon || orden.fklbdocver.startsWith('R-12-39') ? 'Hormigón Fresco' : testigo ? 'Testigos' : 'Muestreo'
       const descripcion = hormigon 
         ? `${hormigon.tipoHormigon || ''} - ${hormigon.elementoHormigonado || ''}`.trim()
         : testigo 
         ? `${testigo.grado || ''} - ${testigo.elemento || ''}`.trim()
-        : ''
+        : `${respuesta.tipo_hormigon || ''} - ${respuesta.elemento_hormigonado || ''}`.trim()
 
-      const numeroTarjeta = ordenTrabajoTarjetasToLegacyString(orden.numeroTarjeta)
+      const tarjetasRespuesta = Array.isArray(respuesta.nTarjetaArray)
+        ? respuesta.nTarjetaArray.map((tarjeta: unknown) => String(tarjeta))
+        : []
+      const numeroTarjeta = ordenTrabajoTarjetasToLegacyString(orden.numeroTarjeta) ||
+        tarjetasRespuesta.join(',') ||
+        String(respuesta.num_tarjeta || '')
 
       return {
         OTNUMERO: orden.clave,
@@ -101,9 +78,11 @@ export async function GET(request: Request) {
         num_tarjeta: numeroTarjeta,
         descrip_tipo_probeta: tipo,
         descripcion: descripcion,
-        tipo_hormigon: hormigon?.tipoHormigon || testigo?.grado || '',
-        cantidad_probetas: hormigon?.cantidadProbetas || 0,
-        elemento: hormigon?.elementoHormigonado || testigo?.elemento || ''
+        tipo_hormigon: hormigon?.tipoHormigon || testigo?.grado || respuesta.tipo_hormigon || '',
+        cantidad_probetas: hormigon?.cantidadProbetas || respuesta.cantidad_probetas || 0,
+        elemento: hormigon?.elementoHormigonado || testigo?.elemento || respuesta.elemento_hormigonado || '',
+        retirada,
+        RETIRADA: retirada
       }
     })
 
