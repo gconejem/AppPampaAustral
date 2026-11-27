@@ -25,7 +25,7 @@ export async function sendEmail(options: EmailOptions) {
         secure: false,
         auth: {
             user: process.env.GMAIL_USER,
-            pass: process.env.GMAIL_APP_PASSWORD
+            pass: process.env.GMAIL_APP_PASSWORD?.replace(/\s/g, '')
         },
         tls: {
             // No rechazar certificados no autorizados (solo para desarrollo)
